@@ -1,12 +1,16 @@
 'use client'
 
 import { useTheme } from 'next-themes'
-import { Moon, Sun } from 'lucide-react'
+import { Moon, Sun, ChevronDown } from 'lucide-react'
 import Link from 'next/link'
 import { LeafIcon } from './LeafIcon'
+import { useAuth } from '@/context/UserContext'
+import { useState } from 'react'
 
 export function Header() {
   const { theme, setTheme } = useTheme()
+  const { user, signOut } = useAuth()
+  const [showUserMenu, setShowUserMenu] = useState(false)
 
   return (
     <div className="border-b border-border bg-background">
@@ -15,12 +19,42 @@ export function Header() {
           <LeafIcon className="w-6 h-6 text-primary" />
           Octree
         </Link>
-        <button
-          onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-          className="p-2 hover:bg-secondary rounded-md"
-        >
-          {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
-        </button>
+        <div className="flex items-center gap-4">
+          <button
+            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+            className="p-2 hover:bg-secondary rounded-md"
+          >
+            {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
+          </button>
+
+          {user && (
+            <div className="relative">
+              <button
+                onClick={() => setShowUserMenu(!showUserMenu)}
+                className="flex items-center gap-2 hover:bg-secondary p-2 rounded-md"
+              >
+                <img
+                  src={user.avatar}
+                  alt={user.name}
+                  className="w-6 h-6 rounded-full"
+                />
+                <span>{user.name}</span>
+                <ChevronDown size={16} />
+              </button>
+
+              {showUserMenu && (
+                <div className="absolute right-0 mt-2 w-48 bg-background border border-border rounded-md shadow-lg">
+                  <button
+                    onClick={() => signOut()}
+                    className="w-full text-left px-4 py-2 hover:bg-secondary"
+                  >
+                    Sign Out
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )

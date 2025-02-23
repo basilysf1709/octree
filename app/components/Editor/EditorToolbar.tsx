@@ -3,7 +3,9 @@
 import React, { useState } from 'react';
 import { 
   Bold, Italic, Underline, AlignLeft, AlignCenter, 
-  AlignRight, Share, MessageSquare, Type, ChevronDown, Moon, Sun, Grid2X2, List
+  AlignRight, Share, MessageSquare, Type, ChevronDown, Moon, Sun, Grid2X2, List, History,
+  ListOrdered, Heading2, Quote, Code, Link2,
+  ImageIcon, Table
 } from 'lucide-react';
 import { useTheme } from 'next-themes';
 
@@ -54,20 +56,79 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({ onShowSidebar }) =
           <button 
             className="p-1.5 hover:bg-secondary rounded"
             onClick={() => handleFormat('bold')}
+            title="Bold"
           >
             <Bold size={18} />
           </button>
           <button 
             className="p-1.5 hover:bg-secondary rounded"
             onClick={() => handleFormat('italic')}
+            title="Italic"
           >
             <Italic size={18} />
           </button>
           <button 
             className="p-1.5 hover:bg-secondary rounded"
             onClick={() => handleFormat('underline')}
+            title="Underline"
           >
             <Underline size={18} />
+          </button>
+          <button 
+            className="p-1.5 hover:bg-secondary rounded"
+            onClick={() => handleFormat('formatBlock')}
+            title="Heading"
+          >
+            <Heading2 size={18} />
+          </button>
+          <button 
+            className="p-1.5 hover:bg-secondary rounded"
+            onClick={() => handleFormat('insertUnorderedList')}
+            title="Bullet List"
+          >
+            <List size={18} />
+          </button>
+          <button 
+            className="p-1.5 hover:bg-secondary rounded"
+            onClick={() => handleFormat('insertOrderedList')}
+            title="Numbered List"
+          >
+            <ListOrdered size={18} />
+          </button>
+          <button 
+            className="p-1.5 hover:bg-secondary rounded"
+            onClick={() => handleFormat('formatBlock')}
+            title="Quote"
+          >
+            <Quote size={18} />
+          </button>
+          <button 
+            className="p-1.5 hover:bg-secondary rounded"
+            onClick={() => handleFormat('insertHTML')}
+            title="Code Block"
+          >
+            <Code size={18} />
+          </button>
+          <button 
+            className="p-1.5 hover:bg-secondary rounded"
+            onClick={() => handleFormat('createLink')}
+            title="Insert Link"
+          >
+            <Link2 size={18} />
+          </button>
+          <button 
+            className="p-1.5 hover:bg-secondary rounded"
+            onClick={() => handleFormat('insertImage')}
+            title="Insert Image"
+          >
+            <ImageIcon size={18} />
+          </button>
+          <button 
+            className="p-1.5 hover:bg-secondary rounded"
+            onClick={() => handleFormat('insertHTML')}
+            title="Insert Table"
+          >
+            <Table size={18} />
           </button>
           
           <div className="relative">
@@ -126,7 +187,7 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({ onShowSidebar }) =
           onClick={onShowSidebar}
           className="p-1.5 hover:bg-secondary rounded mr-2"
         >
-          <MessageSquare size={18} />
+          <History size={18} />
         </button>
         
         <button className="flex items-center px-3 py-1.5 bg-primary text-primary-foreground rounded-md hover:bg-primary/90">

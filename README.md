@@ -1,4 +1,4 @@
-# Modern Document Editor
+# Octree
 
 A next-generation document editor focusing on real-time collaboration, AI assistance, and seamless technical writing experience.
 
@@ -49,7 +49,7 @@ A next-generation document editor focusing on real-time collaboration, AI assist
   - Provider architecture for collaboration
   - Presence awareness system
 - **Performance**:
-  - Server Components optimization
+  - Server Components optimization 
   - Partial hydration strategies
   - Edge runtime support
 

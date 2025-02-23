@@ -5,6 +5,7 @@ import { EditorToolbar } from './EditorToolbar';
 import { VersionHistory } from './VersionHistory';
 import { DocumentSettings } from './DocumentSettings';
 import { BlameLine } from './BlameInfo';
+import { AIChatbot } from './AIChatbot'
 
 // Dummy blame data for demonstration
 const dummyBlameData = {
@@ -38,37 +39,39 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({ initialContent =
     <div className="flex flex-col h-[calc(100vh-64px)]">
       <EditorToolbar onShowSidebar={() => setShowSidebar(!showSidebar)} />
       
-      <div className="flex flex-1 overflow-hidden">
-        {/* Main Editor Area */}
-        <div className="flex-1 overflow-y-auto">
-          <div className="max-w-[850px] min-h-[1123px] mx-auto my-12 px-16 py-12 bg-white dark:bg-gray-900 border border-border">
-            {showBlame && (
-              <div className="absolute -left-[200px] w-[180px] text-right space-y-1">
-                {Object.entries(dummyBlameData).map(([line, info]) => (
-                  <BlameLine 
-                    key={line}
-                    info={info}
-                    documentId={documentId}
-                  />
-                ))}
+      <div className="flex flex-1 overflow-hidden relative">
+        {/* Fixed width center container */}
+        <div className="absolute left-1/2 -translate-x-1/2 h-full overflow-y-auto">
+          <div className="w-[850px]">
+            <div className="min-h-[1123px] my-12 px-16 py-12 bg-white dark:bg-gray-900 border border-border">
+              {showBlame && (
+                <div className="absolute -left-[200px] w-[180px] text-right space-y-1">
+                  {Object.entries(dummyBlameData).map(([line, info]) => (
+                    <BlameLine 
+                      key={line}
+                      info={info}
+                      documentId={documentId}
+                    />
+                  ))}
+                </div>
+              )}
+              <div
+                ref={editorRef}
+                className="prose dark:prose-invert max-w-none min-h-[calc(100vh-8rem)]"
+                contentEditable
+                suppressContentEditableWarning
+                onInput={handleInput}
+                style={{ outline: 'none' }}
+              >
+                {content === '' && <span className="text-gray-400">Start typing...</span>}
               </div>
-            )}
-            <div
-              ref={editorRef}
-              className="prose dark:prose-invert max-w-none min-h-[calc(100vh-8rem)]"
-              contentEditable
-              suppressContentEditableWarning
-              onInput={handleInput}
-              style={{ outline: 'none' }}
-            >
-              {content === '' && <span className="text-gray-400">Start typing...</span>}
             </div>
           </div>
         </div>
 
-        {/* Right Sidebar */}
+        {/* Right Sidebar - absolute positioning */}
         {showSidebar && (
-          <div className="w-[300px] border-l border-border bg-background overflow-y-auto">
+          <div className="absolute right-0 top-0 h-full w-[300px] border-l border-border bg-background overflow-y-auto">
             <div className="sticky top-0 bg-background border-b border-border">
               <div className="flex items-center justify-between p-4">
                 <h2 className="text-lg font-semibold">Version History</h2>
@@ -84,6 +87,8 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({ initialContent =
           </div>
         )}
       </div>
+
+      <AIChatbot />
     </div>
   );
 }; 

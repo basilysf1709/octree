@@ -16,21 +16,6 @@ interface DiffVersion {
 export function DiffViewer({ version }: { version: DiffVersion }) {
   return (
     <div className="flex flex-col h-[calc(100vh-64px)]">
-      {/* Version Info Bar */}
-      <div className="border-b border-border bg-background px-8 py-4">
-        <div className="flex items-center gap-3 max-w-[850px] mx-auto">
-          <GitCommit className="text-muted-foreground" size={20} />
-          <div>
-            <h1 className="text-xl font-semibold">{version.message}</h1>
-            <p className="text-sm text-muted-foreground">
-              <code className="text-primary">{version.id}</code>
-              {' • '}{version.author}{' • '}{version.time}
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Document Area */}
       <div className="flex-1 overflow-y-auto">
         <div className="max-w-[850px] min-h-[1123px] mx-auto my-12 px-16 py-12 bg-white dark:bg-gray-900 border border-border">
           <div className="prose dark:prose-invert max-w-none">

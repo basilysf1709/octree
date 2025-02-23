@@ -1,7 +1,10 @@
 'use client'
 
-import { Header } from '@/components/Header'
+import { DocumentLayout } from '@/components/Editor/DocumentLayout'
 import { DiffViewer } from '@/components/Editor/DiffViewer'
+import { DocumentSettings } from '@/components/Editor/DocumentSettings'
+import { GitCommit } from 'lucide-react'
+import { use } from 'react'
 
 type ChangeType = 'added' | 'removed' | 'modified' | 'context'
 
@@ -21,11 +24,26 @@ const dummyDiff = {
   ]
 }
 
-export default function VersionPage({ params }: { params: { id: string, versionId: string } }) {
+export default function VersionPage({ params }: { params: Promise<{ id: string, versionId: string }> }) {
+  const { id } = use(params)
+  
   return (
-    <div className="min-h-screen bg-background">
-      <Header />
+    <DocumentLayout
+      actions={<DocumentSettings showBlame={false} onBlameToggle={() => {}} />}
+      info={
+        <div className="flex items-center gap-3">
+          <GitCommit className="text-muted-foreground" size={20} />
+          <div>
+            <h1 className="text-xl font-semibold">{dummyDiff.message}</h1>
+            <p className="text-sm text-muted-foreground">
+              <code className="text-primary">{dummyDiff.id}</code>
+              {' • '}{dummyDiff.author}{' • '}{dummyDiff.time}
+            </p>
+          </div>
+        </div>
+      }
+    >
       <DiffViewer version={dummyDiff} />
-    </div>
+    </DocumentLayout>
   )
 } 

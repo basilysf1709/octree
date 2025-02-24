@@ -52,3 +52,36 @@
     @apply bg-background text-foreground;
   }
 }
+
+[contenteditable] {
+  outline: none;
+}
+
+[contenteditable] table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 1rem 0;
+}
+
+[contenteditable] td {
+  border: 1px solid var(--border);
+  padding: 0.5rem;
+}
+
+[contenteditable] blockquote {
+  border-left: 3px solid var(--primary);
+  margin: 1rem 0;
+  padding-left: 1rem;
+  color: var(--muted-foreground);
+}
+
+[contenteditable] pre {
+  background: var(--secondary);
+  padding: 1rem;
+  border-radius: 0.5rem;
+  overflow-x: auto;
+}
+
+[contenteditable] code {
+  font-family: monospace;
+}

@@ -1,7 +1,7 @@
 'use client'
 
 import { useTheme } from 'next-themes'
-import { Moon, Sun, ChevronDown } from 'lucide-react'
+import { Moon, Sun, ChevronDown, Settings, User, HelpCircle, LogOut } from 'lucide-react'
 import Link from 'next/link'
 import { LeafIcon } from './LeafIcon'
 import { useAuth } from '@/context/UserContext'
@@ -31,25 +31,57 @@ export function Header() {
             <div className="relative">
               <button
                 onClick={() => setShowUserMenu(!showUserMenu)}
-                className="flex items-center gap-2 hover:bg-secondary p-2 rounded-md"
+                className="flex items-center gap-2 p-2 hover:bg-secondary rounded-md"
               >
-                <img
-                  src={user.avatar}
-                  alt={user.name}
-                  className="w-6 h-6 rounded-full"
-                />
-                <span>{user.name}</span>
+                <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center">
+                  <User size={16} />
+                </div>
+                <span className="text-sm">{user.name}</span>
                 <ChevronDown size={16} />
               </button>
 
               {showUserMenu && (
-                <div className="absolute right-0 mt-2 w-48 bg-background border border-border rounded-md shadow-lg">
-                  <button
-                    onClick={() => signOut()}
-                    className="w-full text-left px-4 py-2 hover:bg-secondary"
-                  >
-                    Sign Out
-                  </button>
+                <div className="absolute right-0 mt-2 w-56 bg-background border border-border rounded-lg shadow-lg overflow-hidden">
+                  <div className="p-2 border-b border-border">
+                    <div className="px-3 py-2">
+                      <p className="font-medium">{user.name}</p>
+                      <p className="text-sm text-muted-foreground">{user.email}</p>
+                    </div>
+                  </div>
+
+                  <div className="p-1">
+                    <Link
+                      href="/profile"
+                      className="flex items-center gap-2 w-full p-2 text-sm hover:bg-secondary rounded-md"
+                    >
+                      <User size={16} />
+                      Profile
+                    </Link>
+                    <Link
+                      href="/settings"
+                      className="flex items-center gap-2 w-full p-2 text-sm hover:bg-secondary rounded-md"
+                    >
+                      <Settings size={16} />
+                      Settings
+                    </Link>
+                    <Link
+                      href="/help"
+                      className="flex items-center gap-2 w-full p-2 text-sm hover:bg-secondary rounded-md"
+                    >
+                      <HelpCircle size={16} />
+                      Help & Feedback
+                    </Link>
+                  </div>
+
+                  <div className="p-1 border-t border-border">
+                    <button
+                      onClick={() => signOut()}
+                      className="flex items-center gap-2 w-full p-2 text-sm hover:bg-secondary rounded-md text-red-500 hover:text-red-600"
+                    >
+                      <LogOut size={16} />
+                      Sign Out
+                    </button>
+                  </div>
                 </div>
               )}
             </div>

@@ -50,17 +50,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Check for stored user on mount
   useEffect(() => {
-    const storedUser = localStorage.getItem('user')
-    if (storedUser) {
-      setUser(JSON.parse(storedUser))
+    const checkUser = async () => {
+      try {
+        const storedUser = localStorage.getItem('user')
+        if (storedUser) {
+          setUser(JSON.parse(storedUser))
+        }
+      } catch (error) {
+        console.error('Error checking auth state:', error)
+      } finally {
+        setIsLoading(false)
+      }
     }
-    setIsLoading(false)
+    
+    checkUser()
   }, [])
 
   // Protected route handling
   useEffect(() => {
-    if (!isLoading && !user && pathname !== '/login') {
-      router.push('/login')
+    if (!isLoading) {
+      const isAuthPage = pathname === '/login'
+      const isPublicPage = pathname === '/'
+      
+      if (!user && !isAuthPage && !isPublicPage) {
+        router.push('/login')
+      } else if (user && isAuthPage) {
+        router.push('/documents')
+      }
     }
   }, [user, isLoading, pathname, router])
 

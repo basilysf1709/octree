@@ -15,11 +15,11 @@ const dummyBlameData = {
 };
 
 interface DocumentEditorProps {
-  initialContent?: string;
   documentId: string;
+  initialContent?: string;
 }
 
-export const DocumentEditor: React.FC<DocumentEditorProps> = ({ initialContent = '', documentId }) => {
+export function DocumentEditor({ documentId, initialContent = '' }: DocumentEditorProps) {
   const [content, setContent] = useState(initialContent);
   const [showSidebar, setShowSidebar] = useState(false);
   const [showBlame, setShowBlame] = useState(false);
@@ -37,7 +37,10 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({ initialContent =
 
   return (
     <div className="flex flex-col h-[calc(100vh-64px)]">
-      <EditorToolbar onShowSidebar={() => setShowSidebar(!showSidebar)} />
+      <EditorToolbar 
+        onShowSidebar={() => setShowSidebar(!showSidebar)} 
+        documentId={documentId}
+      />
       
       <div className="flex flex-1 overflow-hidden relative">
         {/* Fixed width center container */}
@@ -91,4 +94,4 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({ initialContent =
       <AIChatbot />
     </div>
   );
-}; 
+} 

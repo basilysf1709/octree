@@ -1,79 +1,182 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { Check, X } from 'lucide-react'
 
-const code = [
+const editorStates = [
   {
-    content: '# Project Overview\n\nThis document outlines our approach...',
-    version: 'Initial draft'
+    content: '# Project Overview\n\nOur team is building a new system for handling large-scale data processing...',
+    phase: 'writing',
+    editedContent: null,
+    showAccept: false,
+    statusMessage: 'Writing initial content...'
   },
   {
-    content: '# Project Overview\n\nThis document outlines our new approach to project management...',
-    version: 'Updated introduction'
+    content: '# Project Overview\n\nOur team is building a new system for handling large-scale data processing...',
+    phase: 'ai_thinking',
+    editedContent: null,
+    showAccept: false,
+    statusMessage: 'AI Assistant is analyzing your content...'
   },
   {
-    content: '# Project Overview\n\nThis document outlines our new approach to project management.\n\n## Timeline\nQ1 2024: Planning\nQ2 2024: Implementation',
-    version: 'Added timeline'
+    content: '# Project Overview\n\nOur team is building a new system for handling large-scale data processing...',
+    phase: 'ai_editing',
+    editedContent: 'Our team is developing an innovative solution for processing and analyzing large-scale data with unprecedented efficiency and reliability',
+    editRange: { start: 24, end: 90 },
+    showAccept: false,
+    statusMessage: 'AI Assistant is improving the writing...'
+  },
+  {
+    content: '# Project Overview\n\nOur team is developing an innovative solution for processing and analyzing large-scale data with unprecedented efficiency and reliability...',
+    phase: 'show_accept',
+    editedContent: null,
+    showAccept: true,
+    statusMessage: 'Auto-saving changes...'
+  },
+  {
+    content: '# Project Overview\n\nOur team is developing an innovative solution for processing and analyzing large-scale data with unprecedented efficiency and reliability...',
+    phase: 'complete',
+    editedContent: null,
+    showAccept: false,
+    statusMessage: 'Document saved'
   }
 ]
 
 export function CodeAnimation() {
   const [currentIndex, setCurrentIndex] = useState(0)
   const [currentText, setCurrentText] = useState('')
-  const [showVersion, setShowVersion] = useState(false)
+  const [isTyping, setIsTyping] = useState(true)
 
   useEffect(() => {
     let timeout: NodeJS.Timeout
-    let charIndex = 0
-    const targetText = code[currentIndex].content
+    const currentState = editorStates[currentIndex]
 
-    const typeText = () => {
-      if (charIndex <= targetText.length) {
-        setCurrentText(targetText.slice(0, charIndex))
-        charIndex++
-        timeout = setTimeout(typeText, 50)
-      } else {
-        // Show version tag after typing
+    switch (currentState.phase) {
+      case 'writing':
+        let charIndex = 0
+        const typeText = () => {
+          if (charIndex <= currentState.content.length) {
+            setCurrentText(currentState.content.slice(0, charIndex))
+            charIndex++
+            timeout = setTimeout(typeText, 30)
+          } else {
+            setIsTyping(false)
+            setTimeout(() => {
+              setCurrentIndex(prev => prev + 1)
+            }, 1000)
+          }
+        }
+        typeText()
+        break
+
+      case 'ai_thinking':
         setTimeout(() => {
-          setShowVersion(true)
-          // Move to next version after a delay
-          setTimeout(() => {
-            setShowVersion(false)
-            setCurrentIndex((prev) => (prev + 1) % code.length)
-            charIndex = 0
-          }, 2000)
-        }, 1000)
-      }
+          setCurrentIndex(prev => prev + 1)
+        }, 2000)
+        break
+
+      case 'ai_editing':
+        if (currentState.editedContent && currentState.editRange) {
+          const { start, end } = currentState.editRange
+          let editCharIndex = 0
+          const typeEdit = () => {
+            if (editCharIndex <= currentState.editedContent.length) {
+              const newText = 
+                currentState.content.slice(0, start) +
+                currentState.editedContent.slice(0, editCharIndex) +
+                currentState.content.slice(end)
+              setCurrentText(newText)
+              editCharIndex++
+              timeout = setTimeout(typeEdit, 30)
+            } else {
+              setTimeout(() => {
+                setCurrentIndex(prev => prev + 1)
+              }, 1000)
+            }
+          }
+          typeEdit()
+        }
+        break
+
+      case 'show_accept':
+        setCurrentText(currentState.content)
+        setTimeout(() => {
+          setCurrentIndex(prev => prev + 1)
+        }, 2000)
+        break
+
+      case 'complete':
+        setCurrentText(currentState.content)
+        break
     }
 
-    typeText()
     return () => clearTimeout(timeout)
   }, [currentIndex])
 
+  const renderText = () => {
+    const currentState = editorStates[currentIndex]
+    if (currentState.phase !== 'ai_editing' && !currentState.showAccept) {
+      return currentText
+    }
+
+    if (currentState.editRange) {
+      const { start, end } = currentState.editRange
+      return (
+        <>
+          {currentText.slice(0, start)}
+          <span className="text-green-500 dark:text-green-400">
+            {currentText.slice(start, currentText.length - (currentState.content.length - end))}
+          </span>
+          {currentText.slice(currentText.length - (currentState.content.length - end))}
+        </>
+      )
+    }
+
+    return currentText
+  }
+
   return (
-    <div className="relative font-mono text-sm overflow-hidden rounded-lg border border-border bg-secondary/30 backdrop-blur">
-      {/* Editor Header */}
-      <div className="flex items-center justify-between p-3 border-b border-border bg-background/50">
-        <div className="flex items-center gap-2">
-          <div className="flex gap-1.5">
-            <div className="w-3 h-3 rounded-full bg-red-500/20 border border-red-500/30" />
-            <div className="w-3 h-3 rounded-full bg-yellow-500/20 border border-yellow-500/30" />
-            <div className="w-3 h-3 rounded-full bg-green-500/20 border border-green-500/30" />
+    <div className="relative rounded-lg border border-border overflow-hidden bg-background shadow-2xl">
+      {/* Editor Toolbar */}
+      <div className="flex items-center gap-2 p-2 border-b border-border bg-background/50">
+        <div className="flex items-center gap-1 px-2 py-1 bg-secondary rounded text-sm">
+          document.txt
+        </div>
+        <div className="flex-1" />
+        <div className="flex items-center gap-1">
+          <div className="px-2 py-1 text-xs text-muted-foreground">
+            {editorStates[currentIndex].statusMessage}
           </div>
-          <span className="text-xs text-muted-foreground">document.txt</span>
         </div>
       </div>
 
       {/* Editor Content */}
-      <div className="p-4 min-h-[400px] relative">
-        <pre className="whitespace-pre-wrap break-words">
-          <code>{currentText}</code>
-        </pre>
+      <div className="p-6 min-h-[400px] relative">
+        <div className="prose prose-sm dark:prose-invert max-w-none">
+          <div className="font-mono whitespace-pre-wrap">{renderText()}</div>
+        </div>
 
-        {/* Version Tag */}
-        {showVersion && (
-          <div className="absolute bottom-4 right-4 bg-primary text-primary-foreground px-3 py-1.5 rounded-full text-xs animate-in fade-in slide-in-from-bottom-2">
-            ✓ {code[currentIndex].version}
+        {/* AI Thinking Indicator */}
+        {editorStates[currentIndex].phase === 'ai_thinking' && (
+          <div className="absolute bottom-4 left-6 flex items-center gap-2 bg-primary/10 text-primary px-4 py-2 rounded-lg text-sm">
+            <div className="w-2 h-4 bg-primary animate-pulse" />
+            AI Assistant is analyzing your content to suggest improvements...
+          </div>
+        )}
+
+        {/* AI Editing Indicator */}
+        {editorStates[currentIndex].phase === 'ai_editing' && (
+          <div className="absolute bottom-4 left-6 flex items-center gap-2 bg-primary/10 text-primary px-4 py-2 rounded-lg text-sm">
+            <div className="w-2 h-4 bg-primary animate-pulse" />
+            AI Assistant is enhancing your writing for clarity and impact...
+          </div>
+        )}
+
+        {/* Accept Changes Dialog */}
+        {editorStates[currentIndex].showAccept && (
+          <div className="absolute bottom-4 right-6 flex items-center gap-2 bg-green-500/10 text-green-500 px-4 py-2 rounded-lg text-sm animate-in fade-in slide-in-from-bottom-2">
+            <Check size={16} />
+            AI improvements applied successfully
           </div>
         )}
       </div>

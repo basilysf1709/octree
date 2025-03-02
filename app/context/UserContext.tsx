@@ -2,19 +2,22 @@
 
 import { createContext, useContext, useState, useEffect } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
+import { supabase } from '@/lib/supabase'
 import type { User } from '@/types'
 
 interface AuthContextType {
   user: User | null
   isLoading: boolean
   signIn: (email: string, password: string) => Promise<void>
+  signUp: (email: string, password: string) => Promise<void>
   signOut: () => Promise<void>
 }
 
-const AuthContext = createContext<AuthContextType>({
+export const AuthContext = createContext<AuthContextType>({
   user: null,
   isLoading: true,
   signIn: async () => {},
+  signUp: async () => {},
   signOut: async () => {},
 })
 
@@ -24,53 +27,61 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const pathname = usePathname()
 
-  // Dummy auth methods
-  const signIn = async (email: string, password: string) => {
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    
-    const dummyUser = {
-      id: '1',
-      email,
-      name: email.split('@')[0],
-      avatar: `https://avatar.vercel.sh/${email}`,
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (session?.user) {
+          setUser({
+            id: session.user.id,
+            email: session.user.email!,
+            name: session.user.user_metadata.name || session.user.email!.split('@')[0],
+            avatar: session.user.user_metadata.avatar_url
+          })
+        } else {
+          setUser(null)
+        }
+        setIsLoading(false)
+      }
+    )
+
+    return () => {
+      subscription.unsubscribe()
     }
-    
-    setUser(dummyUser)
-    // Store in localStorage for persistence
-    localStorage.setItem('user', JSON.stringify(dummyUser))
-    router.push('/') // Redirect to home after login
+  }, [])
+
+  const signIn = async (email: string, password: string) => {
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    })
+    if (error) throw error
+    router.push('/documents')
+  }
+
+  const signUp = async (email: string, password: string) => {
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        emailRedirectTo: `${window.location.origin}/auth/callback`
+      }
+    })
+    if (error) throw error
+    // User will need to verify email
+    alert('Please check your email to verify your account')
   }
 
   const signOut = async () => {
-    setUser(null)
-    localStorage.removeItem('user')
+    const { error } = await supabase.auth.signOut()
+    if (error) throw error
     router.push('/login')
   }
-
-  // Check for stored user on mount
-  useEffect(() => {
-    const checkUser = async () => {
-      try {
-        const storedUser = localStorage.getItem('user')
-        if (storedUser) {
-          setUser(JSON.parse(storedUser))
-        }
-      } catch (error) {
-        console.error('Error checking auth state:', error)
-      } finally {
-        setIsLoading(false)
-      }
-    }
-    
-    checkUser()
-  }, [])
 
   // Protected route handling
   useEffect(() => {
     if (!isLoading) {
-      const isAuthPage = pathname === '/login'
-      const isPublicPage = pathname === '/'
+      const isAuthPage = pathname === '/login' || pathname === '/signup'
+      const isPublicPage = pathname === '/' || pathname.includes('/auth/callback')
       
       if (!user && !isAuthPage && !isPublicPage) {
         router.push('/login')
@@ -81,7 +92,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [user, isLoading, pathname, router])
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, signIn, signOut }}>
+    <AuthContext.Provider value={{ user, isLoading, signIn, signUp, signOut }}>
       {children}
     </AuthContext.Provider>
   )

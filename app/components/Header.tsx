@@ -13,7 +13,7 @@ export function Header() {
   const [showUserMenu, setShowUserMenu] = useState(false)
 
   return (
-    <div className="border-b border-border bg-background">
+    <div className="border-b border-border bg-background sticky top-0 z-50">
       <div className="flex items-center justify-between p-4 max-w-7xl mx-auto">
         <Link href="/" className="text-lg font-semibold hover:text-primary flex items-center gap-2">
           <LeafIcon className="w-6 h-6 text-primary" />
@@ -28,7 +28,7 @@ export function Header() {
           </button>
 
           {user && (
-            <div className="relative">
+            <div className="relative z-50">
               <button
                 onClick={() => setShowUserMenu(!showUserMenu)}
                 className="flex items-center gap-2 p-2 hover:bg-secondary rounded-md"

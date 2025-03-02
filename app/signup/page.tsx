@@ -25,8 +25,8 @@ export default function SignUpPage() {
     setIsLoading(true)
     try {
       await signUp(formData.email, formData.password)
-    } catch (error) {
-      alert(error.message)
+    } catch (error: any) {
+      alert(error?.message || 'An error occurred during signup')
     } finally {
       setIsLoading(false)
     }

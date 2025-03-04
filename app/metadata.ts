@@ -1,8 +1,4 @@
-import type { Metadata } from "next";
-import { ThemeProvider } from "./components/ThemeProvider";
-import { AuthProvider } from "./context/UserContext";
-import { AuthLoadingProvider } from "./components/AuthLoadingProvider";
-import "./globals.css";
+import { Metadata } from "next"
 
 export const metadata: Metadata = {
   title: {
@@ -55,29 +51,4 @@ export const metadata: Metadata = {
     },
   },
   manifest: '/site.webmanifest'
-};
-
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
-  return (
-    <html lang="en" suppressHydrationWarning>
-      <head>
-        <link rel="icon" href="/favicon.ico" />
-        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-        <link rel="manifest" href="/site.webmanifest" />
-      </head>
-      <body>
-        <ThemeProvider>
-          <AuthProvider>
-            <AuthLoadingProvider>
-              {children}
-            </AuthLoadingProvider>
-          </AuthProvider>
-        </ThemeProvider>
-      </body>
-    </html>
-  );
-}
+} 

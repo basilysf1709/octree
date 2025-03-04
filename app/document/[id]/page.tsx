@@ -1,28 +1,18 @@
-'use client'
+import { generateMetadata } from '@/utils/metadata'
+import { DocumentPage } from './DocumentPage'
 
-import { DocumentEditor } from '@/components/Editor/DocumentEditor'
-import { DocumentLayout } from '@/components/Editor/DocumentLayout'
-import { DocumentSettings } from '@/components/Editor/DocumentSettings'
-import { use } from 'react'
+export const metadata = generateMetadata({
+  title: 'Document Editor',
+  description: 'Write and collaborate on documents with version control and AI assistance.',
+  noIndex: true // Protect document pages from indexing
+})
 
-const dummyContent = {
-  'a8f2e4d1': 'Project Documentation\n\nThis is a sample project documentation with some content...',
-  'b7c9d3e5': 'Meeting Notes\n\nAttendees: John, Sarah, Mike\nTopics discussed: Project timeline, resource allocation...',
-  'f5e2d9c4': 'Research Paper\n\nAbstract\nThis paper explores the implications of...',
-  'k2j8h6g4': 'Product Roadmap\n\nQ1 2024\n- Feature A launch\n- Infrastructure improvements...',
+interface PageProps {
+  params: Promise<{ id: string }>
+  searchParams: { [key: string]: string | string[] | undefined }
 }
 
-export default function DocumentPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = use(params)
-  
-  return (
-    <DocumentLayout
-      actions={<DocumentSettings showBlame={false} onBlameToggle={() => {}} />}
-    >
-      <DocumentEditor 
-        documentId={id}
-        initialContent={dummyContent[id as keyof typeof dummyContent]} 
-      />
-    </DocumentLayout>
-  )
+export default async function Page({ params }: PageProps) {
+  const resolvedParams = await params
+  return <DocumentPage params={resolvedParams} />
 } 

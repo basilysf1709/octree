@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Header } from '@/components/Header'
 import { ChevronDown, Send, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { Button } from '@/components/ui/button'
 
 const FAQs = [
   {
@@ -54,11 +55,11 @@ export default function HelpPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen flex flex-col bg-background">
       <Header />
       
-      <main className="max-w-4xl mx-auto p-8">
-        <div className="space-y-8">
+      <main className="flex-1 container max-w-4xl mx-auto p-8">
+        <div className="space-y-12">
           <div>
             <h1 className="text-3xl font-bold">Help & Support</h1>
             <p className="text-muted-foreground mt-2">
@@ -67,29 +68,29 @@ export default function HelpPage() {
           </div>
 
           {/* FAQ Accordion */}
-          <div className="space-y-4">
-            <h2 className="text-xl font-semibold">Frequently Asked Questions</h2>
-            <div className="space-y-2">
+          <div className="space-y-6">
+            <h2 className="text-2xl font-semibold">Frequently Asked Questions</h2>
+            <div className="space-y-3">
               {FAQs.map((faq, index) => (
                 <div
                   key={index}
-                  className="border border-border rounded-lg overflow-hidden"
+                  className="border border-border rounded-lg overflow-hidden bg-card"
                 >
                   <button
                     onClick={() => setOpenFAQ(openFAQ === index ? null : index)}
-                    className="w-full flex items-center justify-between p-4 text-left hover:bg-secondary/50"
+                    className="w-full flex items-center justify-between p-4 text-left hover:bg-muted/50 transition-colors"
                   >
                     <span className="font-medium">{faq.question}</span>
                     <ChevronDown
                       size={18}
                       className={cn(
-                        "transition-transform",
+                        "text-muted-foreground transition-transform duration-200",
                         openFAQ === index && "rotate-180"
                       )}
                     />
                   </button>
                   {openFAQ === index && (
-                    <div className="p-4 pt-0 text-muted-foreground">
+                    <div className="px-4 pb-4 text-muted-foreground">
                       {faq.answer}
                     </div>
                   )}
@@ -99,8 +100,8 @@ export default function HelpPage() {
           </div>
 
           {/* Feedback Form */}
-          <div className="space-y-4">
-            <h2 className="text-xl font-semibold">Send Feedback</h2>
+          <div className="space-y-6">
+            <h2 className="text-2xl font-semibold">Send Feedback</h2>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label htmlFor="subject" className="block text-sm font-medium mb-2">
@@ -111,7 +112,7 @@ export default function HelpPage() {
                   type="text"
                   value={feedback.subject}
                   onChange={(e) => setFeedback({ ...feedback, subject: e.target.value })}
-                  className="w-full p-3 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors"
+                  className="w-full p-3 rounded-lg border border-border bg-card focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors"
                   required
                 />
               </div>
@@ -123,14 +124,14 @@ export default function HelpPage() {
                   id="message"
                   value={feedback.message}
                   onChange={(e) => setFeedback({ ...feedback, message: e.target.value })}
-                  className="w-full p-3 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors min-h-[150px]"
+                  className="w-full p-3 rounded-lg border border-border bg-card focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors min-h-[150px]"
                   required
                 />
               </div>
-              <button
+              <Button
                 type="submit"
                 disabled={isLoading}
-                className="px-4 py-2 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors disabled:opacity-70 flex items-center"
+                className="flex items-center"
               >
                 {isLoading ? (
                   <>
@@ -143,7 +144,7 @@ export default function HelpPage() {
                     Send Feedback
                   </>
                 )}
-              </button>
+              </Button>
             </form>
           </div>
         </div>

@@ -1,16 +1,28 @@
 'use client'
 
 import { useTheme } from 'next-themes'
-import { Moon, Sun, ChevronDown, Settings, User, HelpCircle, LogOut } from 'lucide-react'
+import { Moon, Sun, ChevronDown, User, HelpCircle, LogOut, Settings } from 'lucide-react'
 import Link from 'next/link'
 import { LeafIcon } from './LeafIcon'
 import { useAuth } from '@/context/UserContext'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 export function Header() {
   const { theme, setTheme } = useTheme()
   const { user, signOut } = useAuth()
   const [showUserMenu, setShowUserMenu] = useState(false)
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const menu = document.getElementById('user-menu')
+      if (menu && !menu.contains(event.target as Node)) {
+        setShowUserMenu(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
 
   return (
     <div className="border-b border-border bg-background sticky top-0 z-50">
@@ -41,7 +53,7 @@ export function Header() {
               </button>
 
               {showUserMenu && (
-                <div className="absolute right-0 mt-2 w-56 bg-background border border-border rounded-lg shadow-lg overflow-hidden">
+                <div id="user-menu" className="absolute right-0 mt-2 w-56 bg-background border border-border rounded-lg shadow-lg overflow-hidden">
                   <div className="p-2 border-b border-border">
                     <div className="px-3 py-2">
                       <p className="font-medium">{user.name}</p>

@@ -3,25 +3,25 @@ import { MetadataRoute } from 'next'
 export default function sitemap(): MetadataRoute.Sitemap {
   return [
     {
-      url: 'https://octree.com',
+      url: 'https://useoctree.com',
       lastModified: new Date(),
       changeFrequency: 'yearly',
       priority: 1,
     },
     {
-      url: 'https://octree.com/help',
+      url: 'https://useoctree.com/help',
       lastModified: new Date(),
       changeFrequency: 'monthly',
       priority: 0.8,
     },
     {
-      url: 'https://octree.com/login',
+      url: 'https://useoctree.com/login',
       lastModified: new Date(),
       changeFrequency: 'yearly',
       priority: 0.5,
     },
     {
-      url: 'https://octree.com/signup',
+      url: 'https://useoctree.com/signup',
       lastModified: new Date(),
       changeFrequency: 'yearly',
       priority: 0.5,

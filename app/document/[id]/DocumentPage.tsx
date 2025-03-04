@@ -1,29 +1,68 @@
 'use client'
 
-import { DocumentEditor } from '@/components/Editor/DocumentEditor'
-import { DocumentLayout } from '@/components/Editor/DocumentLayout'
-import { DocumentSettings } from '@/components/Editor/DocumentSettings'
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { AuthStatus } from '@/components/AuthStatus'
 
-const dummyContent = {
-  'a8f2e4d1': 'Project Documentation\n\nThis is a sample project documentation with some content...',
-  'b7c9d3e5': 'Meeting Notes\n\nAttendees: John, Sarah, Mike\nTopics discussed: Project timeline, resource allocation...',
-  'f5e2d9c4': 'Research Paper\n\nAbstract\nThis paper explores the implications of...',
-  'k2j8h6g4': 'Product Roadmap\n\nQ1 2024\n- Feature A launch\n- Infrastructure improvements...',
-}
+export function DocumentPage({ params }: { params: { id: string } }) {
+  const router = useRouter()
+  const [name, setName] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
-interface DocumentPageProps {
-  params: { id: string }
-}
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsLoading(true)
+    setError(null)
+    
+    try {
+      const res = await fetch('/api/documents', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name })
+      })
 
-export function DocumentPage({ params }: DocumentPageProps) {
+      if (!res.ok) {
+        const errorData = await res.json()
+        throw new Error(errorData.error || 'Failed to create document')
+      }
+
+      const data = await res.json()
+      router.push(`/document/${data.id}`)
+    } catch (error) {
+      console.error('Error:', error)
+      setError(error instanceof Error ? error.message : 'An unknown error occurred')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   return (
-    <DocumentLayout
-      actions={<DocumentSettings showBlame={false} onBlameToggle={() => {}} />}
-    >
-      <DocumentEditor 
-        documentId={params.id}
-        initialContent={dummyContent[params.id as keyof typeof dummyContent]} 
-      />
-    </DocumentLayout>
+    <div className="max-w-4xl mx-auto p-4">
+      <AuthStatus />
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <h1 className="text-2xl font-bold">Create New Document</h1>
+        {error && (
+          <div className="p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+            {error}
+          </div>
+        )}
+        <input
+          type="text"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="Document Name"
+          className="w-full p-2 border rounded"
+          required
+        />
+        <button
+          type="submit"
+          disabled={isLoading}
+          className="px-4 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90 disabled:opacity-50"
+        >
+          {isLoading ? 'Creating...' : 'Create Document'}
+        </button>
+      </form>
+    </div>
   )
 } 

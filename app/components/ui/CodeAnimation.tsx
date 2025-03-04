@@ -22,7 +22,7 @@ const editorStates = [
     content: '# Project Overview\n\nOur team is building a new system for handling large-scale data processing...',
     phase: 'ai_editing',
     editedContent: 'Our team is developing an innovative solution for processing and analyzing large-scale data with unprecedented efficiency and reliability',
-    editRange: { start: 24, end: 90 },
+    editRange: { start: 20, end: 94 },
     showAccept: false,
     statusMessage: 'AI Assistant is improving the writing...'
   },

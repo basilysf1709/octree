@@ -1,18 +1,25 @@
-import { generateMetadata } from '@/utils/metadata'
-import { DocumentPage } from './DocumentPage'
+'use client'
 
-export const metadata = generateMetadata({
-  title: 'Document Editor',
-  description: 'Write and collaborate on documents with version control and AI assistance.',
-  noIndex: true // Protect document pages from indexing
-})
+import { use } from 'react'
+import { DocumentEditor } from '@/components/Editor/DocumentEditor'
+import { DocumentLayout } from '@/components/Editor/DocumentLayout'
+import { DocumentSettings } from '@/components/Editor/DocumentSettings'
 
 interface PageProps {
   params: Promise<{ id: string }>
-  searchParams: Promise<{ [key: string]: string | string[] | undefined }>
+  searchParams: { [key: string]: string | string[] | undefined }
 }
 
-export default async function Page({ params, searchParams }: PageProps) {
-  const resolvedParams = await params
-  return <DocumentPage params={resolvedParams} />
+export default function Page({ params }: PageProps) {
+  const resolvedParams = use(params)
+  
+  return (
+    <DocumentLayout
+      actions={<DocumentSettings showBlame={false} onBlameToggle={() => {}} />}
+    >
+      <DocumentEditor 
+        documentId={resolvedParams.id}
+      />
+    </DocumentLayout>
+  )
 } 

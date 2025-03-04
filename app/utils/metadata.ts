@@ -11,7 +11,7 @@ export function generateMetadata({
   path?: string
   noIndex?: boolean
 }): Metadata {
-  const baseUrl = 'https://octree.com' // Replace with your domain
+  const baseUrl = 'https://useoctree.com' // Replace with your domain
 
   return {
     title: title ? `${title} | Octree` : undefined,

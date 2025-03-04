@@ -1,24 +1,19 @@
 'use client'
 
-import { use } from 'react'
+import { useParams } from 'next/navigation'
 import { DocumentEditor } from '@/components/Editor/DocumentEditor'
 import { DocumentLayout } from '@/components/Editor/DocumentLayout'
 import { DocumentSettings } from '@/components/Editor/DocumentSettings'
 
-interface PageProps {
-  params: Promise<{ id: string }>
-  searchParams: { [key: string]: string | string[] | undefined }
-}
-
-export default function Page({ params }: PageProps) {
-  const resolvedParams = use(params)
+export default function Page() {
+  const params = useParams<{ id: string }>()
   
   return (
     <DocumentLayout
       actions={<DocumentSettings showBlame={false} onBlameToggle={() => {}} />}
     >
       <DocumentEditor 
-        documentId={resolvedParams.id}
+        documentId={params.id}
       />
     </DocumentLayout>
   )

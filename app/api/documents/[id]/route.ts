@@ -1,12 +1,12 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { createServerComponentClient } from '@supabase/auth-helpers-nextjs'
 
 export async function DELETE(
-  request: Request,
-  { params }: { params: { id: string } }
+  request: NextRequest,
 ) {
   try {
+    const id = request.url.split('/').pop()
     const supabase = createServerComponentClient({ cookies })
     
     // Verify user is authenticated
@@ -20,7 +20,7 @@ export async function DELETE(
     const { error: deleteError } = await supabase
       .from('documents')
       .delete()
-      .eq('id', params.id)
+      .eq('id', id)
       .eq('author_id', user.id) // Ensure user owns the document
       .single()
 

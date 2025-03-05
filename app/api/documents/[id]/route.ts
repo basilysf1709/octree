@@ -24,8 +24,7 @@ export async function DELETE(
       .eq('id', id)
       .eq('author_id', user.id) // Ensure user owns the document
       .single()
-
-    console.log('res', res)
+    
     if (res.error) {
       return NextResponse.json({ error: res.error.message }, { status: 400 })
     }

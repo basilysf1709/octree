@@ -7,6 +7,7 @@ export async function DELETE(
 ) {
   try {
     const id = request.url.split('/').pop()
+    console.log('id', id)
     const supabase = createServerComponentClient({ cookies })
     
     // Verify user is authenticated
@@ -17,15 +18,16 @@ export async function DELETE(
     }
     
     // Delete the document
-    const { error: deleteError } = await supabase
+    const res = await supabase
       .from('documents')
       .delete()
       .eq('id', id)
       .eq('author_id', user.id) // Ensure user owns the document
       .single()
 
-    if (deleteError) {
-      return NextResponse.json({ error: deleteError.message }, { status: 400 })
+    console.log('res', res)
+    if (res.error) {
+      return NextResponse.json({ error: res.error.message }, { status: 400 })
     }
 
     return NextResponse.json({ success: true })

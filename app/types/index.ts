@@ -4,8 +4,9 @@ export interface Document {
   id: string
   name: string
   content: string
-  lastEdited: string
-  authorId: string
+  author_id: string
+  created_at: string
+  last_edited: string
 }
 
 export interface Version {

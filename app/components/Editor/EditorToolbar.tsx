@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useCallback } from 'react'
+import React, { useState, useCallback, useEffect } from 'react'
 import { 
   Bold, Italic, Underline, AlignLeft, AlignCenter, 
   AlignRight, Share, Type, ChevronDown, History,
@@ -36,173 +36,73 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({ onShowSidebar, doc
   const { theme } = useTheme()
 
   const execCommand = useCallback((command: string, value?: string) => {
+    // @ts-ignore - execCommand is still widely supported despite deprecation
     document.execCommand(command, false, value)
   }, [])
 
-  const handleFormat = (format: string, value?: string) => {
-    execCommand(format, value)
-  }
+  const buttonClass = 'p-1.5 hover:bg-secondary rounded'
 
-  const handleLink = () => {
-    const url = prompt('Enter URL:')
-    if (url) {
-      execCommand('createLink', url)
+  const handleHeadingClick = useCallback(() => {
+    const selection = window.getSelection()
+    if (!selection?.rangeCount) return
+
+    const range = selection.getRangeAt(0)
+    const parentElement = range.commonAncestorContainer.parentElement
+
+    if (parentElement?.tagName.match(/^H[1-6]$/)) {
+      document.execCommand('formatBlock', false, 'p')
+    } else {
+      document.execCommand('formatBlock', false, 'h1')
     }
-  }
-
-  const handleImage = () => {
-    const url = prompt('Enter image URL:')
-    if (url) {
-      execCommand('insertImage', url)
-    }
-  }
-
-  const handleTable = () => {
-    const html = `
-      <table class="border-collapse border border-border w-full">
-        <tr>
-          <td class="border border-border p-2">Cell 1</td>
-          <td class="border border-border p-2">Cell 2</td>
-        </tr>
-        <tr>
-          <td class="border border-border p-2">Cell 3</td>
-          <td class="border border-border p-2">Cell 4</td>
-        </tr>
-      </table>
-    `
-    execCommand('insertHTML', html)
-  }
-
-  const handleHeading = () => {
-    execCommand('formatBlock', '<h2>')
-  }
-
-  const handleQuote = () => {
-    execCommand('formatBlock', '<blockquote>')
-  }
-
-  const handleCodeBlock = () => {
-    const html = '<pre><code>// Your code here</code></pre>'
-    execCommand('insertHTML', html)
-  }
-
-  const getContent = useCallback(() => {
-    const editorContent = document.querySelector('[contenteditable]')
-    return editorContent?.innerHTML || ''
   }, [])
 
   return (
     <div className="border-b border-border bg-background sticky top-0 z-10">
       <div className="flex items-center p-2 gap-2 max-w-[1200px] mx-auto">
         <div className="flex items-center gap-1 border-r border-border pr-2">
-          <button
-            className="p-1.5 hover:bg-secondary rounded"
-            onClick={() => handleFormat('bold')}
-            title="Bold"
-          >
+          <button className={buttonClass} onClick={() => execCommand('bold')} title="Bold">
             <Bold size={18} />
           </button>
-          <button
-            className="p-1.5 hover:bg-secondary rounded"
-            onClick={() => handleFormat('italic')}
-            title="Italic"
-          >
+          <button className={buttonClass} onClick={() => execCommand('italic')} title="Italic">
             <Italic size={18} />
           </button>
-          <button
-            className="p-1.5 hover:bg-secondary rounded"
-            onClick={() => handleFormat('underline')}
-            title="Underline"
-          >
+          <button className={buttonClass} onClick={() => execCommand('underline')} title="Underline">
             <Underline size={18} />
           </button>
         </div>
 
         <div className="flex items-center gap-1 border-r border-border pr-2">
-          <button
-            className="p-1.5 hover:bg-secondary rounded"
-            onClick={() => handleFormat('justifyLeft')}
-            title="Align Left"
-          >
+          <button className={buttonClass} onClick={() => execCommand('justifyLeft')} title="Align Left">
             <AlignLeft size={18} />
           </button>
-          <button
-            className="p-1.5 hover:bg-secondary rounded"
-            onClick={() => handleFormat('justifyCenter')}
-            title="Align Center"
-          >
+          <button className={buttonClass} onClick={() => execCommand('justifyCenter')} title="Align Center">
             <AlignCenter size={18} />
           </button>
-          <button
-            className="p-1.5 hover:bg-secondary rounded"
-            onClick={() => handleFormat('justifyRight')}
-            title="Align Right"
-          >
+          <button className={buttonClass} onClick={() => execCommand('justifyRight')} title="Align Right">
             <AlignRight size={18} />
           </button>
         </div>
 
         <div className="flex items-center gap-1 border-r border-border pr-2">
-          <button
-            className="p-1.5 hover:bg-secondary rounded"
-            onClick={() => handleFormat('insertUnorderedList')}
-            title="Bullet List"
-          >
-            <List size={18} />
+          <button className={buttonClass} onClick={handleHeadingClick} title="Heading">
+            <span className="text-lg">H</span>
           </button>
-          <button
-            className="p-1.5 hover:bg-secondary rounded"
-            onClick={() => handleFormat('insertOrderedList')}
-            title="Numbered List"
-          >
-            <ListOrdered size={18} />
-          </button>
-        </div>
-
-        <div className="flex items-center gap-1 border-r border-border pr-2">
-          <button
-            className="p-1.5 hover:bg-secondary rounded"
-            onClick={handleHeading}
-            title="Heading"
-          >
-            <Heading2 size={18} />
-          </button>
-          <button
-            className="p-1.5 hover:bg-secondary rounded"
-            onClick={handleQuote}
-            title="Quote"
-          >
+          <button className={buttonClass} onClick={() => execCommand('formatBlock', '<blockquote>')} title="Quote">
             <Quote size={18} />
           </button>
-          <button
-            className="p-1.5 hover:bg-secondary rounded"
-            onClick={handleCodeBlock}
-            title="Code Block"
-          >
+          <button className={buttonClass} onClick={() => execCommand('formatBlock', '<pre><code>// Your code here</code></pre>')} title="Code Block">
             <Code size={18} />
           </button>
         </div>
 
         <div className="flex items-center gap-1 border-r border-border pr-2">
-          <button
-            className="p-1.5 hover:bg-secondary rounded"
-            onClick={handleLink}
-            title="Insert Link"
-          >
+          <button className={buttonClass} onClick={() => execCommand('createLink')} title="Insert Link">
             <Link2 size={18} />
           </button>
-          <button
-            className="p-1.5 hover:bg-secondary rounded"
-            onClick={handleImage}
-            title="Insert Image"
-          >
+          <button className={buttonClass} onClick={() => execCommand('insertImage')} title="Insert Image">
             <ImageIcon size={18} />
           </button>
-          <button
-            className="p-1.5 hover:bg-secondary rounded"
-            onClick={handleTable}
-            title="Insert Table"
-          >
+          <button className={buttonClass} onClick={() => execCommand('insertHTML', '<table class="border-collapse border border-border w-full"><tr><td class="border border-border p-2">Cell 1</td><td class="border border-border p-2">Cell 2</td></tr><tr><td class="border border-border p-2">Cell 3</td><td class="border border-border p-2">Cell 4</td></tr></table>')} title="Insert Table">
             <Table size={18} />
           </button>
         </div>
@@ -224,7 +124,7 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({ onShowSidebar, doc
                   key={color.name}
                   className="flex items-center gap-2 w-full p-2 hover:bg-secondary rounded"
                   onClick={() => {
-                    handleFormat('foreColor', color.color)
+                    execCommand('foreColor', color.color)
                     setShowColorPicker(false)
                   }}
                 >
@@ -239,6 +139,15 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({ onShowSidebar, doc
           )}
         </div>
 
+        <div className="flex items-center gap-1 border-r border-border pr-2">
+          <button className={buttonClass} onClick={() => execCommand('insertUnorderedList')} title="Bullet List">
+            <List size={18} />
+          </button>
+          <button className={buttonClass} onClick={() => execCommand('insertOrderedList')} title="Numbered List">
+            <ListOrdered size={18} />
+          </button>
+        </div>
+
         <div className="flex-1" />
 
         <CollaboratorDropdown documentId={documentId} />
@@ -251,7 +160,7 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({ onShowSidebar, doc
           <History size={18} />
         </button>
 
-        <ExportDropdown getContent={getContent} />
+        <ExportDropdown getContent={() => document.querySelector('[contenteditable]')?.innerHTML || ''} />
       </div>
     </div>
   )

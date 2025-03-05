@@ -24,6 +24,7 @@ export function DocumentEditor({ documentId, initialContent = '' }: DocumentEdit
   const [showSidebar, setShowSidebar] = useState(false);
   const [showBlame, setShowBlame] = useState(false);
   const editorRef = useRef<HTMLDivElement>(null);
+  const [hasStartedTyping, setHasStartedTyping] = useState(false);
   
   useEffect(() => {
     if (editorRef.current && initialContent) {
@@ -31,8 +32,18 @@ export function DocumentEditor({ documentId, initialContent = '' }: DocumentEdit
     }
   }, [initialContent]);
 
+  useEffect(() => {
+    if (content && !hasStartedTyping) {
+      setHasStartedTyping(true);
+    }
+  }, [content]);
+
   const handleInput = (e: React.FormEvent<HTMLDivElement>) => {
-    setContent(e.currentTarget.textContent || '');
+    const newContent = e.currentTarget.innerHTML;
+    setContent(newContent);
+    if (!hasStartedTyping && newContent !== '<br>') {
+      setHasStartedTyping(true);
+    }
   };
 
   return (

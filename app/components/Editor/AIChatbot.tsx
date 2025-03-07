@@ -2,38 +2,33 @@
 
 import { useRef, useState, useEffect } from 'react'
 import { Bot, MessageSquare, Send, User, X } from 'lucide-react'
-import { Message, useChat } from 'ai/react'
+import { useChat } from '@ai-sdk/react'
 import { cn } from '@/lib/utils'
 
-interface AIChatbotProps {
-  documentContent: string;
-  onUpdateContent: (newContent: string) => void;
-}
-
-export function AIChatbot({ documentContent, onUpdateContent }: AIChatbotProps) {
+export function AIChatbot() {
   const [isOpen, setIsOpen] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   const { messages, input, handleInputChange, handleSubmit, isLoading } = useChat({
-    api: '/api/ai',
+    api: '/api/chat',
     body: {
-      documentContent
+      debug: true
     },
-    onFinish: (message: Message) => {
-      // Check if the response contains document edits
-      if (message.content.includes('EDIT_DOCUMENT:')) {
-        const newContent = message.content.split('EDIT_DOCUMENT:')[1].trim()
-        onUpdateContent(newContent)
-      }
+    onResponse: (response) => {
+      console.log('Request made:', response)
     }
   })
 
+  // Log state changes
+  useEffect(() => {
+  }, [messages, isLoading])
+
   // Scroll to bottom when messages change
-  const scrollToBottom = () => {
+  useEffect(() => {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' })
     }
-  }
+  }, [messages])
 
   // Add keyboard shortcut
   useEffect(() => {
@@ -47,6 +42,13 @@ export function AIChatbot({ documentContent, onUpdateContent }: AIChatbotProps) 
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
   }, [])
+
+  // Add this to debug form submission
+  const handleFormSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    console.log('Submitting message:', input)
+    await handleSubmit(e)
+  }
 
   return (
     <>
@@ -64,7 +66,7 @@ export function AIChatbot({ documentContent, onUpdateContent }: AIChatbotProps) 
               <Bot size={18} />
             </div>
             <div className="flex-1">
-              <h3 className="font-semibold">AI Assistant</h3>
+              <h3 className="font-semibold">Octra</h3>
               <p className="text-xs text-muted-foreground">Helping improve your document</p>
             </div>
             <button
@@ -109,7 +111,16 @@ export function AIChatbot({ documentContent, onUpdateContent }: AIChatbotProps) 
             <div ref={messagesEndRef} />
           </div>
 
-          <form onSubmit={handleSubmit} className="p-4 border-t border-border">
+          <form onSubmit={handleFormSubmit} className="p-4 border-t border-border">
+            {isLoading && !messages.some(m => 
+              m.role === 'assistant' && m.content === ''
+            ) && (
+              <div className="flex items-center gap-1.5 mb-2 text-xs text-muted-foreground">
+                <Bot size={12} className="animate-pulse" />
+                <span>Octra is thinking...</span>
+              </div>
+            )}
+
             <div className="flex items-center gap-2">
               <input
                 value={input}

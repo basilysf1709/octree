@@ -108,8 +108,6 @@ export function Editor({ documentId, onShowSidebar }: EditorProps) {
       </div>
       
       <AIChatbot 
-        documentContent={editorRef.current?.innerHTML || ''} 
-        onUpdateContent={handleAIUpdate}
       />
 
       {error && (

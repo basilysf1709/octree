@@ -103,8 +103,6 @@ export function DocumentEditor({ documentId, initialContent = '' }: DocumentEdit
       </div>
 
       <AIChatbot 
-        documentContent={content} 
-        onUpdateContent={setContent}
       />
     </div>
   );

@@ -1,12 +1,15 @@
 'use client'
 
 import { useRef, useState, useEffect } from 'react'
-import { Bot, MessageSquare, Send, User, X } from 'lucide-react'
+import { Bot, MessageSquare, Send, User, X, Plus } from 'lucide-react'
 import { useChat } from '@ai-sdk/react'
 import { cn } from '@/lib/utils'
+import { useRouter } from 'next/navigation'
 
 export function AIChatbot() {
+  const router = useRouter()
   const [isOpen, setIsOpen] = useState(false)
+  const [chatCompleted, setChatCompleted] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   const { messages, input, handleInputChange, handleSubmit, isLoading } = useChat({
@@ -16,6 +19,10 @@ export function AIChatbot() {
     },
     onResponse: (response) => {
       console.log('Request made:', response)
+    },
+    onFinish: () => {
+      // Set chat as completed when AI finishes responding
+      setChatCompleted(true)
     }
   })
 
@@ -108,6 +115,19 @@ export function AIChatbot() {
                 )}
               </div>
             ))}
+            
+            {chatCompleted && (
+              <div className="flex justify-center mt-4">
+                <button
+                  onClick={() => router.push('/document/new')}
+                  className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
+                >
+                  <Plus size={16} />
+                  Start New Document
+                </button>
+              </div>
+            )}
+            
             <div ref={messagesEndRef} />
           </div>
 

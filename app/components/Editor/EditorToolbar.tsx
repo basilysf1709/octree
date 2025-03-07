@@ -102,9 +102,6 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({ onShowSidebar, doc
           <button className={buttonClass} onClick={() => execCommand('insertImage')} title="Insert Image">
             <ImageIcon size={18} />
           </button>
-          <button className={buttonClass} onClick={() => execCommand('insertHTML', '<table class="border-collapse border border-border w-full"><tr><td class="border border-border p-2">Cell 1</td><td class="border border-border p-2">Cell 2</td></tr><tr><td class="border border-border p-2">Cell 3</td><td class="border border-border p-2">Cell 4</td></tr></table>')} title="Insert Table">
-            <Table size={18} />
-          </button>
         </div>
 
         <div className="relative">

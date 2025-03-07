@@ -17,6 +17,7 @@ export function useDocument(id: string) {
   // Fetch initial document
   useEffect(() => {
     async function fetchDocument() {
+      console.log('Fetching document:', id)
       try {
         const { data, error } = await supabase
           .from('documents')
@@ -25,6 +26,7 @@ export function useDocument(id: string) {
           .single()
 
         if (error) throw error
+        console.log('Fetched document:', data)
         setDocument(data)
       } catch (err) {
         console.error('Error fetching document:', err)
@@ -35,43 +37,51 @@ export function useDocument(id: string) {
     }
 
     fetchDocument()
-  }, [id])
+  }, [id, supabase])
 
   // Debounced save function
   const saveDocument = debounce(async (content: string) => {
+    console.log('Save triggered', { id, contentLength: content.length })
     setIsSaving(true)
     try {
-      console.log('Saving document...', { id, content }) // Debug log
-
-      const { error: updateError } = await supabase
+      const { data, error: updateError } = await supabase
         .from('documents')
-        .update({ content })
+        .update({ 
+          content,
+          last_edited: new Date().toISOString()
+        })
         .eq('id', id)
+        .select()
 
       if (updateError) {
         console.error('Error updating document:', updateError)
         throw updateError
       }
 
-      // Create new version every X saves
-      saveCounter.current += 1
-      if (saveCounter.current % CONSTANTS.VERSION_SAVE_INTERVAL === 0) {
-        const { error: versionError } = await supabase
-          .from('versions')
-          .insert({
-            document_id: id,
-            content,
-            version_number: Math.floor(saveCounter.current / CONSTANTS.VERSION_SAVE_INTERVAL)
-          })
+      console.log('Save successful:', data)
+      
+      // Update local state with the response
+      if (data?.[0]) {
+        setDocument(data[0] as Document)
+        // Increment save counter for versioning
+        saveCounter.current += 1
+        
+        // Create new version every X saves
+        if (saveCounter.current % CONSTANTS.VERSION_SAVE_INTERVAL === 0) {
+          console.log('Creating new version')
+          const { error: versionError } = await supabase
+            .from('versions')
+            .insert({
+              document_id: id,
+              content,
+              version_number: Math.floor(saveCounter.current / CONSTANTS.VERSION_SAVE_INTERVAL)
+            })
 
-        if (versionError) {
-          console.error('Error creating version:', versionError)
-          throw versionError
+          if (versionError) {
+            console.error('Error creating version:', versionError)
+          }
         }
       }
-
-      // Update local state
-      setDocument(prev => prev ? { ...prev, content } : null)
 
     } catch (err) {
       console.error('Error saving document:', err)

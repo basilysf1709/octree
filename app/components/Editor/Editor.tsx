@@ -1,9 +1,10 @@
 'use client'
 
-import { useCallback, useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { EditorToolbar } from './EditorToolbar'
 import { useDocument } from '@/hooks/useDocument'
 import { Loader2 } from 'lucide-react'
+import { AIChatbot } from './AIChatbot'
 
 interface EditorProps {
   documentId: string
@@ -12,19 +13,46 @@ interface EditorProps {
 
 export function Editor({ documentId, onShowSidebar }: EditorProps) {
   const editorRef = useRef<HTMLDivElement>(null)
-  const { document, isLoading, isSaving, saveDocument } = useDocument(documentId)
+  const { document, isLoading, isSaving, error, saveDocument } = useDocument(documentId)
+  const [hasContent, setHasContent] = useState(false)
 
-  const handleInput = useCallback(() => {
+  const handleInput = useCallback((e: React.FormEvent<HTMLDivElement>) => {
     if (editorRef.current) {
       const content = editorRef.current.innerHTML
-      console.log('Content changed, saving...', content.slice(0, 100)) // Debug log
+      
+      // Only skip empty or single <br> content
+      if (!content || content === '<br>' || content === '&nbsp;') {
+        setHasContent(false)
+        return
+      }
+      
+      setHasContent(true)
+      console.log('Input event triggered', { 
+        contentLength: content.length,
+        preview: content.slice(0, 100),
+        documentId
+      })
       saveDocument(content)
     }
-  }, [saveDocument])
+  }, [saveDocument, documentId])
 
+  const handleAIUpdate = (newContent: string) => {
+    if (editorRef.current) {
+      editorRef.current.innerHTML = newContent;
+      saveDocument(newContent);
+    }
+  };
+
+  // Set initial content
   useEffect(() => {
-    if (editorRef.current && document?.content) {
-      editorRef.current.innerHTML = document.content
+    if (editorRef.current) {
+      if (document?.content) {
+        editorRef.current.innerHTML = document.content
+        setHasContent(true)
+      } else {
+        editorRef.current.innerHTML = ''
+        setHasContent(false)
+      }
     }
   }, [document])
 
@@ -34,6 +62,19 @@ export function Editor({ documentId, onShowSidebar }: EditorProps) {
       if (editorRef.current) {
         saveDocument.flush() // Forces any pending save
       }
+    }
+  }, [saveDocument])
+
+  // Add onBlur handler to ensure we catch all changes
+  useEffect(() => {
+    const editor = editorRef.current
+    if (editor) {
+      const handleBlur = () => {
+        console.log('Editor blur - forcing save')
+        saveDocument.flush() // Force any pending saves
+      }
+      editor.addEventListener('blur', handleBlur)
+      return () => editor.removeEventListener('blur', handleBlur)
     }
   }, [saveDocument])
 
@@ -50,13 +91,32 @@ export function Editor({ documentId, onShowSidebar }: EditorProps) {
         <div className="max-w-[900px] mx-auto p-8">
           <div
             ref={editorRef}
-            className="min-h-[calc(100vh-200px)] outline-none prose prose-sm dark:prose-invert max-w-none"
+            className={`
+              min-h-[calc(100vh-200px)] 
+              outline-none 
+              prose 
+              prose-sm 
+              dark:prose-invert 
+              max-w-none
+              ${!hasContent ? 'before:content-["Start_typing..."] before:text-muted-foreground' : ''}
+            `}
             contentEditable
             onInput={handleInput}
             suppressContentEditableWarning
           />
         </div>
       </div>
+      
+      <AIChatbot 
+        documentContent={editorRef.current?.innerHTML || ''} 
+        onUpdateContent={handleAIUpdate}
+      />
+
+      {error && (
+        <div className="fixed bottom-4 right-4 bg-destructive/10 text-destructive px-3 py-1.5 rounded-md text-sm">
+          Error saving: {error.message}
+        </div>
+      )}
       {isSaving && (
         <div className="fixed bottom-4 right-4 bg-secondary px-3 py-1.5 rounded-md text-sm">
           Saving...

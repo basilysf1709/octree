@@ -46,6 +46,13 @@ export function DocumentEditor({ documentId, initialContent = '' }: DocumentEdit
     }
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === 'Enter' && e.metaKey) {
+      e.preventDefault();
+      // Handle link insertion
+    }
+  };
+
   return (
     <div className="flex flex-col h-[calc(100vh-64px)]">
       <EditorToolbar 
@@ -71,11 +78,19 @@ export function DocumentEditor({ documentId, initialContent = '' }: DocumentEdit
               )}
               <div
                 ref={editorRef}
-                className="prose dark:prose-invert max-w-none min-h-[calc(100vh-8rem)]"
+                className="prose dark:prose-invert max-w-none h-full"
                 contentEditable
                 suppressContentEditableWarning
                 onInput={handleInput}
+                onKeyDown={handleKeyDown}
                 style={{ outline: 'none' }}
+                onMouseDown={(e) => {
+                  // Allow clicking links while editing
+                  if ((e.target as HTMLElement).tagName === 'A') {
+                    e.preventDefault()
+                    window.open((e.target as HTMLAnchorElement).href, '_blank')
+                  }
+                }}
               >
                 {content === '' && <span className="text-gray-400">Start typing...</span>}
               </div>

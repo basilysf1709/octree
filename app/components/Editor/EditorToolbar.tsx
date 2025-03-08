@@ -1,11 +1,11 @@
 'use client'
 
-import React, { useState, useCallback, useEffect } from 'react'
+import React, { useState, useCallback, useEffect, useRef } from 'react'
 import { 
   Bold, Italic, Underline, AlignLeft, AlignCenter, 
   AlignRight, Share, Type, ChevronDown, History,
-  List, ListOrdered, Heading2, Quote, Code, Link2,
-  ImageIcon, Table, Palette
+  List, ListOrdered, Heading2, Quote, Link2,
+  ImageIcon, Palette
 } from 'lucide-react'
 import { useTheme } from 'next-themes'
 import { ExportDropdown } from './ExportDropdown'
@@ -34,6 +34,12 @@ const COLORS: ColorOption[] = [
 export const EditorToolbar: React.FC<EditorToolbarProps> = ({ onShowSidebar, documentId }) => {
   const [showColorPicker, setShowColorPicker] = useState(false)
   const { theme } = useTheme()
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [showLinkDialog, setShowLinkDialog] = useState(false)
+  const [linkUrl, setLinkUrl] = useState('')
+  const [linkText, setLinkText] = useState('')
+  const selectedTextRef = useRef('')
+  const selectedRangeRef = useRef<Range | null>(null)
 
   const execCommand = useCallback((command: string, value?: string) => {
     // @ts-ignore - execCommand is still widely supported despite deprecation
@@ -55,6 +61,71 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({ onShowSidebar, doc
       document.execCommand('formatBlock', false, 'h1')
     }
   }, [])
+
+  const handleImageClick = () => {
+    fileInputRef.current?.click()
+  }
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    if (!['image/jpeg', 'image/png', 'image/jpg'].includes(file.type)) {
+      alert('Please upload a JPG or PNG image')
+      return
+    }
+
+    const reader = new FileReader()
+    reader.onload = (event) => {
+      document.execCommand('insertImage', false, event.target?.result as string)
+    }
+    reader.readAsDataURL(file)
+  }
+
+  const handleLinkClick = () => {
+    const selection = window.getSelection()
+    if (!selection?.rangeCount) return
+
+    // Store both the selected text and the range
+    selectedRangeRef.current = selection.getRangeAt(0).cloneRange()
+    selectedTextRef.current = selection.toString()
+    setLinkText(selectedTextRef.current)
+    setShowLinkDialog(true)
+  }
+
+  const handleInsertLink = () => {
+    if (!linkUrl) return
+    
+    // Restore the selection
+    const selection = window.getSelection()
+    if (selection && selectedRangeRef.current) {
+      selection.removeAllRanges()
+      selection.addRange(selectedRangeRef.current)
+      
+      // Add http:// if no protocol is specified
+      const url = linkUrl.startsWith('http://') || linkUrl.startsWith('https://')
+        ? linkUrl
+        : `https://${linkUrl}`
+      
+      if (linkText) {
+        document.execCommand('insertHTML', false, 
+          `<a href="${url}" target="_blank" rel="noopener noreferrer">${linkText}</a>`
+        )
+      } else {
+        document.execCommand('createLink', false, url)
+        // Make the link open in new tab
+        const link = selection.anchorNode?.parentElement
+        if (link?.tagName === 'A') {
+          link.setAttribute('target', '_blank')
+          link.setAttribute('rel', 'noopener noreferrer')
+        }
+      }
+    }
+    
+    setShowLinkDialog(false)
+    setLinkUrl('')
+    setLinkText('')
+  }
 
   return (
     <div className="border-b border-border bg-background sticky top-0 z-10">
@@ -90,18 +161,22 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({ onShowSidebar, doc
           <button className={buttonClass} onClick={() => execCommand('formatBlock', '<blockquote>')} title="Quote">
             <Quote size={18} />
           </button>
-          <button className={buttonClass} onClick={() => execCommand('formatBlock', '<pre><code>// Your code here</code></pre>')} title="Code Block">
-            <Code size={18} />
-          </button>
         </div>
 
         <div className="flex items-center gap-1 border-r border-border pr-2">
-          <button className={buttonClass} onClick={() => execCommand('createLink')} title="Insert Link">
+          <button className={buttonClass} onClick={handleLinkClick} title="Insert Link">
             <Link2 size={18} />
           </button>
-          <button className={buttonClass} onClick={() => execCommand('insertImage')} title="Insert Image">
+          <button className={buttonClass} onClick={handleImageClick} title="Upload Image">
             <ImageIcon size={18} />
           </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/jpg"
+            className="hidden"
+            onChange={handleImageUpload}
+          />
         </div>
 
         <div className="relative">
@@ -159,6 +234,51 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({ onShowSidebar, doc
 
         <ExportDropdown getContent={() => document.querySelector('[contenteditable]')?.innerHTML || ''} />
       </div>
+
+      {showLinkDialog && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-background p-4 rounded-lg shadow-lg w-[400px]">
+            <h3 className="font-semibold mb-4">Insert Link</h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm mb-1">Link URL</label>
+                <input
+                  type="url"
+                  value={linkUrl}
+                  onChange={(e) => setLinkUrl(e.target.value)}
+                  placeholder="https://example.com"
+                  className="w-full p-2 rounded border border-border bg-secondary/50"
+                  autoFocus
+                />
+              </div>
+              <div>
+                <label className="block text-sm mb-1">Link Text</label>
+                <input
+                  type="text"
+                  value={linkText}
+                  onChange={(e) => setLinkText(e.target.value)}
+                  placeholder="Link text"
+                  className="w-full p-2 rounded border border-border bg-secondary/50"
+                />
+              </div>
+              <div className="flex justify-end gap-2">
+                <button
+                  onClick={() => setShowLinkDialog(false)}
+                  className="px-3 py-1.5 rounded hover:bg-secondary"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleInsertLink}
+                  className="px-3 py-1.5 bg-primary text-primary-foreground rounded hover:bg-primary/90"
+                >
+                  Insert
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 } 

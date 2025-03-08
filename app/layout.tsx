@@ -3,6 +3,7 @@ import { ThemeProvider } from "./components/ThemeProvider";
 import { AuthProvider } from "./context/UserContext";
 import { AuthLoadingProvider } from "./components/AuthLoadingProvider";
 import "./globals.css";
+import { Analytics } from "@vercel/analytics/react"
 
 export const metadata: Metadata = {
   title: {
@@ -74,6 +75,7 @@ export default function RootLayout({
           <AuthProvider>
             <AuthLoadingProvider>
               {children}
+              <Analytics />
             </AuthLoadingProvider>
           </AuthProvider>
         </ThemeProvider>

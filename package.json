@@ -15,6 +15,7 @@
     "@supabase/auth-helpers-nextjs": "^0.10.0",
     "@supabase/ssr": "^0.5.2",
     "@supabase/supabase-js": "^2.49.1",
+    "@vercel/analytics": "^1.5.0",
     "ai": "^4.1.54",
     "autoprefixer": "^10.4.20",
     "class-variance-authority": "^0.7.1",

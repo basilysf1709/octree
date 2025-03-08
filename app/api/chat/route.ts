@@ -4,6 +4,7 @@ import { streamText } from 'ai'
 
 // Configure runtime
 export const runtime = 'edge'
+export const preferredRegion = 'auto' // Add automatic region selection
 
 export async function POST(request: Request) {
   try {
@@ -14,10 +15,13 @@ export async function POST(request: Request) {
       messages: [
         {
           role: 'system',
-          content: 'You are a helpful AI assistant.'
+          content: 'You are a concise AI writing assistant. Respond in 1-2 sentences max. Be direct and brief.'
         },
-        ...messages
-      ]
+        // Only send last few messages for context
+        ...messages.slice(-3)
+      ],
+      temperature: 0.3, // Lower temperature for faster, more focused responses
+      maxTokens: 1000,
     })
 
     // Use toDataStreamResponse to properly format the stream
@@ -25,9 +29,6 @@ export async function POST(request: Request) {
 
   } catch (error) {
     console.error('AI API error:', error)
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Unknown error' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Failed to process request' }, { status: 500 })
   }
 } 

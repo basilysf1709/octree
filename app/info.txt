@@ -1,0 +1,202 @@
+Tech Architecture
+1. Supabase as our db
+2. Next.js with Monaco Editor, with Github Copilot API for autocomplete
+3. Using together AI for llama chat
+
+What I am trying to build:
+1. AI Latex Editor
+2. Document Create/Update/Delete
+3. Latex Renderer to PDF (Something like Overleaf)
+4. Chat with AI
+
+Colors:
+1. #C5E6A6
+2. #BDD2A6
+3. #B9BEA5
+4. #A7AAA4
+5. #9899A6
+
+
+Here are the Supabase setup commands for your AI LaTeX Editor project:
+Supabase Schema Setup
+sqlCopy-- Enable pgvector extension
+CREATE EXTENSION IF NOT EXISTS vector;
+
+-- Users Profile table (extends auth.users)
+CREATE TABLE public.profiles (
+  id UUID REFERENCES auth.users(id) PRIMARY KEY,
+  display_name TEXT,
+  avatar_url TEXT,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+);
+
+-- LaTeX Documents table
+CREATE TABLE public.documents (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
+  title TEXT NOT NULL,
+  content TEXT NOT NULL DEFAULT '',
+  owner_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  is_public BOOLEAN DEFAULT FALSE,
+  document_type TEXT DEFAULT 'article',
+  compile_settings JSONB DEFAULT '{}'
+);
+
+-- Document versions
+CREATE TABLE public.document_versions (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  document_id UUID REFERENCES public.documents(id) ON DELETE CASCADE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
+  content TEXT NOT NULL,
+  change_summary TEXT,
+  created_by UUID REFERENCES auth.users(id)
+);
+
+-- Document collaborators
+CREATE TABLE public.document_collaborators (
+  document_id UUID REFERENCES public.documents(id) ON DELETE CASCADE,
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  permission TEXT NOT NULL DEFAULT 'read', -- 'read', 'write', 'admin'
+  added_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
+  added_by UUID REFERENCES auth.users(id),
+  PRIMARY KEY (document_id, user_id)
+);
+
+-- Document embeddings for RAG
+CREATE TABLE public.document_embeddings (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  document_id UUID REFERENCES public.documents(id) ON DELETE CASCADE,
+  section_content TEXT NOT NULL,
+  embedding VECTOR(1536),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+);
+
+-- AI usage tracking
+CREATE TABLE public.ai_usage (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  tokens_used INTEGER NOT NULL DEFAULT 0,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
+  request_type TEXT NOT NULL -- 'completion', 'chat', etc.
+);
+Row Level Security (RLS) Policies
+sqlCopy-- Enable RLS
+ALTER TABLE public.documents ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.document_versions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.document_collaborators ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.document_embeddings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.ai_usage ENABLE ROW LEVEL SECURITY;
+
+-- Documents policies
+CREATE POLICY "Users can view their own documents"
+  ON public.documents FOR SELECT
+  USING (owner_id = auth.uid());
+
+CREATE POLICY "Users can view documents they collaborate on"
+  ON public.documents FOR SELECT
+  USING (
+    id IN (
+      SELECT document_id 
+      FROM public.document_collaborators 
+      WHERE user_id = auth.uid()
+    )
+  );
+
+CREATE POLICY "Public documents are viewable by everyone"
+  ON public.documents FOR SELECT
+  USING (is_public = TRUE);
+
+CREATE POLICY "Users can create documents"
+  ON public.documents FOR INSERT
+  WITH CHECK (owner_id = auth.uid());
+
+CREATE POLICY "Users can update their own documents"
+  ON public.documents FOR UPDATE
+  USING (owner_id = auth.uid());
+
+CREATE POLICY "Collaborators with write access can update documents"
+  ON public.documents FOR UPDATE
+  USING (
+    id IN (
+      SELECT document_id 
+      FROM public.document_collaborators 
+      WHERE user_id = auth.uid() AND permission IN ('write', 'admin')
+    )
+  );
+
+CREATE POLICY "Users can delete their own documents"
+  ON public.documents FOR DELETE
+  USING (owner_id = auth.uid());
+
+-- Apply similar patterns for other tables
+Triggers for Versioning
+sqlCopy-- Function to create a document version on update
+CREATE OR REPLACE FUNCTION create_document_version()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF OLD.content <> NEW.content THEN
+    INSERT INTO public.document_versions 
+      (document_id, content, created_by)
+    VALUES 
+      (NEW.id, OLD.content, auth.uid());
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Add trigger to documents table
+CREATE TRIGGER on_document_update
+  BEFORE UPDATE ON public.documents
+  FOR EACH ROW
+  EXECUTE PROCEDURE create_document_version();
+Database Functions for Common Operations
+sqlCopy-- Get document with collaborators
+CREATE OR REPLACE FUNCTION get_document_with_collaborators(doc_id UUID)
+RETURNS TABLE (
+  id UUID,
+  title TEXT,
+  content TEXT,
+  owner_id UUID,
+  owner_name TEXT,
+  is_public BOOLEAN,
+  document_type TEXT,
+  collaborators JSONB
+) 
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  RETURN QUERY
+  SELECT 
+    d.id,
+    d.title,
+    d.content,
+    d.owner_id,
+    p.display_name as owner_name,
+    d.is_public,
+    d.document_type,
+    COALESCE(
+      (SELECT json_agg(json_build_object(
+        'user_id', c.user_id,
+        'permission', c.permission,
+        'display_name', up.display_name
+      ))
+      FROM document_collaborators c
+      LEFT JOIN profiles up ON c.user_id = up.id
+      WHERE c.document_id = d.id
+      ), '[]'::json) as collaborators
+  FROM documents d
+  LEFT JOIN profiles p ON d.owner_id = p.id
+  WHERE d.id = doc_id
+  AND (
+    d.owner_id = auth.uid() 
+    OR d.is_public = TRUE
+    OR EXISTS (
+      SELECT 1 FROM document_collaborators 
+      WHERE document_id = d.id AND user_id = auth.uid()
+    )
+  );
+END;
+$$ LANGUAGE plpgsql;

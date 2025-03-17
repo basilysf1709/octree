@@ -92,9 +92,6 @@ export default function AuthPage() {
               magicLink={false}
               providers={[]}
               redirectTo="http://localhost:3000/auth/callback"
-              onError={(error) => {
-                console.error('Auth error:', error);
-              }}
             />
 
             <div className="mt-8 pt-6 text-center border-t border-blue-100">

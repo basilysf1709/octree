@@ -65,19 +65,29 @@ export default function Dashboard() {
   };
 
   const createNewDocument = async () => {
-    const { data, error } = await supabase
-      .from('documents')
-      .insert([
-        {
-          title: 'Untitled Document',
-          content: '\\documentclass{article}\n\\begin{document}\n\nHello LaTeX!\n\n\\end{document}',
-        }
-      ])
-      .select()
-      .single();
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      const { data, error } = await supabase
+        .from('documents')
+        .insert([
+          {
+            title: 'Untitled Document',
+            content: '\\documentclass{article}\n\\begin{document}\n\nHello LaTeX!\n\n\\end{document}',
+            owner_id: session?.user.id
+          }
+        ])
+        .select()
+        .single();
 
-    if (!error && data) {
-      router.push(`/editor/${data.id}`);
+      if (error) throw error;
+
+      if (data) {
+        // Use router.push to navigate to the editor page
+        router.push(`/editor/${data.id}`);
+      }
+    } catch (error) {
+      console.error('Error creating document:', error);
     }
   };
 

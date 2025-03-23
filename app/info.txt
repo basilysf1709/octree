@@ -4,7 +4,7 @@ Tech Architecture
 3. Using together AI for llama chat
 
 What I am trying to build:
-1. AI Latex Editor
+1. Octree (AI Latex Editor)
 2. Document Create/Update/Delete
 3. Latex Renderer to PDF (Something like Overleaf)
 4. Chat with AI
@@ -17,7 +17,7 @@ Colors:
 5. #9899A6
 
 
-Here are the Supabase setup commands for your AI LaTeX Editor project:
+Here are the Supabase setup commands for your Octree (AI LaTeX Editor) project:
 Supabase Schema Setup
 sqlCopy-- Enable pgvector extension
 CREATE EXTENSION IF NOT EXISTS vector;

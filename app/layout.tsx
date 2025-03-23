@@ -5,7 +5,7 @@ import "./globals.css";
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: "AI Latex Editor",
+  title: "Octree",
   description: "This is a latex editor that uses AI to help you write latex",
 };
 

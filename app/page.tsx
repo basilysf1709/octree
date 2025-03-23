@@ -159,7 +159,7 @@ export default function Home() {
             Ready to Transform Your LaTeX Workflow?
           </h2>
           <p className="text-xl mb-8 text-blue-100 max-w-2xl mx-auto">
-            Join thousands of researchers and students who are already using AI LaTeX Editor
+            Join thousands of researchers and students who are already using Octree
           </p>
           <Link href="/auth">
             <Button className="bg-white hover:bg-blue-50 text-blue-600 px-8 py-6 text-lg">
@@ -174,7 +174,7 @@ export default function Home() {
         <div className="container mx-auto px-4">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-12">
             <div>
-              <h3 className="text-xl font-bold mb-4">AI LaTeX Editor</h3>
+              <h3 className="text-xl font-bold mb-4">Octree</h3>
               <p className="text-blue-200 mb-4">
                 Making LaTeX writing easier and more efficient with AI assistance.
               </p>
@@ -202,7 +202,7 @@ export default function Home() {
             ))}
           </div>
           <div className="border-t border-blue-800 mt-12 pt-8 text-center text-blue-200">
-            <p>© 2024 AI LaTeX Editor. All rights reserved.</p>
+            <p>© 2025 Octree. All rights reserved.</p>
           </div>
         </div>
       </footer>

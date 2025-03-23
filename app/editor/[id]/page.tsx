@@ -5,7 +5,6 @@ import Editor, { loader } from "@monaco-editor/react";
 import { Button } from "@/components/ui/button";
 import Link from 'next/link';
 import { latexLanguageConfiguration, latexTokenProvider } from '@/lib/editor-config';
-import { MathJaxContext, MathJax } from "better-react-mathjax";
 
 // Configure Monaco editor
 loader.init().then(monaco => {
@@ -41,11 +40,53 @@ Here's a simple equation:
   const [compiling, setCompiling] = useState(false);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
 
+  const config = {
+    loader: { load: ["[tex]/html"] },
+    tex: {
+      packages: { "[+]": ["html"] },
+      inlineMath: [["$", "$"]],
+      displayMath: [["$$", "$$"]],
+    },
+  };
+
+  const extractContent = (latex: string) => {
+    // Extract content between \begin{document} and \end{document}
+    const match = latex.match(/\\begin{document}([\s\S]*?)\\end{document}/);
+    if (!match) return latex;
+    
+    return match[1]
+      // Handle sections
+      .replace(/\\section{(.*?)}/g, '<h2>$1</h2>')
+      .replace(/\\subsection{(.*?)}/g, '<h3>$1</h3>')
+      // Handle title, author, date
+      .replace(/\\maketitle/, (match) => {
+        const title = latex.match(/\\title{(.*?)}/)?.[1] || '';
+        const author = latex.match(/\\author{(.*?)}/)?.[1] || '';
+        const date = latex.match(/\\date{(.*?)}/)?.[1] || '';
+        return `<h1>${title}</h1><p><em>${author}</em></p><p>${date}</p>`;
+      })
+      // Handle math environments
+      .replace(/\\\[([\s\S]*?)\\\]/g, '$$$$1$$')
+      .replace(/\\\(([\s\S]*?)\\\)/g, '$$$1$');
+  };
+
   const handleCompile = async () => {
     setCompiling(true);
     try {
-      // Instead of using latex.js, we'll render directly with react-latex-next
-      setPdfUrl('preview'); // Just a flag to show preview
+      const response = await fetch('/api/compile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content })
+      });
+
+      if (!response.ok) throw new Error('Compilation failed');
+
+      const { html } = await response.json();
+      const blob = new Blob([html], { type: 'text/html' });
+      const url = URL.createObjectURL(blob);
+      setPdfUrl(url);
+    } catch (error) {
+      console.error('Compilation error:', error);
     } finally {
       setCompiling(false);
     }
@@ -115,11 +156,12 @@ Here's a simple equation:
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
               </div>
             ) : pdfUrl ? (
-              <div className="prose max-w-none">
-                <MathJaxContext>
-                  <MathJax>{content}</MathJax>
-                </MathJaxContext>
-              </div>
+              <iframe
+                src={pdfUrl}
+                className="w-full h-[80vh]"
+                title="Preview"
+                sandbox="allow-same-origin allow-scripts"
+              />
             ) : (
               <div className="h-full flex items-center justify-center text-blue-600">
                 Click &quot;Compile&quot; to see the preview

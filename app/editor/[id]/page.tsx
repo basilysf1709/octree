@@ -4,13 +4,15 @@ import { useEffect, useState } from 'react';
 import Editor, { loader } from "@monaco-editor/react";
 import { Button } from "@/components/ui/button";
 import Link from 'next/link';
-import { latexLanguageConfiguration, latexTokenProvider } from '@/lib/editor-config';
+import { latexLanguageConfiguration, latexTokenProvider, registerLatexCompletions } from '@/lib/editor-config';
+import { Chat } from '@/components/chat';
 
 // Configure Monaco editor
 loader.init().then(monaco => {
   monaco.languages.register({ id: 'latex' });
   monaco.languages.setLanguageConfiguration('latex', latexLanguageConfiguration);
   monaco.languages.setMonarchTokensProvider('latex', latexTokenProvider);
+  registerLatexCompletions(monaco);
 });
 
 export default function EditorPage({ params }: { params: { id: string } }) {
@@ -31,9 +33,7 @@ This is a sample LaTeX document.
 
 \\section{Mathematics}
 Here's a simple equation:
-\\[
   E = mc^2
-\\]
 
 \\end{document}`);
   
@@ -145,6 +145,13 @@ Here's a simple equation:
                 lineNumbers: 'on',
                 renderWhitespace: 'all',
                 scrollBeyondLastLine: false,
+                quickSuggestions: true,
+                suggestOnTriggerCharacters: true,
+                wordBasedSuggestions: 'allDocuments',
+                tabCompletion: 'on',
+                suggest: {
+                  snippetsPreventQuickSuggestions: false,
+                },
               }}
             />
           </div>
@@ -170,6 +177,9 @@ Here's a simple equation:
           </div>
         </div>
       </div>
+
+      {/* Add Chat component */}
+      <Chat />
     </div>
   );
 } 

@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import { OctreeLogo } from '@/components/icons/octree-logo';
 
 export default function Home() {
   return (
@@ -10,9 +11,7 @@ export default function Home() {
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center">
               <Link href="/" className="flex items-center space-x-2">
-                <svg className="w-8 h-8 text-blue-600" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M12 2L1 12h3v9h6v-6h4v6h6v-9h3L12 2z" />
-                </svg>
+                <OctreeLogo className="w-8 h-8 text-blue-600" />
                 <span className="text-xl font-bold text-blue-900">Octree</span>
               </Link>
               <div className="hidden md:flex items-center ml-10 space-x-8">
@@ -92,13 +91,23 @@ export default function Home() {
       {/* Stats Section */}
       <div className="bg-white py-12 border-y border-blue-100">
         <div className="container mx-auto px-4">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-            {stats.map((stat, index) => (
-              <div key={index} className="text-center">
-                <div className="text-4xl font-bold text-blue-600 mb-2">{stat.value}</div>
-                <div className="text-blue-900">{stat.label}</div>
-              </div>
-            ))}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 max-w-6xl mx-auto py-16 px-4">
+            <div className="text-center">
+              <h3 className="text-4xl font-bold text-blue-600 mb-2">Beta</h3>
+              <p className="text-blue-800">Development Stage</p>
+            </div>
+            <div className="text-center">
+              <h3 className="text-4xl font-bold text-blue-600 mb-2">5+</h3>
+              <p className="text-blue-800">LaTeX Templates</p>
+            </div>
+            <div className="text-center">
+              <h3 className="text-4xl font-bold text-blue-600 mb-2">AI</h3>
+              <p className="text-blue-800">Powered Editor</p>
+            </div>
+            <div className="text-center">
+              <h3 className="text-4xl font-bold text-blue-600 mb-2">100%</h3>
+              <p className="text-blue-800">Open Source</p>
+            </div>
           </div>
         </div>
       </div>

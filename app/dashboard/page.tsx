@@ -12,6 +12,10 @@ import {
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import Link from 'next/link';
+import { OctreeLogo } from '@/components/icons/octree-logo';
+import { Trash2 } from 'lucide-react';
+import { DeleteDialog } from '@/components/ui/delete-dialog';
+import { CreateDocumentDialog } from '@/components/ui/create-document-dialog';
 
 interface Document {
   id: string;
@@ -25,6 +29,16 @@ export default function Dashboard() {
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
   const [userName, setUserName] = useState<string | null>(null);
+  const [deleteDialog, setDeleteDialog] = useState<{
+    isOpen: boolean;
+    docId: string | null;
+    title: string;
+  }>({
+    isOpen: false,
+    docId: null,
+    title: ''
+  });
+  const [createDialog, setCreateDialog] = useState(false);
 
   useEffect(() => {
     const fetchUserAndDocuments = async () => {
@@ -64,7 +78,11 @@ export default function Dashboard() {
     router.push('/');
   };
 
-  const createNewDocument = async () => {
+  const handleCreateClick = () => {
+    setCreateDialog(true);
+  };
+
+  const createNewDocument = async (title: string) => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       
@@ -72,7 +90,7 @@ export default function Dashboard() {
         .from('documents')
         .insert([
           {
-            title: 'Untitled Document',
+            title,
             content: '\\documentclass{article}\n\\begin{document}\n\nHello LaTeX!\n\n\\end{document}',
             owner_id: session?.user.id
           }
@@ -83,11 +101,39 @@ export default function Dashboard() {
       if (error) throw error;
 
       if (data) {
-        // Use router.push to navigate to the editor page
+        setCreateDialog(false);
         router.push(`/editor/${data.id}`);
       }
     } catch (error) {
       console.error('Error creating document:', error);
+    }
+  };
+
+  const handleDeleteClick = (docId: string, title: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setDeleteDialog({
+      isOpen: true,
+      docId,
+      title
+    });
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteDialog.docId) return;
+
+    try {
+      const { error } = await supabase
+        .from('documents')
+        .delete()
+        .eq('id', deleteDialog.docId);
+
+      if (error) throw error;
+
+      setDocuments(documents.filter(doc => doc.id !== deleteDialog.docId));
+      setDeleteDialog({ isOpen: false, docId: null, title: '' });
+    } catch (error) {
+      console.error('Error deleting document:', error);
+      alert('Failed to delete document');
     }
   };
 
@@ -99,9 +145,7 @@ export default function Dashboard() {
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center">
               <Link href="/" className="flex items-center space-x-2">
-                <svg className="w-8 h-8 text-blue-600" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M12 2L1 12h3v9h6v-6h4v6h6v-9h3L12 2z" />
-                </svg>
+                <OctreeLogo className="w-8 h-8 text-blue-600" />
                 <span className="text-xl font-bold text-blue-900">Octree</span>
               </Link>
             </div>
@@ -126,7 +170,7 @@ export default function Dashboard() {
             <p className="text-blue-600 mt-1">Manage and edit your LaTeX documents</p>
           </div>
           <Button
-            onClick={createNewDocument}
+            onClick={handleCreateClick}
             className="bg-blue-600 hover:bg-blue-700 text-white"
           >
             <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -157,7 +201,7 @@ export default function Dashboard() {
             <h3 className="text-xl font-semibold text-blue-900 mb-2">No documents yet</h3>
             <p className="text-blue-600 mb-6">Create your first LaTeX document to get started</p>
             <Button
-              onClick={createNewDocument}
+              onClick={handleCreateClick}
               className="bg-blue-600 hover:bg-blue-700 text-white"
             >
               Create Document
@@ -168,20 +212,48 @@ export default function Dashboard() {
             {documents.map((doc) => (
               <Card
                 key={doc.id}
-                className="bg-white hover:shadow-lg transition-shadow cursor-pointer"
+                className="bg-white hover:shadow-lg transition-shadow cursor-pointer group relative"
                 onClick={() => router.push(`/editor/${doc.id}`)}
               >
                 <CardHeader>
-                  <CardTitle className="text-blue-900 truncate">{doc.title}</CardTitle>
-                  <CardDescription className="text-blue-600">
-                    Last updated: {new Date(doc.updated_at).toLocaleDateString()}
-                  </CardDescription>
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <CardTitle className="text-blue-900 truncate">{doc.title}</CardTitle>
+                      <CardDescription className="text-blue-600">
+                        Last updated: {new Date(doc.updated_at).toLocaleDateString()}
+                      </CardDescription>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="opacity-0 group-hover:opacity-100 transition-opacity text-red-600 hover:text-red-700 hover:bg-red-50"
+                      onClick={(e) => handleDeleteClick(doc.id, doc.title, e)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </CardHeader>
               </Card>
             ))}
           </div>
         )}
       </main>
+
+      {/* Add the delete dialog */}
+      <DeleteDialog
+        isOpen={deleteDialog.isOpen}
+        onClose={() => setDeleteDialog({ isOpen: false, docId: null, title: '' })}
+        onConfirm={handleDeleteConfirm}
+        title="Delete Document"
+        description={`Are you sure you want to delete "${deleteDialog.title}"? This action cannot be undone.`}
+      />
+
+      {/* Add the create dialog */}
+      <CreateDocumentDialog
+        isOpen={createDialog}
+        onClose={() => setCreateDialog(false)}
+        onConfirm={createNewDocument}
+      />
     </div>
   );
 } 

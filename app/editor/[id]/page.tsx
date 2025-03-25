@@ -6,16 +6,19 @@ import { Button } from "@/components/ui/button";
 import Link from 'next/link';
 import { latexLanguageConfiguration, latexTokenProvider, registerLatexCompletions } from '@/lib/editor-config';
 import { Chat } from '@/components/chat';
-
-// Configure Monaco editor
-loader.init().then(monaco => {
-  monaco.languages.register({ id: 'latex' });
-  monaco.languages.setLanguageConfiguration('latex', latexLanguageConfiguration);
-  monaco.languages.setMonarchTokensProvider('latex', latexTokenProvider);
-  registerLatexCompletions(monaco);
-});
+import { OctreeLogo } from '@/components/icons/octree-logo';
 
 export default function EditorPage({ params }: { params: { id: string } }) {
+  // Move Monaco initialization into useEffect
+  useEffect(() => {
+    loader.init().then(monaco => {
+      monaco.languages.register({ id: 'latex' });
+      monaco.languages.setLanguageConfiguration('latex', latexLanguageConfiguration);
+      monaco.languages.setMonarchTokensProvider('latex', latexTokenProvider);
+      registerLatexCompletions(monaco);
+    });
+  }, []); // Empty dependency array means this runs once on mount
+
   const [content, setContent] = useState(`\\documentclass{article}
 \\usepackage{amsmath}
 \\usepackage{graphicx}
@@ -109,9 +112,7 @@ Here's a simple equation:
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center">
               <Link href="/dashboard" className="flex items-center space-x-2">
-                <svg className="w-8 h-8 text-blue-600" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M12 2L1 12h3v9h6v-6h4v6h6v-9h3L12 2z" />
-                </svg>
+                <OctreeLogo className="w-8 h-8 text-blue-600" />
                 <span className="text-xl font-bold text-blue-900">Octree</span>
               </Link>
             </div>

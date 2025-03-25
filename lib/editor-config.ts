@@ -1,4 +1,5 @@
 import { languages } from 'monaco-editor';
+import type * as Monaco from 'monaco-editor';
 
 // Basic language configuration
 export const latexLanguageConfiguration: languages.LanguageConfiguration = {
@@ -41,15 +42,24 @@ const latexSnippets = [
   { label: '\\int', insertText: '\\int_{$1}^{$2}$0', documentation: 'Integral' },
 ];
 
-// Completion provider
-export const registerLatexCompletions = (monaco: any) => {
+// Completion provider with proper Monaco type
+export const registerLatexCompletions = (monaco: typeof Monaco) => {
   monaco.languages.registerCompletionItemProvider('latex', {
-    provideCompletionItems: () => {
+    provideCompletionItems: (model, position) => {
+      const word = model.getWordUntilPosition(position);
+      const range = {
+        startLineNumber: position.lineNumber,
+        endLineNumber: position.lineNumber,
+        startColumn: word.startColumn,
+        endColumn: word.endColumn
+      };
+
       return {
         suggestions: latexSnippets.map(snippet => ({
           ...snippet,
           kind: monaco.languages.CompletionItemKind.Snippet,
-          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet
+          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+          range
         }))
       };
     }

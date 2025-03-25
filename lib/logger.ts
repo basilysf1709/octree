@@ -1,7 +1,12 @@
 import fs from 'fs';
 import path from 'path';
 
-export function logToFile(message: string, data?: any) {
+interface LogData {
+  message?: string;
+  [key: string]: unknown;
+}
+
+export function logToFile(message: string, data?: LogData) {
   const timestamp = new Date().toISOString();
   const logMessage = `${timestamp}: ${message} ${data ? JSON.stringify(data) : ''}\n`;
   

@@ -43,7 +43,7 @@ export async function POST(request: Request) {
     const date = content.match(/\\date{(.*?)}/)?.[ 1 ] || '';
 
     // Process document content
-    let documentContent = documentMatch[1]
+    const documentContent = documentMatch[1]
       // Handle document structure
       .replace(/\\maketitle/, `
         <div class="title-block">

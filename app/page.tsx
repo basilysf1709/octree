@@ -331,13 +331,6 @@ export default function Home() {
   );
 }
 
-const stats = [
-  { value: "10K+", label: "Active Users" },
-  { value: "1M+", label: "Documents Created" },
-  { value: "50+", label: "Templates" },
-  { value: "99.9%", label: "Uptime" },
-];
-
 const steps = [
   {
     title: "Sign Up",

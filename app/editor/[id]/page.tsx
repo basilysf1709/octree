@@ -11,7 +11,7 @@ import { EditSuggestion } from '@/types/edit';
 import { Check, X } from 'lucide-react';
 import type * as Monaco from 'monaco-editor';
 
-export default function EditorPage({ params }: { params: { id: string } }) {
+export default function EditorPage() {
   // Move Monaco initialization into useEffect
   useEffect(() => {
     loader.init().then(monaco => {
@@ -82,36 +82,6 @@ The definition of an integral:
   const [editor, setEditor] = useState<Monaco.editor.IStandaloneCodeEditor | null>(null);
   const [monacoInstance, setMonacoInstance] = useState<typeof Monaco | null>(null);
   const [decorationIds, setDecorationIds] = useState<string[]>([]);
-
-  const config = {
-    loader: { load: ["[tex]/html"] },
-    tex: {
-      packages: { "[+]": ["html"] },
-      inlineMath: [["$", "$"]],
-      displayMath: [["$$", "$$"]],
-    },
-  };
-
-  const extractContent = (latex: string) => {
-    // Extract content between \begin{document} and \end{document}
-    const match = latex.match(/\\begin{document}([\s\S]*?)\\end{document}/);
-    if (!match) return latex;
-    
-    return match[1]
-      // Handle sections
-      .replace(/\\section{(.*?)}/g, '<h2>$1</h2>')
-      .replace(/\\subsection{(.*?)}/g, '<h3>$1</h3>')
-      // Handle title, author, date
-      .replace(/\\maketitle/, (match) => {
-        const title = latex.match(/\\title{(.*?)}/)?.[1] || '';
-        const author = latex.match(/\\author{(.*?)}/)?.[1] || '';
-        const date = latex.match(/\\date{(.*?)}/)?.[1] || '';
-        return `<h1>${title}</h1><p><em>${author}</em></p><p>${date}</p>`;
-      })
-      // Handle math environments
-      .replace(/\\\[([\s\S]*?)\\\]/g, '$$$$1$$')
-      .replace(/\\\(([\s\S]*?)\\\)/g, '$$$1$');
-  };
 
   const handleCompile = async () => {
     setCompiling(true);
@@ -267,7 +237,7 @@ The definition of an integral:
     // Store new decoration IDs
     const newDecorationIds = editor.deltaDecorations([], decorations);
     setDecorationIds(newDecorationIds);
-  }, [editSuggestions, editor, monacoInstance]);
+  }, [editSuggestions, editor, monacoInstance, decorationIds]);
 
   // Cleanup URL on unmount
   useEffect(() => {

@@ -7,6 +7,9 @@ import Link from 'next/link';
 import { latexLanguageConfiguration, latexTokenProvider, registerLatexCompletions } from '@/lib/editor-config';
 import { Chat } from '@/components/chat';
 import { OctreeLogo } from '@/components/icons/octree-logo';
+import { EditSuggestion } from '@/types/edit';
+import { Check, X } from 'lucide-react';
+import type * as Monaco from 'monaco-editor';
 
 export default function EditorPage({ params }: { params: { id: string } }) {
   // Move Monaco initialization into useEffect
@@ -42,6 +45,9 @@ Here's a simple equation:
   
   const [compiling, setCompiling] = useState(false);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [editSuggestions, setEditSuggestions] = useState<EditSuggestion[]>([]);
+  const [editor, setEditor] = useState<Monaco.editor.IStandaloneCodeEditor | null>(null);
+  const [monacoInstance, setMonacoInstance] = useState<typeof Monaco | null>(null);
 
   const config = {
     loader: { load: ["[tex]/html"] },
@@ -94,6 +100,80 @@ Here's a simple equation:
       setCompiling(false);
     }
   };
+
+  const handleEditSuggestion = (suggestion: EditSuggestion) => {
+    setEditSuggestions(prev => [...prev, suggestion]);
+  };
+
+  const handleAcceptEdit = (id: string) => {
+    const suggestion = editSuggestions.find(s => s.id === id);
+    if (!suggestion) return;
+
+    // Update the editor content
+    const editorInstance = monaco.editor.getModels()[0];
+    const range = new monaco.Range(
+      suggestion.startLine,
+      1,
+      suggestion.endLine,
+      1
+    );
+    
+    editorInstance.pushEditOperations(
+      [],
+      [{
+        range,
+        text: suggestion.suggested
+      }],
+      () => null
+    );
+
+    // Update suggestion status
+    setEditSuggestions(prev =>
+      prev.map(s => s.id === id ? { ...s, status: 'accepted' } : s)
+    );
+  };
+
+  const handleRejectEdit = (id: string) => {
+    setEditSuggestions(prev =>
+      prev.map(s => s.id === id ? { ...s, status: 'rejected' } : s)
+    );
+  };
+
+  // Add decorations for suggestions
+  useEffect(() => {
+    if (!editor || !monacoInstance) return;
+
+    const model = editor.getModel();
+    if (!model) return;
+
+    const decorations = editSuggestions
+      .filter(s => s.status === 'pending')
+      .map(suggestion => ({
+        range: new monacoInstance.Range(
+          suggestion.startLine,
+          1,
+          suggestion.endLine,
+          1
+        ),
+        options: {
+          isWholeLine: true,
+          className: 'suggestion-line',
+          glyphMarginClassName: 'suggestion-glyph',
+          glyphMarginHoverMessage: { value: 'Edit suggestion' },
+          minimap: {
+            color: '#34d399',
+            position: 2
+          },
+          after: {
+            content: '  ',
+            inlineClassName: 'after-suggestion',
+            attachedData: suggestion.id
+          }
+        }
+      }));
+
+    editor.deltaDecorations([], decorations);
+  }, [editSuggestions, editor, monacoInstance]);
 
   // Cleanup URL on unmount
   useEffect(() => {
@@ -154,6 +234,26 @@ Here's a simple equation:
                   snippetsPreventQuickSuggestions: false,
                 },
               }}
+              onMount={(editor, monaco) => {
+                setEditor(editor);
+                setMonacoInstance(monaco);
+                // Add suggestion actions
+                editor.addAction({
+                  id: 'accept-suggestion',
+                  label: 'Accept Suggestion',
+                  contextMenuGroupId: 'suggestion',
+                  run: (ed) => {
+                    const position = ed.getPosition();
+                    if (!position) return;
+                    
+                    const decorations = ed.getLineDecorations(position.lineNumber);
+                    const suggestion = decorations?.find(d => d.options.after?.attachedData);
+                    if (suggestion) {
+                      handleAcceptEdit(suggestion.options.after.attachedData);
+                    }
+                  }
+                });
+              }}
             />
           </div>
 
@@ -180,7 +280,38 @@ Here's a simple equation:
       </div>
 
       {/* Add Chat component */}
-      <Chat />
+      <Chat onEditSuggestion={handleEditSuggestion} />
+
+      {/* Suggestion Actions */}
+      <div className="absolute right-0 top-0">
+        {editSuggestions
+          .filter(s => s.status === 'pending')
+          .map(suggestion => (
+            <div
+              key={suggestion.id}
+              className="flex items-center gap-2 p-2 bg-white shadow-lg rounded-lg m-2"
+            >
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => handleAcceptEdit(suggestion.id)}
+                className="text-green-600 hover:bg-green-50"
+              >
+                <Check size={14} />
+                Accept
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => handleRejectEdit(suggestion.id)}
+                className="text-red-600 hover:bg-red-50"
+              >
+                <X size={14} />
+                Reject
+              </Button>
+            </div>
+          ))}
+      </div>
     </div>
   );
 } 

@@ -3,16 +3,57 @@
 import { useChat } from 'ai/react';
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Loader2, Send, X, Maximize2, Minimize2, Command } from 'lucide-react';
+import { Loader2, Send, X, Maximize2, Minimize2, Command, Check, X as XIcon } from 'lucide-react';
 import { OctreeLogo } from '@/components/icons/octree-logo';
 import { motion, AnimatePresence } from 'framer-motion';
+import { EditSuggestion } from '@/types/edit';
+import { v4 as uuidv4 } from 'uuid';
 
-export function Chat() {
+interface ChatProps {
+  onEditSuggestion: (edit: EditSuggestion) => void;
+}
+
+export function Chat({ onEditSuggestion }: ChatProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
 
-  const { messages, input, handleInputChange, handleSubmit, isLoading } = useChat({
+  const parseEditSuggestions = (content: string) => {
+    const editRegex = /```latex-diff\n([\s\S]*?)\n```/g;
+    let match;
+    
+    while ((match = editRegex.exec(content)) !== null) {
+      const diffContent = match[1];
+      const lines = diffContent.split('\n');
+      let original = '';
+      let suggested = '';
+      
+      lines.forEach(line => {
+        if (line.startsWith('-')) {
+          original += line.slice(1) + '\n';
+        } else if (line.startsWith('+')) {
+          suggested += line.slice(1) + '\n';
+        }
+      });
+
+      if (original || suggested) {
+        const suggestion: EditSuggestion = {
+          id: uuidv4(),
+          original: original.trim(),
+          suggested: suggested.trim(),
+          startLine: 0, // This will be determined by the editor
+          endLine: 0,
+          status: 'pending'
+        };
+        onEditSuggestion(suggestion);
+      }
+    }
+  };
+
+  const { messages, input, handleInputChange, handleSubmit: originalHandleSubmit, isLoading } = useChat({
     api: '/api/octra',
+    onFinish: (message) => {
+      parseEditSuggestions(message.content);
+    }
   });
 
   // Keyboard shortcut handler
@@ -121,7 +162,20 @@ export function Chat() {
                   <div className="text-sm font-medium mb-1 text-blue-900">
                     {message.role === 'assistant' ? 'Octra' : 'You'}
                   </div>
-                  <div className="text-blue-800 text-sm leading-relaxed">{message.content}</div>
+                  <div className="text-blue-800 text-sm leading-relaxed whitespace-pre-wrap">
+                    {message.content.split(/```latex-diff\n[\s\S]*?\n```/g).map((text, i, array) => {
+                      if (i === array.length - 1) return text;
+                      const match = message.content.match(/```latex-diff\n[\s\S]*?\n```/g)?.[i];
+                      return (
+                        <>
+                          {text}
+                          <div key={i} className="bg-blue-50 rounded-lg p-2 my-2 font-mono text-xs">
+                            {match}
+                          </div>
+                        </>
+                      );
+                    })}
+                  </div>
                 </motion.div>
               ))}
               {isLoading && (
@@ -139,7 +193,7 @@ export function Chat() {
 
             {/* Input */}
             <div className="border-t border-blue-100/50 p-4 bg-white/50 backdrop-blur-sm rounded-b-2xl">
-              <form onSubmit={handleSubmit} className="relative">
+              <form onSubmit={originalHandleSubmit} className="relative">
                 <input
                   value={input}
                   onChange={handleInputChange}

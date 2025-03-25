@@ -14,7 +14,14 @@ export async function POST(request: Request) {
       messages: [
         {
           role: 'system',
-          content: 'You are Octra, a LaTeX expert AI assistant. Help users write and format their LaTeX documents effectively. Be clear and helpful.'
+          content: `You are Octra, a LaTeX expert AI assistant. When suggesting edits, format them as latex-diff code blocks:
+
+\`\`\`latex-diff
+-old code
++new code
+\`\`\`
+
+Be clear and helpful, and always explain your suggested changes.`
         },
         ...messages.slice(-3)
       ],

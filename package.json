@@ -17,6 +17,7 @@
     "@supabase/auth-ui-shared": "^0.1.8",
     "@supabase/supabase-js": "^2.39.0",
     "@types/katex": "^0.16.7",
+    "@types/uuid": "^10.0.0",
     "ai": "^4.2.0",
     "better-react-mathjax": "^2.1.0",
     "class-variance-authority": "^0.7.1",
@@ -36,7 +37,8 @@
     "react-dom": "^19.0.0",
     "shadcn": "^2.4.0-canary.14",
     "tailwind-merge": "^3.0.2",
-    "tailwindcss-animate": "^1.0.7"
+    "tailwindcss-animate": "^1.0.7",
+    "uuid": "^11.1.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",

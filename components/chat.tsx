@@ -182,18 +182,16 @@ export function Chat({ onEditSuggestion, fileContent }: ChatProps) {
                     {message.role === 'assistant' ? 'Octra' : 'You'}
                   </div>
                   <div className="text-blue-800 text-sm leading-relaxed whitespace-pre-wrap">
-                    {message.content.split(/```latex-diff\n[\s\S]*?\n```/g).map((text, i, array) => {
-                      if (i === array.length - 1) return text;
-                      const match = message.content.match(/```latex-diff\n[\s\S]*?\n```/g)?.[i];
-                      return (
-                        <>
-                          {text}
-                          <div key={i} className="bg-blue-50 rounded-lg p-2 my-2 font-mono text-xs">
-                            {match}
-                          </div>
-                        </>
-                      );
-                    })}
+                    {message.content.split(/```latex-diff\n[\s\S]*?\n```/g).map((text, i, array) => (
+                      <div key={`message-${message.id}-part-${i}`}>
+                        {i === array.length - 1 ? text : (
+                          <>
+                            {text}
+                            {message.content.match(/```latex-diff\n[\s\S]*?\n```/g)?.[i]}
+                          </>
+                        )}
+                      </div>
+                    ))}
                   </div>
                 </motion.div>
               ))}

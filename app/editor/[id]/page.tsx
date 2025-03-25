@@ -24,22 +24,55 @@ export default function EditorPage({ params }: { params: { id: string } }) {
 
   const [content, setContent] = useState(`\\documentclass{article}
 \\usepackage{amsmath}
-\\usepackage{graphicx}
-
-\\title{My Document}
-\\author{Your Name}
-\\date{\\today}
+\\usepackage{amssymb}
+\\title{Sample LaTeX Document with Equations}
+\\author{Basil Yusuf}
+\\date{18th Jan, 1991}
 
 \\begin{document}
 
 \\maketitle
 
 \\section{Introduction}
-This is a sample LaTeX document.
+This is a sample LaTeX document containing various equations to test your LaTeX to HTML compiler.
 
-\\section{Mathematics}
-Here's a simple equation:
-  E = mc^2
+\\section{Simple Equations}
+Here is a simple inline equation: $E = mc^2$. This famous equation relates energy and mass.
+
+Here is a displayed equation:
+\\begin{equation}
+    F = G \\frac{m_1 m_2}{r^2}
+\\end{equation}
+
+\\section{More Complex Equations}
+The quadratic formula for solving $ax^2 + bx + c = 0$ is:
+\\begin{equation}
+    x = \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}
+\\end{equation}
+
+The binomial theorem provides the expansion:
+\\begin{equation}
+    (x + y)^n = \\sum_{k=0}^{n} \\binom{n}{k} x^{n-k} y^k
+\\end{equation}
+
+Maxwell's equations in differential form include:
+\\begin{align}
+    \\nabla \\cdot \\mathbf{E} &= \\frac{\\rho}{\\varepsilon_0} \\\\
+    \\nabla \\cdot \\mathbf{B} &= 0 \\\\
+    \\nabla \\times \\mathbf{E} &= -\\frac{\\partial \\mathbf{B}}{\\partial t} \\\\
+    \\nabla \\times \\mathbf{B} &= \\mu_0 \\mathbf{J} + \\mu_0 \\varepsilon_0 \\frac{\\partial \\mathbf{E}}{\\partial t}
+\\end{align}
+
+\\section{Advanced Mathematical Notation}
+The infinite series for $e^x$ is given by:
+\\begin{equation}
+    e^x = \\sum_{n=0}^{\\infty} \\frac{x^n}{n!} = 1 + x + \\frac{x^2}{2!} + \\frac{x^3}{3!} + \\cdots
+\\end{equation}
+
+The definition of an integral:
+\\begin{equation}
+    \\int_{a}^{b} f(x) \\, dx = \\lim_{n \\to \\infty} \\sum_{i=1}^{n} f(x_i^*) \\Delta x
+\\end{equation}
 
 \\end{document}`);
   
@@ -119,18 +152,40 @@ Here's a simple equation:
       return;
     }
 
-    // Find the actual line containing our target text
-    let actualStartLine = suggestion.startLine;
-    let actualEndLine = suggestion.endLine;
+    // Find the actual lines containing our target text
+    let actualStartLine = -1;
+    let actualEndLine = -1;
     
-    // Search for the exact line containing our text
-    for (let i = suggestion.startLine; i <= suggestion.endLine + 2; i++) {
+    // Search in a window around the suggested line numbers
+    const searchStart = Math.max(1, suggestion.startLine - 5);
+    const searchEnd = suggestion.endLine + 5;
+    
+    const originalLines = suggestion.original.trim().split('\n');
+    const firstOriginalLine = originalLines[0].trim();
+    
+    for (let i = searchStart; i <= searchEnd; i++) {
       const lineContent = model.getLineContent(i).trim();
-      if (lineContent.includes(suggestion.original.trim())) {
+      if (lineContent.includes(firstOriginalLine)) {
         actualStartLine = i;
-        actualEndLine = i;
-        break;
+        // Check subsequent lines if multiline
+        let allLinesMatch = true;
+        for (let j = 1; j < originalLines.length; j++) {
+          const nextLineContent = model.getLineContent(i + j).trim();
+          if (!nextLineContent.includes(originalLines[j].trim())) {
+            allLinesMatch = false;
+            break;
+          }
+        }
+        if (allLinesMatch) {
+          actualEndLine = i + originalLines.length - 1;
+          break;
+        }
       }
+    }
+
+    if (actualStartLine === -1 || actualEndLine === -1) {
+      console.log('Could not find matching text');
+      return;
     }
 
     const range = new monacoInstance.Range(
@@ -140,35 +195,15 @@ Here's a simple equation:
       1
     );
 
-    const currentText = model.getValueInRange(range);
-    console.log('Debug edit operation:', {
-      originalText: suggestion.original,
-      currentText: currentText.trim(),
-      suggestedText: suggestion.suggested,
-      range: {
-        startLine: actualStartLine,
-        endLine: actualEndLine + 1
-      }
-    });
-    
-    if (currentText.trim().includes(suggestion.original.trim())) {
-      const edit = {
-        range,
-        text: suggestion.suggested + '\n',
-        forceMoveMarkers: true
-      };
+    const edit = {
+      range,
+      text: suggestion.suggested + '\n',
+      forceMoveMarkers: true
+    };
 
-      const success = editor.executeEdits('suggestion', [edit]);
-      console.log('Edit applied:', success);
-
-      const newContent = editor.getValue();
-      setContent(newContent);
-    } else {
-      console.log('Text mismatch:', {
-        expected: suggestion.original,
-        found: currentText.trim()
-      });
-    }
+    editor.executeEdits('suggestion', [edit]);
+    const newContent = editor.getValue();
+    setContent(newContent);
 
     setEditSuggestions(prev =>
       prev.map(s => s.id === id ? { ...s, status: 'accepted' } : s)
@@ -193,29 +228,41 @@ Here's a simple equation:
 
     const decorations = editSuggestions
       .filter(s => s.status === 'pending')
-      .map(suggestion => ({
-        range: new monacoInstance.Range(
-          suggestion.startLine,
-          1,
-          suggestion.endLine + 1,
-          1
-        ),
-        options: {
-          isWholeLine: true,
-          className: 'suggestion-line',
-          glyphMarginClassName: 'suggestion-glyph',
-          glyphMarginHoverMessage: { value: 'Edit suggestion' },
-          minimap: {
-            color: '#34d399',
-            position: 2
-          },
-          after: {
-            content: '  ',
-            inlineClassName: 'after-suggestion',
-            attachedData: suggestion.id
+      .flatMap(suggestion => [
+        // Original text decoration (red)
+        {
+          range: new monacoInstance.Range(
+            suggestion.startLine,
+            1,
+            suggestion.endLine + 1,
+            1
+          ),
+          options: {
+            isWholeLine: false,
+            className: 'suggestion-deleted',
+            glyphMarginClassName: 'suggestion-glyph',
+            glyphMarginHoverMessage: { value: 'Edit suggestion' }
+          }
+        },
+        // Suggested text decoration (green)
+        {
+          range: new monacoInstance.Range(
+            suggestion.startLine,
+            1,
+            suggestion.endLine + 1,
+            1
+          ),
+          options: {
+            isWholeLine: false,
+            className: 'suggestion-added',
+            after: {
+              content: `  ${suggestion.suggested}`,
+              inlineClassName: 'suggestion-added',
+              attachedData: suggestion.id
+            }
           }
         }
-      }));
+      ]);
 
     // Store new decoration IDs
     const newDecorationIds = editor.deltaDecorations([], decorations);

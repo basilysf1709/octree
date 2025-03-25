@@ -1,6 +1,6 @@
 declare module 'latex.js' {
-  export class Generator {
+  export class HtmlGenerator {
     constructor(options?: { customHeaders?: string[] });
-    parse(content: string): { html: string };
+    parse(content: string): string;
   }
 } 

@@ -16,7 +16,6 @@ export default function Home() {
               </Link>
               <div className="hidden md:flex items-center ml-10 space-x-8">
                 <Link href="#features" className="text-blue-600 hover:text-blue-800">Features</Link>
-                <Link href="#templates" className="text-blue-600 hover:text-blue-800">Templates</Link>
                 <Link href="#pricing" className="text-blue-600 hover:text-blue-800">Pricing</Link>
                 <Link href="#docs" className="text-blue-600 hover:text-blue-800">Documentation</Link>
               </div>
@@ -157,6 +156,119 @@ export default function Home() {
                 <p className="text-blue-700">{step.description}</p>
               </div>
             ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Pricing Section */}
+      <div id="pricing" className="py-24 bg-white">
+        <div className="container mx-auto px-4">
+          <h2 className="text-4xl font-bold text-center mb-4 text-blue-900">
+            Simple, Transparent Pricing
+          </h2>
+          <p className="text-blue-600 text-center mb-16 max-w-2xl mx-auto">
+            Start with a free trial, then choose the plan that works for you
+          </p>
+          
+          <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+            {/* Free Trial */}
+            <div className="rounded-2xl border border-blue-200 p-8 bg-blue-50">
+              <h3 className="text-xl font-semibold text-blue-900 mb-2">Free Trial</h3>
+              <p className="text-blue-600 mb-4">Perfect for getting started</p>
+              <div className="text-4xl font-bold text-blue-900 mb-6">
+                $0 <span className="text-lg font-normal text-blue-600">/week</span>
+              </div>
+              <ul className="space-y-3 mb-8">
+                <li className="flex items-center text-blue-700">
+                  <svg className="w-5 h-5 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  Full access to all features
+                </li>
+                <li className="flex items-center text-blue-700">
+                  <svg className="w-5 h-5 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  AI-powered assistance
+                </li>
+                <li className="flex items-center text-blue-700">
+                  <svg className="w-5 h-5 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  7 days trial period
+                </li>
+              </ul>
+              <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white">
+                Start Free Trial
+              </Button>
+            </div>
+
+            {/* Pro Plan */}
+            <div className="rounded-2xl border border-blue-600 p-8 bg-white shadow-lg relative">
+              <div className="absolute top-0 right-0 bg-blue-600 text-white px-3 py-1 rounded-bl-lg rounded-tr-lg text-sm">
+                Popular
+              </div>
+              <h3 className="text-xl font-semibold text-blue-900 mb-2">Pro</h3>
+              <p className="text-blue-600 mb-4">For individual researchers</p>
+              <div className="text-4xl font-bold text-blue-900 mb-6">
+                $20 <span className="text-lg font-normal text-blue-600">/month</span>
+              </div>
+              <ul className="space-y-3 mb-8">
+                <li className="flex items-center text-blue-700">
+                  <svg className="w-5 h-5 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  Everything in Free Trial
+                </li>
+                <li className="flex items-center text-blue-700">
+                  <svg className="w-5 h-5 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  Unlimited documents
+                </li>
+                <li className="flex items-center text-blue-700">
+                  <svg className="w-5 h-5 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  Priority support
+                </li>
+              </ul>
+              <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white">
+                Get Started
+              </Button>
+            </div>
+
+            {/* Enterprise */}
+            <div className="rounded-2xl border border-blue-200 p-8 bg-blue-50">
+              <h3 className="text-xl font-semibold text-blue-900 mb-2">Enterprise</h3>
+              <p className="text-blue-600 mb-4">For teams and organizations</p>
+              <div className="text-4xl font-bold text-blue-900 mb-6">
+                Custom
+              </div>
+              <ul className="space-y-3 mb-8">
+                <li className="flex items-center text-blue-700">
+                  <svg className="w-5 h-5 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  Everything in Pro
+                </li>
+                <li className="flex items-center text-blue-700">
+                  <svg className="w-5 h-5 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  Custom integrations
+                </li>
+                <li className="flex items-center text-blue-700">
+                  <svg className="w-5 h-5 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  Dedicated support
+                </li>
+              </ul>
+              <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white">
+                Contact Sales
+              </Button>
+            </div>
           </div>
         </div>
       </div>

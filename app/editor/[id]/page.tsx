@@ -48,6 +48,7 @@ Here's a simple equation:
   const [editSuggestions, setEditSuggestions] = useState<EditSuggestion[]>([]);
   const [editor, setEditor] = useState<Monaco.editor.IStandaloneCodeEditor | null>(null);
   const [monacoInstance, setMonacoInstance] = useState<typeof Monaco | null>(null);
+  const [decorationIds, setDecorationIds] = useState<string[]>([]);
 
   const config = {
     loader: { load: ["[tex]/html"] },
@@ -107,25 +108,29 @@ Here's a simple equation:
 
   const handleAcceptEdit = (id: string) => {
     const suggestion = editSuggestions.find(s => s.id === id);
-    if (!suggestion) return;
+    if (!suggestion || !editor || !monacoInstance) return;
 
-    // Update the editor content
-    const editorInstance = monaco.editor.getModels()[0];
-    const range = new monaco.Range(
+    const model = editor.getModel();
+    if (!model) return;
+
+    const range = new monacoInstance.Range(
       suggestion.startLine,
       1,
-      suggestion.endLine,
+      suggestion.endLine + 1,
       1
     );
+
+    const currentText = model.getValueInRange(range);
     
-    editorInstance.pushEditOperations(
-      [],
-      [{
+    if (currentText.trim() === suggestion.original.trim()) {
+      editor.executeEdits('suggestion', [{
         range,
-        text: suggestion.suggested
-      }],
-      () => null
-    );
+        text: suggestion.suggested + '\n',
+        forceMoveMarkers: true
+      }]);
+
+      setContent(editor.getValue());
+    }
 
     // Update suggestion status
     setEditSuggestions(prev =>
@@ -139,12 +144,15 @@ Here's a simple equation:
     );
   };
 
-  // Add decorations for suggestions
+  // Update the decoration effect
   useEffect(() => {
     if (!editor || !monacoInstance) return;
 
     const model = editor.getModel();
     if (!model) return;
+
+    // Clear previous decorations
+    editor.deltaDecorations(decorationIds, []);
 
     const decorations = editSuggestions
       .filter(s => s.status === 'pending')
@@ -152,7 +160,7 @@ Here's a simple equation:
         range: new monacoInstance.Range(
           suggestion.startLine,
           1,
-          suggestion.endLine,
+          suggestion.endLine + 1,
           1
         ),
         options: {
@@ -172,7 +180,9 @@ Here's a simple equation:
         }
       }));
 
-    editor.deltaDecorations([], decorations);
+    // Store new decoration IDs
+    const newDecorationIds = editor.deltaDecorations([], decorations);
+    setDecorationIds(newDecorationIds);
   }, [editSuggestions, editor, monacoInstance]);
 
   // Cleanup URL on unmount
@@ -280,35 +290,43 @@ Here's a simple equation:
       </div>
 
       {/* Add Chat component */}
-      <Chat onEditSuggestion={handleEditSuggestion} />
+      <Chat 
+        onEditSuggestion={handleEditSuggestion} 
+        fileContent={content}
+      />
 
       {/* Suggestion Actions */}
-      <div className="absolute right-0 top-0">
+      <div className="fixed right-6 top-24 space-y-2 z-50">
         {editSuggestions
           .filter(s => s.status === 'pending')
           .map(suggestion => (
             <div
               key={suggestion.id}
-              className="flex items-center gap-2 p-2 bg-white shadow-lg rounded-lg m-2"
+              className="flex flex-col gap-2 p-3 bg-white shadow-lg rounded-lg border border-blue-100"
             >
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => handleAcceptEdit(suggestion.id)}
-                className="text-green-600 hover:bg-green-50"
-              >
-                <Check size={14} />
-                Accept
-              </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => handleRejectEdit(suggestion.id)}
-                className="text-red-600 hover:bg-red-50"
-              >
-                <X size={14} />
-                Reject
-              </Button>
+              <div className="text-sm text-blue-600">
+                Lines {suggestion.startLine}-{suggestion.endLine}
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => handleAcceptEdit(suggestion.id)}
+                  className="flex-1 text-green-600 hover:bg-green-50 border border-green-200"
+                >
+                  <Check size={14} className="mr-1" />
+                  Accept
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => handleRejectEdit(suggestion.id)}
+                  className="flex-1 text-red-600 hover:bg-red-50 border border-red-200"
+                >
+                  <X size={14} className="mr-1" />
+                  Reject
+                </Button>
+              </div>
             </div>
           ))}
       </div>

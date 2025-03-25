@@ -11,21 +11,32 @@ import { v4 as uuidv4 } from 'uuid';
 
 interface ChatProps {
   onEditSuggestion: (edit: EditSuggestion) => void;
+  fileContent: string;
 }
 
-export function Chat({ onEditSuggestion }: ChatProps) {
+export function Chat({ onEditSuggestion, fileContent }: ChatProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
 
   const parseEditSuggestions = (content: string) => {
     const editRegex = /```latex-diff\n([\s\S]*?)\n```/g;
     let match;
+    let cleanContent = content;
     
     while ((match = editRegex.exec(content)) !== null) {
       const diffContent = match[1];
       const lines = diffContent.split('\n');
       let original = '';
       let suggested = '';
+      let startLine = 0;
+      let lineCount = 0;
+      
+      // Find the context in the file
+      const contextMatch = diffContent.match(/@@\s*-(\d+),(\d+)\s*\+\d+,\d+\s*@@/);
+      if (contextMatch) {
+        startLine = parseInt(contextMatch[1]);
+        lineCount = parseInt(contextMatch[2]);
+      }
       
       lines.forEach(line => {
         if (line.startsWith('-')) {
@@ -40,19 +51,27 @@ export function Chat({ onEditSuggestion }: ChatProps) {
           id: uuidv4(),
           original: original.trim(),
           suggested: suggested.trim(),
-          startLine: 0, // This will be determined by the editor
-          endLine: 0,
+          startLine,
+          endLine: startLine + lineCount - 1,
           status: 'pending'
         };
         onEditSuggestion(suggestion);
       }
+
+      // Remove the edit block from displayed content
+      cleanContent = cleanContent.replace(match[0], '');
     }
+
+    return cleanContent;
   };
 
   const { messages, input, handleInputChange, handleSubmit: originalHandleSubmit, isLoading } = useChat({
     api: '/api/octra',
+    body: {
+      fileContent
+    },
     onFinish: (message) => {
-      parseEditSuggestions(message.content);
+      message.content = parseEditSuggestions(message.content);
     }
   });
 

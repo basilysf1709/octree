@@ -1,8 +1,34 @@
+'use client';
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { OctreeLogo } from '@/components/icons/octree-logo';
+import { useState } from 'react';
+import { Loader2 } from 'lucide-react';
 
 export default function Home() {
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleSubscribe = async () => {
+    try {
+      setIsLoading(true);
+      const response = await fetch('/api/create-checkout-session', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+
+      const { url } = await response.json();
+      if (url) {
+        window.location.href = url;
+      }
+    } catch (error) {
+      console.error('Error:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-blue-50">
       {/* Navigation */}
@@ -233,8 +259,16 @@ export default function Home() {
                   Priority support
                 </li>
               </ul>
-              <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white">
-                Get Started
+              <Button 
+                onClick={handleSubscribe} 
+                disabled={isLoading}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                {isLoading ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : (
+                  'Get Started'
+                )}
               </Button>
             </div>
 

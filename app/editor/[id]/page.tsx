@@ -108,31 +108,68 @@ Here's a simple equation:
 
   const handleAcceptEdit = (id: string) => {
     const suggestion = editSuggestions.find(s => s.id === id);
-    if (!suggestion || !editor || !monacoInstance) return;
+    if (!suggestion || !editor || !monacoInstance) {
+      console.log('Missing dependencies:', { suggestion: !!suggestion, editor: !!editor, monaco: !!monacoInstance });
+      return;
+    }
 
     const model = editor.getModel();
-    if (!model) return;
+    if (!model) {
+      console.log('No editor model found');
+      return;
+    }
+
+    // Find the actual line containing our target text
+    let actualStartLine = suggestion.startLine;
+    let actualEndLine = suggestion.endLine;
+    
+    // Search for the exact line containing our text
+    for (let i = suggestion.startLine; i <= suggestion.endLine + 2; i++) {
+      const lineContent = model.getLineContent(i).trim();
+      if (lineContent.includes(suggestion.original.trim())) {
+        actualStartLine = i;
+        actualEndLine = i;
+        break;
+      }
+    }
 
     const range = new monacoInstance.Range(
-      suggestion.startLine,
+      actualStartLine,
       1,
-      suggestion.endLine + 1,
+      actualEndLine + 1,
       1
     );
 
     const currentText = model.getValueInRange(range);
+    console.log('Debug edit operation:', {
+      originalText: suggestion.original,
+      currentText: currentText.trim(),
+      suggestedText: suggestion.suggested,
+      range: {
+        startLine: actualStartLine,
+        endLine: actualEndLine + 1
+      }
+    });
     
-    if (currentText.trim() === suggestion.original.trim()) {
-      editor.executeEdits('suggestion', [{
+    if (currentText.trim().includes(suggestion.original.trim())) {
+      const edit = {
         range,
         text: suggestion.suggested + '\n',
         forceMoveMarkers: true
-      }]);
+      };
 
-      setContent(editor.getValue());
+      const success = editor.executeEdits('suggestion', [edit]);
+      console.log('Edit applied:', success);
+
+      const newContent = editor.getValue();
+      setContent(newContent);
+    } else {
+      console.log('Text mismatch:', {
+        expected: suggestion.original,
+        found: currentText.trim()
+      });
     }
 
-    // Update suggestion status
     setEditSuggestions(prev =>
       prev.map(s => s.id === id ? { ...s, status: 'accepted' } : s)
     );
@@ -257,10 +294,10 @@ Here's a simple equation:
                     if (!position) return;
                     
                     const decorations = ed.getLineDecorations(position.lineNumber);
-                    const suggestion = decorations?.find(d => d.options.after?.attachedData);
-                    if (suggestion) {
-                      handleAcceptEdit(suggestion.options.after.attachedData);
-                    }
+                    const suggestion = decorations?.find(d => d.options.after && 'attachedData' in d.options.after);
+                    if (suggestion?.options.after && 'attachedData' in suggestion.options.after) {
+                      handleAcceptEdit(suggestion.options.after.attachedData as string);
+                     }
                   }
                 });
               }}

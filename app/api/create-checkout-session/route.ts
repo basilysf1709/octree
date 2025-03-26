@@ -9,7 +9,7 @@ const stripe = new Stripe(
   { apiVersion: '2025-02-24.acacia' }
 );
 
-export async function POST(request: Request) {
+export async function POST() {
   try {
     const baseUrl = getBaseUrl();
     

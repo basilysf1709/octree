@@ -16,7 +16,7 @@ export async function POST(request: Request) {
     const { content } = await request.json();
     
     // Check environment
-    const isProd = process.env.ENVIRONMENT === 'production';
+    const isProd = process.env.ENVIRONMENT === 'prod';
     
     if (isProd) {
       // Use the remote TeX Live service in production

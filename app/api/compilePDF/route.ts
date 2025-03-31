@@ -38,11 +38,14 @@ export async function POST(request: Request) {
         // Get the PDF directly from the response
         const pdfBuffer = await response.arrayBuffer();
         
+        // After getting the PDF buffer
+        console.log("PDF buffer size:", pdfBuffer.byteLength);
+        
         // Return the PDF
         return new NextResponse(pdfBuffer, {
           headers: {
             'Content-Type': 'application/pdf',
-            'Content-Disposition': 'inline; filename="document.pdf"'
+            'Content-Disposition': 'attachment; filename="document.pdf"'
           }
         });
       } catch (error) {
@@ -82,6 +85,10 @@ export async function POST(request: Request) {
           // Read the PDF file
           const pdfBuffer = fs.readFileSync(pdfPath);
           
+          // After getting the PDF buffer
+          console.log("PDF buffer size:", pdfBuffer.byteLength);
+          console.log("PDF starts with:", pdfBuffer.slice(0, 10).toString('hex'));
+          
           // Log any LaTeX warnings/errors for debugging but still return the PDF
           const logPath = path.join(tempDir, 'main.log');
           if (fs.existsSync(logPath)) {
@@ -96,7 +103,7 @@ export async function POST(request: Request) {
           return new NextResponse(pdfBuffer, {
             headers: {
               'Content-Type': 'application/pdf',
-              'Content-Disposition': 'inline; filename="document.pdf"'
+              'Content-Disposition': 'attachment; filename="document.pdf"'
             }
           });
         } else {
@@ -123,6 +130,10 @@ export async function POST(request: Request) {
           console.log("PDF was generated despite errors - returning it anyway");
           const pdfBuffer = fs.readFileSync(pdfPath);
           
+          // After getting the PDF buffer
+          console.log("PDF buffer size:", pdfBuffer.byteLength);
+          console.log("PDF starts with:", pdfBuffer.slice(0, 10).toString('hex'));
+          
           // Clean up
           fs.rmSync(tempDir, { recursive: true, force: true });
           
@@ -130,7 +141,7 @@ export async function POST(request: Request) {
           return new NextResponse(pdfBuffer, {
             headers: {
               'Content-Type': 'application/pdf',
-              'Content-Disposition': 'inline; filename="document.pdf"'
+              'Content-Disposition': 'attachment; filename="document.pdf"'
             }
           });
         }

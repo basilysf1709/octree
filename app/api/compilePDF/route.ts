@@ -1,3 +1,4 @@
+/* eslint-disable */
 import { NextResponse } from 'next/server';
 import { exec } from 'child_process';
 import fs from 'fs';
@@ -14,93 +15,133 @@ export async function POST(request: Request) {
   try {
     const { content } = await request.json();
     
-    // Create a unique ID for this compilation
-    const compilationId = uuidv4();
+    // Check environment
+    const isProd = process.env.ENVIRONMENT === 'production';
     
-    // Create temp directory in /tmp to work with Docker
-    const tempDir = path.join('/tmp', compilationId);
-    fs.mkdirSync(tempDir, { recursive: true });
-    
-    // Write the LaTeX content to a file
-    const texFilePath = path.join(tempDir, 'main.tex');
-    fs.writeFileSync(texFilePath, content);
-    
-    try {
-      // Log the Docker command for debugging
-      console.log(`Running Docker command: docker run --rm -v ${tempDir}:/data texlive/texlive pdflatex -interaction=nonstopmode -output-directory=/data /data/main.tex`);
-      
-      // Run pdflatex in Docker - continue even with LaTeX errors
-      const { stdout, stderr } = await execAsync(`docker run --rm -v ${tempDir}:/data texlive/texlive pdflatex -interaction=nonstopmode -output-directory=/data /data/main.tex`);
-      
-      console.log("Docker stdout:", stdout);
-      if (stderr) console.error("Docker stderr:", stderr);
-      
-      // Check if PDF was created regardless of errors
-      const pdfPath = path.join(tempDir, 'main.pdf');
-      
-      if (fs.existsSync(pdfPath)) {
-        // Read the PDF file
-        const pdfBuffer = fs.readFileSync(pdfPath);
+    if (isProd) {
+      // Use the remote TeX Live service in production
+      try {
+        // Make a request to your DigitalOcean service
+        const response = await fetch('http://142.93.195.236:3001/compile', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'text/plain',
+          },
+          body: content,
+        });
         
-        // Log any LaTeX warnings/errors for debugging but still return the PDF
-        const logPath = path.join(tempDir, 'main.log');
-        if (fs.existsSync(logPath)) {
-          const logContent = fs.readFileSync(logPath, 'utf-8');
-          console.log("LaTeX compilation log (warnings/errors):", logContent);
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(`LaTeX compilation failed: ${errorData.log || 'Unknown error'}`);
         }
         
-        // Clean up temporary files
-        fs.rmSync(tempDir, { recursive: true, force: true });
+        // Get the PDF directly from the response
+        const pdfBuffer = await response.arrayBuffer();
         
-        // Return the PDF even if there were LaTeX errors
+        // Return the PDF
         return new NextResponse(pdfBuffer, {
           headers: {
             'Content-Type': 'application/pdf',
             'Content-Disposition': 'inline; filename="document.pdf"'
           }
         });
-      } else {
-        console.error("PDF not found at path:", pdfPath);
-        throw new Error('PDF file not created');
+      } catch (error) {
+        console.error('Remote compilation error:', error);
+        return NextResponse.json({ 
+          error: 'LaTeX compilation failed on remote server', 
+          details: String(error)
+        }, { status: 500 });
       }
-    } catch (error) {
-      console.error('Docker execution error:', error);
+    } else {
+      // Local development: Use Docker on the same machine
+      // Create a unique ID for this compilation
+      const compilationId = uuidv4();
       
-      // If compilation fails, try to get the log file for debugging
-      const logPath = path.join(tempDir, 'main.log');
-      let logContent = '';
+      // Create temp directory in /tmp to work with Docker
+      const tempDir = path.join('/tmp', compilationId);
+      fs.mkdirSync(tempDir, { recursive: true });
       
-      if (fs.existsSync(logPath)) {
-        logContent = fs.readFileSync(logPath, 'utf-8');
-        console.log("LaTeX compilation log:", logContent);
-      } else {
-        console.error("No LaTeX log file found");
-      }
+      // Write the LaTeX content to a file
+      const texFilePath = path.join(tempDir, 'main.tex');
+      fs.writeFileSync(texFilePath, content);
       
-      // Check if PDF was created despite errors - this is the key change
-      const pdfPath = path.join(tempDir, 'main.pdf');
-      if (fs.existsSync(pdfPath)) {
-        console.log("PDF was generated despite errors - returning it anyway");
-        const pdfBuffer = fs.readFileSync(pdfPath);
+      try {
+        // Log the Docker command for debugging
+        console.log(`Running Docker command: docker run --rm -v ${tempDir}:/data texlive/texlive pdflatex -interaction=nonstopmode -output-directory=/data /data/main.tex`);
         
-        // Clean up
-        fs.rmSync(tempDir, { recursive: true, force: true });
+        // Run pdflatex in Docker - continue even with LaTeX errors
+        const { stdout, stderr } = await execAsync(`docker run --rm -v ${tempDir}:/data texlive/texlive pdflatex -interaction=nonstopmode -output-directory=/data /data/main.tex`);
         
-        // Return the PDF even though there were errors
-        return new NextResponse(pdfBuffer, {
-          headers: {
-            'Content-Type': 'application/pdf',
-            'Content-Disposition': 'inline; filename="document.pdf"'
+        console.log("Docker stdout:", stdout);
+        if (stderr) console.error("Docker stderr:", stderr);
+        
+        // Check if PDF was created regardless of errors
+        const pdfPath = path.join(tempDir, 'main.pdf');
+        
+        if (fs.existsSync(pdfPath)) {
+          // Read the PDF file
+          const pdfBuffer = fs.readFileSync(pdfPath);
+          
+          // Log any LaTeX warnings/errors for debugging but still return the PDF
+          const logPath = path.join(tempDir, 'main.log');
+          if (fs.existsSync(logPath)) {
+            const logContent = fs.readFileSync(logPath, 'utf-8');
+            console.log("LaTeX compilation log (warnings/errors):", logContent);
           }
-        });
+          
+          // Clean up temporary files
+          fs.rmSync(tempDir, { recursive: true, force: true });
+          
+          // Return the PDF even if there were LaTeX errors
+          return new NextResponse(pdfBuffer, {
+            headers: {
+              'Content-Type': 'application/pdf',
+              'Content-Disposition': 'inline; filename="document.pdf"'
+            }
+          });
+        } else {
+          console.error("PDF not found at path:", pdfPath);
+          throw new Error('PDF file not created');
+        }
+      } catch (error) {
+        console.error('Docker execution error:', error);
+        
+        // If compilation fails, try to get the log file for debugging
+        const logPath = path.join(tempDir, 'main.log');
+        let logContent = '';
+        
+        if (fs.existsSync(logPath)) {
+          logContent = fs.readFileSync(logPath, 'utf-8');
+          console.log("LaTeX compilation log:", logContent);
+        } else {
+          console.error("No LaTeX log file found");
+        }
+        
+        // Check if PDF was created despite errors
+        const pdfPath = path.join(tempDir, 'main.pdf');
+        if (fs.existsSync(pdfPath)) {
+          console.log("PDF was generated despite errors - returning it anyway");
+          const pdfBuffer = fs.readFileSync(pdfPath);
+          
+          // Clean up
+          fs.rmSync(tempDir, { recursive: true, force: true });
+          
+          // Return the PDF even though there were errors
+          return new NextResponse(pdfBuffer, {
+            headers: {
+              'Content-Type': 'application/pdf',
+              'Content-Disposition': 'inline; filename="document.pdf"'
+            }
+          });
+        }
+        
+        // No PDF was generated, return error
+        return NextResponse.json({ 
+          error: 'LaTeX compilation failed', 
+          details: String(error),
+          log: logContent 
+        }, { status: 500 });
       }
-      
-      // No PDF was generated, return error
-      return NextResponse.json({ 
-        error: 'LaTeX compilation failed', 
-        details: String(error),
-        log: logContent 
-      }, { status: 500 });
     }
   } catch (error) {
     console.error('Compilation error:', error);

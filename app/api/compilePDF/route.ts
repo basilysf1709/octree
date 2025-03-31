@@ -14,6 +14,8 @@ export const runtime = 'nodejs';
 export async function POST(request: Request) {
   try {
     const { content } = await request.json();
+
+    console.log("Received content:", content);
     
     // Check environment
     const isProd = process.env.ENVIRONMENT === 'prod';

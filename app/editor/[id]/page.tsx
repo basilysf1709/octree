@@ -8,7 +8,7 @@ import { latexLanguageConfiguration, latexTokenProvider, registerLatexCompletion
 import { Chat } from '@/components/chat';
 import { OctreeLogo } from '@/components/icons/octree-logo';
 import { EditSuggestion } from '@/types/edit';
-import { Check, X } from 'lucide-react';
+import { Check, X, Loader2 } from 'lucide-react';
 import type * as Monaco from 'monaco-editor';
 
 export default function EditorPage() {
@@ -82,6 +82,7 @@ The definition of an integral:
   const [editor, setEditor] = useState<Monaco.editor.IStandaloneCodeEditor | null>(null);
   const [monacoInstance, setMonacoInstance] = useState<typeof Monaco | null>(null);
   const [decorationIds, setDecorationIds] = useState<string[]>([]);
+  const [exportingPDF, setExportingPDF] = useState(false);
 
   const handleCompile = async () => {
     setCompiling(true);
@@ -102,6 +103,38 @@ The definition of an integral:
       console.error('Compilation error:', error);
     } finally {
       setCompiling(false);
+    }
+  };
+
+  const handleExportPDF = async () => {
+    setExportingPDF(true);
+    try {
+      const response = await fetch('/api/compilePDF', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content })
+      });
+
+      if (!response.ok) throw new Error('PDF compilation failed');
+
+      // Get the PDF as a blob
+      const pdfBlob = await response.blob();
+      
+      // Create download link
+      const url = URL.createObjectURL(pdfBlob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'document.pdf';
+      document.body.appendChild(a);
+      a.click();
+      
+      // Clean up
+      URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      console.error('PDF export error:', error);
+    } finally {
+      setExportingPDF(false);
     }
   };
 
@@ -188,56 +221,73 @@ The definition of an integral:
 
   // Update the decoration effect
   useEffect(() => {
-    if (!editor || !monacoInstance) return;
+    if (!editor || !monacoInstance || editSuggestions.length === 0) {
+      return;
+    }
 
+    // Clear existing decorations
+    if (decorationIds.length) {
+      editor.deltaDecorations(decorationIds, []);
+      setDecorationIds([]); // Clear the IDs after removing decorations
+      return; // Exit early to prevent infinite loop
+    }
+
+    // Get pending suggestions
+    const pendingSuggestions = editSuggestions.filter(s => s.status === 'pending');
+    
+    // Skip processing if no pending suggestions
+    if (pendingSuggestions.length === 0) return;
+    
+    // Create decorations for the first pending suggestion only
+    const suggestion = pendingSuggestions[0];
+    
     const model = editor.getModel();
     if (!model) return;
 
-    // Clear previous decorations
-    editor.deltaDecorations(decorationIds, []);
-
-    const decorations = editSuggestions
-      .filter(s => s.status === 'pending')
-      .flatMap(suggestion => [
-        // Original text decoration (red)
-        {
-          range: new monacoInstance.Range(
-            suggestion.startLine,
-            1,
-            suggestion.endLine + 1,
-            1
-          ),
-          options: {
-            isWholeLine: false,
-            className: 'suggestion-deleted',
-            glyphMarginClassName: 'suggestion-glyph',
-            glyphMarginHoverMessage: { value: 'Edit suggestion' }
-          }
-        },
-        // Suggested text decoration (green)
-        {
-          range: new monacoInstance.Range(
-            suggestion.startLine,
-            1,
-            suggestion.endLine + 1,
-            1
-          ),
-          options: {
-            isWholeLine: false,
-            className: 'suggestion-added',
-            after: {
-              content: `  ${suggestion.suggested}`,
-              inlineClassName: 'suggestion-added',
-              attachedData: suggestion.id
-            }
+    const decorations = [
+      // Original text decoration (red)
+      {
+        range: new monacoInstance.Range(
+          suggestion.startLine,
+          1,
+          suggestion.endLine + 1,
+          1
+        ),
+        options: {
+          isWholeLine: false,
+          className: 'suggestion-deleted',
+          glyphMarginClassName: 'suggestion-glyph',
+          glyphMarginHoverMessage: { value: 'Edit suggestion' }
+        }
+      },
+      // Suggested text decoration (green)
+      {
+        range: new monacoInstance.Range(
+          suggestion.startLine,
+          1,
+          suggestion.endLine + 1,
+          1
+        ),
+        options: {
+          isWholeLine: false,
+          className: 'suggestion-added',
+          after: {
+            content: `  ${suggestion.suggested}`,
+            inlineClassName: 'suggestion-added',
+            attachedData: suggestion.id
           }
         }
-      ]);
+      }
+    ];
 
-    // Store new decoration IDs
+    // Store new decoration IDs without calling setDecorationIds inside the effect
     const newDecorationIds = editor.deltaDecorations([], decorations);
-    setDecorationIds(newDecorationIds);
-  }, [editSuggestions, editor, monacoInstance, decorationIds]);
+    
+    // Use a ref to track if we've already set the IDs
+    if (newDecorationIds.length > 0) {
+      setDecorationIds(newDecorationIds);
+    }
+  }, [editSuggestions, editor, monacoInstance]); // Remove decorationIds from dependencies
 
   // Cleanup URL on unmount
   useEffect(() => {
@@ -267,6 +317,20 @@ The definition of an integral:
                 className="bg-blue-600 hover:bg-blue-700 text-white"
               >
                 {compiling ? 'Compiling...' : 'Compile'}
+              </Button>
+              <Button
+                onClick={handleExportPDF}
+                disabled={exportingPDF}
+                className="bg-blue-500 hover:bg-blue-600 text-white"
+              >
+                {exportingPDF ? (
+                  <div className="flex items-center">
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Exporting...
+                  </div>
+                ) : (
+                  'Export PDF'
+                )}
               </Button>
             </div>
           </div>

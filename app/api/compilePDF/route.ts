@@ -47,7 +47,7 @@ export async function POST(request: Request) {
         return new Response(pdfBuffer, {
           headers: {
             'Content-Type': 'application/pdf',
-            'Content-Disposition': 'attachment; filename="document.pdf"',
+            'Content-Disposition': 'inline; filename="document.pdf"',
             'Content-Length': pdfBuffer.byteLength.toString()
           }
         });
@@ -106,7 +106,8 @@ export async function POST(request: Request) {
           return new Response(pdfBuffer, {
             headers: {
               'Content-Type': 'application/pdf',
-              'Content-Disposition': 'attachment; filename="document.pdf"'
+              'Content-Disposition': 'inline; filename="document.pdf"',
+              'Content-Length': pdfBuffer.byteLength.toString()
             }
           });
         } else {
@@ -144,7 +145,8 @@ export async function POST(request: Request) {
           return new Response(pdfBuffer, {
             headers: {
               'Content-Type': 'application/pdf',
-              'Content-Disposition': 'attachment; filename="document.pdf"'
+              'Content-Disposition': 'inline; filename="document.pdf"',
+              'Content-Length': pdfBuffer.byteLength.toString()
             }
           });
         }

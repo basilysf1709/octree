@@ -43,11 +43,12 @@ export async function POST(request: Request) {
         // After getting the PDF buffer
         console.log("PDF buffer size:", pdfBuffer.byteLength);
         
-        // Return the PDF
-        return new NextResponse(pdfBuffer, {
+        // Use correct return format for binary data
+        return new Response(pdfBuffer, {
           headers: {
             'Content-Type': 'application/pdf',
-            'Content-Disposition': 'attachment; filename="document.pdf"'
+            'Content-Disposition': 'attachment; filename="document.pdf"',
+            'Content-Length': pdfBuffer.byteLength.toString()
           }
         });
       } catch (error) {

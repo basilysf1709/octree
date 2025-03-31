@@ -103,7 +103,7 @@ export async function POST(request: Request) {
           fs.rmSync(tempDir, { recursive: true, force: true });
           
           // Return the PDF even if there were LaTeX errors
-          return new NextResponse(pdfBuffer, {
+          return new Response(pdfBuffer, {
             headers: {
               'Content-Type': 'application/pdf',
               'Content-Disposition': 'attachment; filename="document.pdf"'
@@ -141,7 +141,7 @@ export async function POST(request: Request) {
           fs.rmSync(tempDir, { recursive: true, force: true });
           
           // Return the PDF even though there were errors
-          return new NextResponse(pdfBuffer, {
+          return new Response(pdfBuffer, {
             headers: {
               'Content-Type': 'application/pdf',
               'Content-Disposition': 'attachment; filename="document.pdf"'

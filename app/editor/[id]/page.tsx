@@ -12,8 +12,21 @@ import { EditSuggestion } from '@/types/edit';
 import { Check, X, Loader2 } from 'lucide-react';
 import type * as Monaco from 'monaco-editor';
 import { PDFViewer } from "@/components/PDFViewer";
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { useParams, useRouter } from 'next/navigation';
 
 export default function EditorPage() {
+  // Add Supabase client and params
+  const supabase = createClientComponentClient();
+  const params = useParams();
+  const documentId = params.id as string;
+  const router = useRouter();
+  
+  // Add document metadata state
+  const [documentTitle, setDocumentTitle] = useState<string>("LaTeX Document");
+  const [isSaving, setIsSaving] = useState<boolean>(false);
+  const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  
   // Move Monaco initialization into useEffect
   useEffect(() => {
     loader.init().then(monaco => {
@@ -86,22 +99,58 @@ The definition of an integral:
   const [decorationIds, setDecorationIds] = useState<string[]>([]);
   const [exportingPDF, setExportingPDF] = useState(false);
 
-  const handleCompile = async () => {
-    setCompiling(true);
+  // New function to save document
+  const saveDocument = async (): Promise<boolean> => {
+    if (!documentId) return false;
+    
     try {
+      setIsSaving(true);
+      
+      const { error } = await supabase
+        .from('documents')
+        .update({
+          content: content,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', documentId);
+      
+      if (error) throw error;
+      
+      setLastSaved(new Date());
+      return true;
+    } catch (error) {
+      console.error('Error saving document:', error);
+      return false;
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Update compile handler to show loading immediately
+  const handleCompile = async () => {
+    // Start loading indicator immediately
+    setCompiling(true);
+    
+    try {
+      // Save document in the background (don't await)
+      const savePromise = saveDocument();
+      
+      // Start compilation request without waiting for save
       const response = await fetch('/api/compilePDF', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ content })
       });
 
+      // Wait for save to complete in the background
+      await savePromise;
+
       if (!response.ok) throw new Error('Compilation failed');
 
-      // Get PDF data directly
+      // Process response
       const data = await response.json();
       
       if (data.pdf) {
-        // Set the Base64 PDF data
         setPdfData(data.pdf);
       } else {
         throw new Error('No PDF data received');
@@ -113,18 +162,25 @@ The definition of an integral:
     }
   };
 
+  // Also update export handler
   const handleExportPDF = async () => {
+    // Start loading indicator immediately
     setExportingPDF(true);
+    
     try {
-      console.log("Starting PDF export...");
+      // Save document in the background
+      const savePromise = saveDocument();
       
+      // Start PDF compilation immediately
+      console.log("Starting PDF export...");
       const response = await fetch('/api/compilePDF', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ content })
       });
       
-      console.log("API response received, status:", response.status);
+      // Wait for save to complete in background
+      await savePromise;
       
       if (!response.ok) throw new Error('PDF compilation failed');
       
@@ -341,6 +397,33 @@ The definition of an integral:
     };
   }, []);
 
+  // Load document on initial render
+  useEffect(() => {
+    const fetchDocument = async () => {
+      if (!documentId) return;
+      
+      try {
+        const { data, error } = await supabase
+          .from('documents')
+          .select('content, title')
+          .eq('id', documentId)
+          .single();
+        
+        if (error) throw error;
+        
+        if (data) {
+          setContent(data.content || '');
+          setDocumentTitle(data.title || 'LaTeX Document');
+          setLastSaved(new Date());
+        }
+      } catch (error) {
+        console.error('Error fetching document:', error);
+      }
+    };
+    
+    fetchDocument();
+  }, [documentId, supabase]);
+
   return (
     <div className="min-h-screen bg-blue-50">
       {/* Navigation */}
@@ -352,6 +435,11 @@ The definition of an integral:
                 <OctreeLogo className="w-8 h-8 text-blue-600" />
                 <span className="text-xl font-bold text-blue-900">Octree</span>
               </Link>
+              {lastSaved && (
+                <span className="ml-6 text-sm text-gray-500">
+                  {isSaving ? 'Saving...' : `Last saved: ${lastSaved.toLocaleTimeString()}`}
+                </span>
+              )}
             </div>
             <div className="flex items-center space-x-4">
               <Button

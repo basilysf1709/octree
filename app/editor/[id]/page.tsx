@@ -11,6 +11,7 @@ import { OctreeLogo } from '@/components/icons/octree-logo';
 import { EditSuggestion } from '@/types/edit';
 import { Check, X, Loader2 } from 'lucide-react';
 import type * as Monaco from 'monaco-editor';
+import { PDFViewer } from "@/components/PDFViewer";
 
 export default function EditorPage() {
   // Move Monaco initialization into useEffect
@@ -78,7 +79,7 @@ The definition of an integral:
 \\end{document}`);
   
   const [compiling, setCompiling] = useState(false);
-  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [pdfData, setPdfData] = useState<string | null>(null);
   const [editSuggestions, setEditSuggestions] = useState<EditSuggestion[]>([]);
   const [editor, setEditor] = useState<Monaco.editor.IStandaloneCodeEditor | null>(null);
   const [monacoInstance, setMonacoInstance] = useState<typeof Monaco | null>(null);
@@ -88,7 +89,7 @@ The definition of an integral:
   const handleCompile = async () => {
     setCompiling(true);
     try {
-      const response = await fetch('/api/compile', {
+      const response = await fetch('/api/compilePDF', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ content })
@@ -96,10 +97,15 @@ The definition of an integral:
 
       if (!response.ok) throw new Error('Compilation failed');
 
-      const { html } = await response.json();
-      const blob = new Blob([html], { type: 'text/html' });
-      const url = URL.createObjectURL(blob);
-      setPdfUrl(url);
+      // Get PDF data directly
+      const data = await response.json();
+      
+      if (data.pdf) {
+        // Set the Base64 PDF data
+        setPdfData(data.pdf);
+      } else {
+        throw new Error('No PDF data received');
+      }
     } catch (error) {
       console.error('Compilation error:', error);
     } finally {
@@ -328,14 +334,12 @@ The definition of an integral:
     }
   }, [editSuggestions, editor, monacoInstance]); // Remove decorationIds from dependencies
 
-  // Cleanup URL on unmount
+  // Cleanup on unmount (adjust to remove any references to pdfUrl)
   useEffect(() => {
     return () => {
-      if (pdfUrl) {
-        URL.revokeObjectURL(pdfUrl);
-      }
+      // No URL objects to revoke now that we're using data URLs
     };
-  }, [pdfUrl]);
+  }, []);
 
   return (
     <div className="min-h-screen bg-blue-50">
@@ -424,24 +428,12 @@ The definition of an integral:
             />
           </div>
 
-          {/* Preview */}
+          {/* Preview - Replace with PDFViewer */}
           <div className="flex-1 bg-white rounded-lg shadow-sm p-4 overflow-auto">
-            {compiling ? (
-              <div className="h-full flex items-center justify-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-              </div>
-            ) : pdfUrl ? (
-              <iframe
-                src={pdfUrl}
-                className="w-full h-[80vh]"
-                title="Preview"
-                sandbox="allow-same-origin allow-scripts"
-              />
-            ) : (
-              <div className="h-full flex items-center justify-center text-blue-600">
-                Click &quot;Compile&quot; to see the preview
-              </div>
-            )}
+            <PDFViewer 
+              pdfData={pdfData} 
+              isLoading={compiling} 
+            />
           </div>
         </div>
       </div>

@@ -38,23 +38,17 @@ export async function POST(request: Request) {
         }
         
         // Get the PDF directly from the response
-        const pdfBuffer = await response.arrayBuffer();
+        const pdfArrayBuffer = await response.arrayBuffer();
+        console.log("PDF buffer size:", pdfArrayBuffer.byteLength);
         
-        // After getting the PDF buffer
-        console.log("PDF buffer size:", pdfBuffer.byteLength);
-        console.log("PDF starts with:", Buffer.from(pdfBuffer).toString('hex'));
+        // Convert to Base64 (prevents binary corruption)
+        const pdfBuffer = Buffer.from(pdfArrayBuffer);
+        const base64PDF = pdfBuffer.toString('base64');
         
-        // Check for PDF signature
-        const isPdfValid = Buffer.from(pdfBuffer).toString() === '%PDF';
-        console.log(`Appears to be valid PDF: ${isPdfValid}`);
-        
-        // Use correct return format for binary data
-        return new Response(pdfBuffer, {
-          headers: {
-            'Content-Type': 'application/pdf',
-            'Content-Disposition': 'attachment; filename="document.pdf"',
-            'Content-Length': pdfBuffer.byteLength.toString()
-          }
+        // Return Base64 data
+        return NextResponse.json({ 
+          pdf: base64PDF,
+          size: pdfBuffer.length
         });
       } catch (error) {
         console.error('Remote compilation error:', error);

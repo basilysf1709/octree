@@ -118,11 +118,21 @@ The definition of an integral:
 
       if (!response.ok) throw new Error('PDF compilation failed');
 
-      // Get the PDF as a blob
-      const pdfBlob = await response.blob();
+      // Get the Base64 PDF data
+      const data = await response.json();
       
-      // Create download link
-      const url = URL.createObjectURL(pdfBlob);
+      // Convert Base64 back to binary
+      const binaryString = atob(data.pdf);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+      
+      // Create downloadable blob
+      const blob = new Blob([bytes], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
+      
+      // Download
       const a = document.createElement('a');
       a.href = url;
       a.download = 'document.pdf';

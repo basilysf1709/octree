@@ -23,7 +23,8 @@ export async function POST(request: Request) {
     if (isProd) {
       // Use the remote TeX Live service in production
       try {
-        // Make a request to your DigitalOcean service
+        console.log("Starting remote PDF generation...");
+        
         const response = await fetch('http://142.93.195.236:3001/compile', {
           method: 'POST',
           headers: {
@@ -32,23 +33,38 @@ export async function POST(request: Request) {
           body: content,
         });
         
+        console.log("Remote server response status:", response.status);
+        console.log("Remote server response headers:", JSON.stringify(Object.fromEntries([...response.headers])));
+        
         if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(`LaTeX compilation failed: ${errorData.log || 'Unknown error'}`);
+          const errorText = await response.text();
+          console.error("Remote server error response:", errorText);
+          throw new Error(`LaTeX compilation failed: ${errorText}`);
         }
         
-        // Get the PDF directly from the response
         const pdfArrayBuffer = await response.arrayBuffer();
-        console.log("PDF buffer size:", pdfArrayBuffer.byteLength);
+        console.log("PDF buffer received, size:", pdfArrayBuffer.byteLength);
         
-        // Convert to Base64 (prevents binary corruption)
+        // Check the first few bytes
+        const firstBytes = Buffer.from(pdfArrayBuffer.slice(0, 20)).toString('hex');
+        console.log("PDF starts with (hex):", firstBytes);
+        
+        // Convert to Base64
         const pdfBuffer = Buffer.from(pdfArrayBuffer);
         const base64PDF = pdfBuffer.toString('base64');
+        console.log("Base64 PDF length:", base64PDF.length);
+        console.log("Base64 PDF starts with:", base64PDF.substring(0, 40));
         
-        // Return Base64 data
+        // Return with verbose info
         return NextResponse.json({ 
           pdf: base64PDF,
-          size: pdfBuffer.length
+          size: pdfBuffer.length,
+          mimeType: 'application/pdf',
+          debugInfo: {
+            firstBytesHex: firstBytes,
+            contentLength: pdfArrayBuffer.byteLength,
+            base64Length: base64PDF.length
+          }
         });
       } catch (error) {
         console.error('Remote compilation error:', error);

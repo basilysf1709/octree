@@ -110,38 +110,66 @@ The definition of an integral:
   const handleExportPDF = async () => {
     setExportingPDF(true);
     try {
+      console.log("Starting PDF export...");
+      
       const response = await fetch('/api/compilePDF', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ content })
       });
-
-      if (!response.ok) throw new Error('PDF compilation failed');
-
-      // Get the Base64 PDF data
-      const data = await response.json();
       
-      // Convert Base64 back to binary
-      const binaryString = atob(data.pdf);
-      const bytes = new Uint8Array(binaryString.length);
-      for (let i = 0; i < binaryString.length; i++) {
-        bytes[i] = binaryString.charCodeAt(i);
+      console.log("API response received, status:", response.status);
+      
+      if (!response.ok) throw new Error('PDF compilation failed');
+      
+      // Log raw response for debugging
+      const rawText = await response.text();
+      console.log("Raw response (first 100 chars):", rawText.substring(0, 100));
+      
+      // Parse manually to avoid potential issues
+      let data;
+      try {
+        data = JSON.parse(rawText);
+        console.log("JSON parsed successfully");
+        console.log("PDF data present:", !!data.pdf);
+        console.log("PDF size:", data.size);
+        console.log("Base64 length:", data.pdf?.length);
+      } catch (e) {
+        console.error("Failed to parse JSON:", e);
+        throw new Error("Failed to parse server response");
       }
       
-      // Create downloadable blob
-      const blob = new Blob([bytes], { type: 'application/pdf' });
-      const url = URL.createObjectURL(blob);
-      
-      // Download
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'document.pdf';
-      document.body.appendChild(a);
-      a.click();
-      
-      // Clean up
-      URL.revokeObjectURL(url);
-      document.body.removeChild(a);
+      // Continue with PDF processing...
+      if (data.pdf) {
+        console.log("Converting Base64 to binary...");
+        
+        // Convert Base64 back to binary
+        const binaryString = atob(data.pdf);
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
+        
+        console.log("Creating blob from binary data...");
+        // Create downloadable blob
+        const blob = new Blob([bytes], { type: 'application/pdf' });
+        const url = URL.createObjectURL(blob);
+        
+        console.log("Initiating download...");
+        // Download
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'document.pdf';
+        document.body.appendChild(a);
+        a.click();
+        
+        // Clean up
+        URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        console.log("Download complete!");
+      } else {
+        throw new Error("No PDF data received from server");
+      }
     } catch (error) {
       console.error('PDF export error:', error);
     } finally {

@@ -2,11 +2,42 @@
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { OctreeLogo } from '@/components/icons/octree-logo';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 
 export default function Home() {
   const [isLoading, setIsLoading] = useState(false);
+  const [isSignedIn, setIsSignedIn] = useState(false);
+  const supabase = createClientComponentClient();
+  
+  // Check authentication status on mount
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      setIsSignedIn(!!session);
+    };
+    
+    checkAuth();
+    
+    // Set up listener for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        setIsSignedIn(!!session);
+      }
+    );
+    
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [supabase.auth]);
+  
+  const handleSignOut = async () => {
+    setIsLoading(true);
+    await supabase.auth.signOut();
+    setIsLoading(false);
+    window.location.href = '/';
+  };
 
   const handleSubscribe = async () => {
     try {
@@ -47,14 +78,28 @@ export default function Home() {
               </div>
             </div>
             <div className="flex items-center space-x-4">
-              <Link href="/auth" className="text-blue-600 hover:text-blue-800">
-                Sign in
-              </Link>
-              <Link href="/auth">
-                <Button className="bg-blue-600 hover:bg-blue-700 text-white">
-                  Get Started
+              {isSignedIn ? (
+                <Button 
+                  onClick={handleSignOut}
+                  disabled={isLoading}
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  {isLoading ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : 'Sign Out'}
                 </Button>
-              </Link>
+              ) : (
+                <>
+                  <Link href="/auth" className="text-blue-600 hover:text-blue-800">
+                    Sign in
+                  </Link>
+                  <Link href="/auth">
+                    <Button className="bg-blue-600 hover:bg-blue-700 text-white">
+                      Get Started
+                    </Button>
+                  </Link>
+                </>
+              )}
             </div>
           </div>
         </div>

@@ -26,7 +26,9 @@ export async function POST(request: Request) {
         // Make a request to your DigitalOcean service
         const response = await fetch('http://142.93.195.236:3001/compile', {
           method: 'POST',
-          headers: { 'Content-Type': 'text/plain' },
+          headers: {
+            'Content-Type': 'text/plain',
+          },
           body: content,
         });
         
@@ -35,18 +37,24 @@ export async function POST(request: Request) {
           throw new Error(`LaTeX compilation failed: ${errorData.log || 'Unknown error'}`);
         }
         
-        // Get binary data as ArrayBuffer
-        const pdfArrayBuffer = await response.arrayBuffer();
-        console.log("PDF buffer size:", pdfArrayBuffer.byteLength);
+        // Get the PDF directly from the response
+        const pdfBuffer = await response.arrayBuffer();
         
-        // Convert to Base64 (prevents binary corruption)
-        const pdfBuffer = Buffer.from(pdfArrayBuffer);
-        const base64PDF = pdfBuffer.toString('base64');
+        // After getting the PDF buffer
+        console.log("PDF buffer size:", pdfBuffer.byteLength);
+        console.log("PDF starts with:", Buffer.from(pdfBuffer).slice(0, 20).toString('hex'));
         
-        // Return Base64 data with instructions to convert back
-        return NextResponse.json({ 
-          pdf: base64PDF,
-          size: pdfBuffer.length
+        // Check for PDF signature
+        const isPdfValid = Buffer.from(pdfBuffer).slice(0, 4).toString() === '%PDF';
+        console.log(`Appears to be valid PDF: ${isPdfValid}`);
+        
+        // Use correct return format for binary data
+        return new Response(pdfBuffer, {
+          headers: {
+            'Content-Type': 'application/pdf',
+            'Content-Disposition': 'attachment; filename="document.pdf"',
+            'Content-Length': pdfBuffer.byteLength.toString()
+          }
         });
       } catch (error) {
         console.error('Remote compilation error:', error);

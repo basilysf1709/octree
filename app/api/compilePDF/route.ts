@@ -91,7 +91,7 @@ export async function POST(request: Request) {
           console.log("PDF buffer size:", pdfBuffer.byteLength);
           console.log("PDF starts with:", pdfBuffer.slice(0, 10).toString('hex'));
           
-          // Log any LaTeX warnings/errors for debugging but still return the PDF
+          // Log any LaTeX warnings/errors for debugging
           const logPath = path.join(tempDir, 'main.log');
           if (fs.existsSync(logPath)) {
             const logContent = fs.readFileSync(logPath, 'utf-8');
@@ -101,15 +101,13 @@ export async function POST(request: Request) {
           // Clean up temporary files
           fs.rmSync(tempDir, { recursive: true, force: true });
           
-          // Return the PDF even if there were LaTeX errors
-          console.log("PDF buffer size:", pdfBuffer.byteLength);
-          console.log("PDF starts with:", pdfBuffer.toString('hex'));
-          return new Response(pdfBuffer, {
-            headers: {
-              'Content-Type': 'application/pdf',
-              'Content-Disposition': 'inline; filename="document.pdf"',
-              'Content-Length': pdfBuffer.byteLength.toString()
-            }
+          // Convert to Base64 to match production behavior
+          const base64PDF = pdfBuffer.toString('base64');
+          
+          // Return Base64 data in JSON
+          return NextResponse.json({ 
+            pdf: base64PDF,
+            size: pdfBuffer.length
           });
         } else {
           console.error("PDF not found at path:", pdfPath);
@@ -142,13 +140,13 @@ export async function POST(request: Request) {
           // Clean up
           fs.rmSync(tempDir, { recursive: true, force: true });
           
-          // Return the PDF even though there were errors
-          return new Response(pdfBuffer, {
-            headers: {
-              'Content-Type': 'application/pdf',
-              'Content-Disposition': 'inline; filename="document.pdf"',
-              'Content-Length': pdfBuffer.byteLength.toString()
-            }
+          // Convert to Base64 to match production behavior
+          const base64PDF = pdfBuffer.toString('base64');
+          
+          // Return Base64 data in JSON
+          return NextResponse.json({ 
+            pdf: base64PDF,
+            size: pdfBuffer.length
           });
         }
         

@@ -108,7 +108,6 @@ The definition of an integral:
   };
 
   const handleExportPDF = async () => {
-    setExportingPDF(true);
     try {
       const response = await fetch('/api/compilePDF', {
         method: 'POST',
@@ -118,24 +117,30 @@ The definition of an integral:
 
       if (!response.ok) throw new Error('PDF compilation failed');
 
-      // Get the PDF as a blob
-      const pdfBlob = await response.blob();
+      // Get the Base64 PDF data
+      const data = await response.json();
       
-      // Create download link
-      const url = URL.createObjectURL(pdfBlob);
+      // Convert Base64 back to binary
+      const binaryData = atob(data.pdf);
+      
+      // Create Blob from binary
+      const bytes = new Uint8Array(binaryData.length);
+      for (let i = 0; i < binaryData.length; i++) {
+        bytes[i] = binaryData.charCodeAt(i);
+      }
+      const blob = new Blob([bytes], { type: 'application/pdf' });
+      
+      // Download as before
+      const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
       a.download = 'document.pdf';
       document.body.appendChild(a);
       a.click();
-      
-      // Clean up
       URL.revokeObjectURL(url);
       document.body.removeChild(a);
     } catch (error) {
-      console.error('PDF export error:', error);
-    } finally {
-      setExportingPDF(false);
+      console.error('Error:', error);
     }
   };
 

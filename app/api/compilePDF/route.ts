@@ -42,10 +42,10 @@ export async function POST(request: Request) {
         
         // After getting the PDF buffer
         console.log("PDF buffer size:", pdfBuffer.byteLength);
-        console.log("PDF starts with:", Buffer.from(pdfBuffer).slice(0, 20).toString('hex'));
+        console.log("PDF starts with:", Buffer.from(pdfBuffer).toString('hex'));
         
         // Check for PDF signature
-        const isPdfValid = Buffer.from(pdfBuffer).slice(0, 4).toString() === '%PDF';
+        const isPdfValid = Buffer.from(pdfBuffer).toString() === '%PDF';
         console.log(`Appears to be valid PDF: ${isPdfValid}`);
         
         // Use correct return format for binary data

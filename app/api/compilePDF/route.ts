@@ -42,12 +42,17 @@ export async function POST(request: Request) {
         
         // After getting the PDF buffer
         console.log("PDF buffer size:", pdfBuffer.byteLength);
+        console.log("PDF starts with:", Buffer.from(pdfBuffer).slice(0, 20).toString('hex'));
+        
+        // Check for PDF signature
+        const isPdfValid = Buffer.from(pdfBuffer).slice(0, 4).toString() === '%PDF';
+        console.log(`Appears to be valid PDF: ${isPdfValid}`);
         
         // Use correct return format for binary data
         return new Response(pdfBuffer, {
           headers: {
             'Content-Type': 'application/pdf',
-            'Content-Disposition': 'inline; filename="document.pdf"',
+            'Content-Disposition': 'attachment; filename="document.pdf"',
             'Content-Length': pdfBuffer.byteLength.toString()
           }
         });
@@ -103,6 +108,8 @@ export async function POST(request: Request) {
           fs.rmSync(tempDir, { recursive: true, force: true });
           
           // Return the PDF even if there were LaTeX errors
+          console.log("PDF buffer size:", pdfBuffer.byteLength);
+          console.log("PDF starts with:", pdfBuffer.toString('hex'));
           return new Response(pdfBuffer, {
             headers: {
               'Content-Type': 'application/pdf',

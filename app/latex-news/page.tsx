@@ -59,6 +59,7 @@ export default function LatexNewsPage() {
         setNews(data.news);
         setLoading(false);
       } catch (err) {
+        console.error('Error fetching LaTeX news:', err);
         setError('Failed to load LaTeX news. Please try again later.');
         setLoading(false);
       }

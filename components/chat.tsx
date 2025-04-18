@@ -195,7 +195,7 @@ export function Chat({ onEditSuggestion, fileContent }: ChatProps) {
                   </div>
                 </div>
               )}
-              {messages.map((message, i) => (
+              {messages.map((message) => (
                 <motion.div
                   initial={{ y: 10, opacity: 0 }}
                   animate={{ y: 0, opacity: 1 }}

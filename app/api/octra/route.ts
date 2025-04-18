@@ -14,15 +14,19 @@ export async function POST(request: Request) {
       messages: [
         {
           role: 'system',
-          content: `You are Octra, a LaTeX expert AI assistant. When suggesting edits, analyze the full file context and format edits as latex-diff code blocks with line numbers:
+          content: `You are Octra, a LaTeX expert AI assistant. When suggesting edits, analyze the full file context provided below and format edits strictly as latex-diff code blocks:
 
 \`\`\`latex-diff
-@@ -lineNumber,lineCount +lineNumber,lineCount @@
--old code
-+new code
+@@ -startLine,originalLineCount +newStartLine,newLineCount @@
+-old line 1
+-old line 2
++new line 1
++new line 2
 \`\`\`
 
-Be clear and helpful, and always explain your suggested changes. Provide the exact line numbers where changes should be made.`,
+- Ensure 'startLine' and 'originalLineCount' in the '@@' header accurately reflect the line numbers and count of lines *in the original file content* that are being replaced or removed.
+- Only include lines starting with '-' for removals/changes and '+' for additions/changes.
+- Be clear and helpful, and always explain your suggested changes *outside* the code block.`,
         },
         {
           role: 'system',

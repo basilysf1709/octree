@@ -18,53 +18,59 @@ export function Chat({ onEditSuggestion, fileContent }: ChatProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
 
-  const parseEditSuggestions = (content: string) => {
+  const parseEditSuggestions = (content: string): string => {
     const editRegex = /```latex-diff\n([\s\S]*?)\n```/g;
     let match;
     let cleanContent = content;
 
     while ((match = editRegex.exec(content)) !== null) {
-      const diffContent = match[1];
-      const lines = diffContent.split('\n');
-      let original = '';
-      let suggested = '';
+      const diffBlockContent = match[1];
+      const lines = diffBlockContent.split('\n');
+
+      let originalContent = '';
+      let suggestedContent = '';
       let startLine = 0;
-      let lineCount = 0;
+      let originalLineCount = 0;
 
-      // Find the context in the file
-      const contextMatch = diffContent.match(
-        /@@\s*-(\d+),(\d+)\s*\+\d+,\d+\s*@@/
+      const headerMatch = lines[0]?.match(
+        /@@\s*-(\d+)(?:,(\d+))?\s*\+(\d+)(?:,(\d+))?\s*@@/
       );
-      if (contextMatch) {
-        startLine = parseInt(contextMatch[1]);
-        lineCount = parseInt(contextMatch[2]);
-      }
 
-      lines.forEach((line) => {
-        if (line.startsWith('-')) {
-          original += line.slice(1) + '\n';
-        } else if (line.startsWith('+')) {
-          suggested += line.slice(1) + '\n';
+      if (headerMatch) {
+        startLine = parseInt(headerMatch[1], 10);
+        originalLineCount = headerMatch[2] ? parseInt(headerMatch[2], 10) : 1;
+
+        for (let i = 1; i < lines.length; i++) {
+          const line = lines[i];
+          if (line.startsWith('-')) {
+            originalContent += line.slice(1) + '\n';
+          } else if (line.startsWith('+')) {
+            suggestedContent += line.slice(1) + '\n';
+          }
         }
-      });
 
-      if (original || suggested) {
-        const suggestion: EditSuggestion = {
-          id: uuidv4(),
-          original: original.trim(),
-          suggested: suggested.trim(),
-          startLine,
-          endLine: startLine + lineCount - 1,
-          status: 'pending',
-        };
-        onEditSuggestion(suggestion);
+        originalContent = originalContent.replace(/\n$/, '');
+        suggestedContent = suggestedContent.replace(/\n$/, '');
+
+        if (originalContent || suggestedContent) {
+          const suggestion: EditSuggestion = {
+            id: uuidv4(),
+            original: originalContent,
+            suggested: suggestedContent,
+            startLine: startLine,
+            originalLineCount: originalLineCount,
+            status: 'pending',
+          };
+          onEditSuggestion(suggestion);
+        }
+      } else {
+        console.warn("Could not parse diff header:", lines[0]);
       }
 
-      // Remove the edit block from displayed content
       cleanContent = cleanContent.replace(match[0], '');
     }
 
-    return cleanContent;
+    return cleanContent.trim();
   };
 
   const {
@@ -73,17 +79,21 @@ export function Chat({ onEditSuggestion, fileContent }: ChatProps) {
     handleInputChange,
     handleSubmit: originalHandleSubmit,
     isLoading,
+    setMessages
   } = useChat({
     api: '/api/octra',
     body: {
       fileContent,
     },
     onFinish: (message) => {
-      message.content = parseEditSuggestions(message.content);
+      const cleanedContent = parseEditSuggestions(message.content);
+
+      setMessages(prevMessages => prevMessages.map(m =>
+        m.id === message.id ? { ...m, content: cleanedContent } : m
+      ));
     },
   });
 
-  // Keyboard shortcut handler
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'b') {
@@ -132,7 +142,6 @@ export function Chat({ onEditSuggestion, fileContent }: ChatProps) {
       exit={{ y: 20, opacity: 0 }}
       className={`fixed right-4 bottom-16 w-96 rounded-2xl border border-blue-100 bg-white shadow-2xl transition-all duration-200 ${isMinimized ? 'h-14' : 'h-[580px]'}`}
     >
-      {/* Header */}
       <div className="flex items-center justify-between border-b border-blue-100/50 p-4">
         <div className="flex items-center space-x-3">
           <div className="rounded-lg bg-blue-100/50 p-1.5">
@@ -170,7 +179,6 @@ export function Chat({ onEditSuggestion, fileContent }: ChatProps) {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
           >
-            {/* Messages */}
             <div className="scrollbar-thin scrollbar-thumb-blue-200 scrollbar-track-transparent h-[480px] overflow-auto p-4">
               {messages.length === 0 && (
                 <div className="flex h-full flex-col items-center justify-center space-y-4 text-center">
@@ -191,7 +199,7 @@ export function Chat({ onEditSuggestion, fileContent }: ChatProps) {
                 <motion.div
                   initial={{ y: 10, opacity: 0 }}
                   animate={{ y: 0, opacity: 1 }}
-                  key={i}
+                  key={message.id}
                   className={`mb-4 ${
                     message.role === 'assistant'
                       ? 'rounded-lg bg-gradient-to-br from-blue-50 to-blue-50/50 p-3'
@@ -202,24 +210,7 @@ export function Chat({ onEditSuggestion, fileContent }: ChatProps) {
                     {message.role === 'assistant' ? 'Octra' : 'You'}
                   </div>
                   <div className="text-sm leading-relaxed whitespace-pre-wrap text-blue-800">
-                    {message.content
-                      .split(/```latex-diff\n[\s\S]*?\n```/g)
-                      .map((text, i, array) => (
-                        <div key={`message-${message.id}-part-${i}`}>
-                          {i === array.length - 1 ? (
-                            text
-                          ) : (
-                            <>
-                              {text}
-                              {
-                                message.content.match(
-                                  /```latex-diff\n[\s\S]*?\n```/g
-                                )?.[i]
-                              }
-                            </>
-                          )}
-                        </div>
-                      ))}
+                    {message.content}
                   </div>
                 </motion.div>
               ))}
@@ -236,7 +227,6 @@ export function Chat({ onEditSuggestion, fileContent }: ChatProps) {
               )}
             </div>
 
-            {/* Input */}
             <div className="rounded-b-2xl border-t border-blue-100/50 bg-white/50 p-4 backdrop-blur-sm">
               <form onSubmit={originalHandleSubmit} className="relative">
                 <input

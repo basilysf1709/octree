@@ -15,15 +15,12 @@ export async function POST(request: Request) {
   try {
     const { content } = await request.json();
 
-    console.log('Received content:', content);
-
     // Check environment
     const isProd = process.env.ENVIRONMENT === 'prod';
 
     if (isProd) {
       // Use the remote TeX Live service in production
       try {
-        console.log('Starting remote PDF generation...');
 
         const response = await fetch('http://142.93.195.236:3001/compile', {
           method: 'POST',
@@ -33,12 +30,6 @@ export async function POST(request: Request) {
           body: content,
         });
 
-        console.log('Remote server response status:', response.status);
-        console.log(
-          'Remote server response headers:',
-          JSON.stringify(Object.fromEntries([...response.headers]))
-        );
-
         if (!response.ok) {
           const errorText = await response.text();
           console.error('Remote server error response:', errorText);
@@ -46,19 +37,16 @@ export async function POST(request: Request) {
         }
 
         const pdfArrayBuffer = await response.arrayBuffer();
-        console.log('PDF buffer received, size:', pdfArrayBuffer.byteLength);
 
         // Check the first few bytes
         const firstBytes = Buffer.from(pdfArrayBuffer.slice(0, 20)).toString(
           'hex'
         );
-        console.log('PDF starts with (hex):', firstBytes);
 
         // Convert to Base64
         const pdfBuffer = Buffer.from(pdfArrayBuffer);
         const base64PDF = pdfBuffer.toString('base64');
-        console.log('Base64 PDF length:', base64PDF.length);
-        console.log('Base64 PDF starts with:', base64PDF.substring(0, 40));
+
 
         // Return with verbose info
         return NextResponse.json({
@@ -95,17 +83,11 @@ export async function POST(request: Request) {
       fs.writeFileSync(texFilePath, content);
 
       try {
-        // Log the Docker command for debugging
-        console.log(
-          `Running Docker command: docker run --rm -v ${tempDir}:/data texlive/texlive pdflatex -interaction=nonstopmode -output-directory=/data /data/main.tex`
-        );
-
         // Run pdflatex in Docker - continue even with LaTeX errors
         const { stdout, stderr } = await execAsync(
           `docker run --rm -v ${tempDir}:/data texlive/texlive pdflatex -interaction=nonstopmode -output-directory=/data /data/main.tex`
         );
 
-        console.log('Docker stdout:', stdout);
         if (stderr) console.error('Docker stderr:', stderr);
 
         // Check if PDF was created regardless of errors
@@ -115,18 +97,10 @@ export async function POST(request: Request) {
           // Read the PDF file
           const pdfBuffer = fs.readFileSync(pdfPath);
 
-          // After getting the PDF buffer
-          console.log('PDF buffer size:', pdfBuffer.byteLength);
-          console.log(
-            'PDF starts with:',
-            pdfBuffer.slice(0, 10).toString('hex')
-          );
-
           // Log any LaTeX warnings/errors for debugging
           const logPath = path.join(tempDir, 'main.log');
           if (fs.existsSync(logPath)) {
-            const logContent = fs.readFileSync(logPath, 'utf-8');
-            console.log('LaTeX compilation log (warnings/errors):', logContent);
+            fs.readFileSync(logPath, 'utf-8');
           }
 
           // Clean up temporary files
@@ -153,7 +127,6 @@ export async function POST(request: Request) {
 
         if (fs.existsSync(logPath)) {
           logContent = fs.readFileSync(logPath, 'utf-8');
-          console.log('LaTeX compilation log:', logContent);
         } else {
           console.error('No LaTeX log file found');
         }
@@ -161,15 +134,7 @@ export async function POST(request: Request) {
         // Check if PDF was created despite errors
         const pdfPath = path.join(tempDir, 'main.pdf');
         if (fs.existsSync(pdfPath)) {
-          console.log('PDF was generated despite errors - returning it anyway');
           const pdfBuffer = fs.readFileSync(pdfPath);
-
-          // After getting the PDF buffer
-          console.log('PDF buffer size:', pdfBuffer.byteLength);
-          console.log(
-            'PDF starts with:',
-            pdfBuffer.slice(0, 10).toString('hex')
-          );
 
           // Clean up
           fs.rmSync(tempDir, { recursive: true, force: true });

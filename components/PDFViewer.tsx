@@ -8,15 +8,15 @@ interface PDFViewerProps {
 export function PDFViewer({ pdfData, isLoading = false }: PDFViewerProps) {
   if (isLoading) {
     return (
-      <div className="h-full flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="flex h-full items-center justify-center">
+        <div className="h-12 w-12 animate-spin rounded-full border-b-2 border-blue-600"></div>
       </div>
     );
   }
 
   if (!pdfData) {
     return (
-      <div className="h-full flex items-center justify-center text-blue-600">
+      <div className="flex h-full items-center justify-center text-blue-600">
         Click &quot;Compile&quot; to see the PDF preview
       </div>
     );
@@ -24,7 +24,7 @@ export function PDFViewer({ pdfData, isLoading = false }: PDFViewerProps) {
 
   // Create a data URL from the Base64 PDF
   const pdfUrl = `data:application/pdf;base64,${pdfData}`;
-  
+
   // Create a URL with parameters to control the PDF viewer appearance
   const viewerUrl = `${pdfUrl}#toolbar=0&navpanes=0&scrollbar=1&page=1&view=FitH`;
 
@@ -32,9 +32,9 @@ export function PDFViewer({ pdfData, isLoading = false }: PDFViewerProps) {
     <div className="h-full w-full">
       <iframe
         src={viewerUrl}
-        className="w-full h-[80vh] border-none"
+        className="h-[80vh] w-full border-none"
         title="PDF Viewer"
       />
     </div>
   );
-} 
+}

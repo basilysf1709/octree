@@ -14,7 +14,9 @@ export default function AuthPage() {
 
   useEffect(() => {
     const checkUser = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       if (session) {
         router.push('/dashboard');
       }
@@ -24,7 +26,9 @@ export default function AuthPage() {
     checkUser();
 
     // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_IN' && session) {
         router.push('/dashboard');
       }
@@ -38,11 +42,11 @@ export default function AuthPage() {
   return (
     <div className="min-h-screen bg-blue-50">
       {/* Navigation */}
-      <nav className="bg-white border-b border-blue-100">
+      <nav className="border-b border-blue-100 bg-white">
         <div className="container mx-auto px-4">
-          <div className="flex items-center h-16">
+          <div className="flex h-16 items-center">
             <Link href="/" className="flex items-center space-x-2">
-              <OctreeLogo className="w-8 h-8 text-blue-600" />
+              <OctreeLogo className="h-8 w-8 text-blue-600" />
               <span className="text-xl font-bold text-blue-900">Octree</span>
             </Link>
           </div>
@@ -50,7 +54,7 @@ export default function AuthPage() {
       </nav>
 
       <div className="container mx-auto px-4 py-8">
-        <div className="max-w-md mx-auto bg-white rounded-lg shadow-sm p-8">
+        <div className="mx-auto max-w-md rounded-lg bg-white p-8 shadow-sm">
           <Auth
             supabaseClient={supabase}
             appearance={{
@@ -70,4 +74,4 @@ export default function AuthPage() {
       </div>
     </div>
   );
-} 
+}

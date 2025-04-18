@@ -4,7 +4,14 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { OctreeLogo } from '@/components/icons/octree-logo';
 import { Button } from '@/components/ui/button';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+  CardFooter,
+} from '@/components/ui/card';
 import { CalendarIcon, Globe, ArrowRight, Loader2 } from 'lucide-react';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { useRouter } from 'next/navigation';
@@ -29,8 +36,10 @@ export default function LatexNewsPage() {
 
   useEffect(() => {
     const fetchUserData = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
       if (session) {
         // Get user name
         const { data: profile } = await supabase
@@ -50,11 +59,11 @@ export default function LatexNewsPage() {
     async function fetchNews() {
       try {
         const response = await fetch('/api/latex-news');
-        
+
         if (!response.ok) {
           throw new Error('Failed to fetch news');
         }
-        
+
         const data = await response.json();
         setNews(data.news);
         setLoading(false);
@@ -64,7 +73,7 @@ export default function LatexNewsPage() {
         setLoading(false);
       }
     }
-    
+
     fetchNews();
   }, []);
 
@@ -74,10 +83,10 @@ export default function LatexNewsPage() {
   };
 
   const formatDate = (dateString: string) => {
-    const options: Intl.DateTimeFormatOptions = { 
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric' 
+    const options: Intl.DateTimeFormatOptions = {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
     };
     return new Date(dateString).toLocaleDateString(undefined, options);
   };
@@ -85,19 +94,25 @@ export default function LatexNewsPage() {
   return (
     <div className="min-h-screen bg-blue-50">
       {/* Navigation */}
-      <nav className="bg-white border-b border-blue-100">
+      <nav className="border-b border-blue-100 bg-white">
         <div className="container mx-auto px-4">
-          <div className="flex items-center justify-between h-16">
+          <div className="flex h-16 items-center justify-between">
             <div className="flex items-center">
               <Link href="/" className="flex items-center space-x-2">
-                <OctreeLogo className="w-8 h-8 text-blue-600" />
+                <OctreeLogo className="h-8 w-8 text-blue-600" />
                 <span className="text-xl font-bold text-blue-900">Octree</span>
               </Link>
-              <div className="hidden md:flex ml-10 space-x-8">
-                <Link href="/dashboard" className="text-blue-600 hover:text-blue-800">
+              <div className="ml-10 hidden space-x-8 md:flex">
+                <Link
+                  href="/dashboard"
+                  className="text-blue-600 hover:text-blue-800"
+                >
                   Dashboard
                 </Link>
-                <Link href="/latex-news" className="text-blue-600 hover:text-blue-800 border-b-2 border-blue-600">
+                <Link
+                  href="/latex-news"
+                  className="border-b-2 border-blue-600 text-blue-600 hover:text-blue-800"
+                >
                   LaTeX News
                 </Link>
               </div>
@@ -109,14 +124,14 @@ export default function LatexNewsPage() {
                   <Button
                     variant="ghost"
                     onClick={handleSignOut}
-                    className="text-blue-600 hover:text-blue-800 hover:bg-blue-50"
+                    className="text-blue-600 hover:bg-blue-50 hover:text-blue-800"
                   >
                     Sign Out
                   </Button>
                 </>
               ) : (
                 <Link href="/auth">
-                  <Button className="bg-blue-600 hover:bg-blue-700 text-white">
+                  <Button className="bg-blue-600 text-white hover:bg-blue-700">
                     Sign In
                   </Button>
                 </Link>
@@ -126,38 +141,46 @@ export default function LatexNewsPage() {
         </div>
       </nav>
 
-      <main className="container mx-auto py-8 px-4">
+      <main className="container mx-auto px-4 py-8">
         <div className="mb-12 text-center">
-          <h1 className="text-4xl font-bold text-blue-900 mb-4">Latest LaTeX News</h1>
-          <p className="text-lg text-blue-600 max-w-2xl mx-auto">
-            Stay updated with the latest developments, releases, and tools in the LaTeX ecosystem
+          <h1 className="mb-4 text-4xl font-bold text-blue-900">
+            Latest LaTeX News
+          </h1>
+          <p className="mx-auto max-w-2xl text-lg text-blue-600">
+            Stay updated with the latest developments, releases, and tools in
+            the LaTeX ecosystem
           </p>
         </div>
 
         {loading ? (
-          <div className="flex justify-center items-center min-h-[400px]">
-            <Loader2 className="w-12 h-12 text-blue-600 animate-spin" />
+          <div className="flex min-h-[400px] items-center justify-center">
+            <Loader2 className="h-12 w-12 animate-spin text-blue-600" />
           </div>
         ) : error ? (
-          <div className="text-center p-8 bg-white rounded-xl shadow-sm">
-            <p className="text-red-600 mb-4">{error}</p>
-            <Button 
+          <div className="rounded-xl bg-white p-8 text-center shadow-sm">
+            <p className="mb-4 text-red-600">{error}</p>
+            <Button
               onClick={() => window.location.reload()}
-              className="bg-blue-600 hover:bg-blue-700 text-white"
+              className="bg-blue-600 text-white hover:bg-blue-700"
             >
               Try Again
             </Button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
             {news.map((item) => (
-              <Card key={item.id} className="bg-white hover:shadow-md transition-shadow">
+              <Card
+                key={item.id}
+                className="bg-white transition-shadow hover:shadow-md"
+              >
                 <CardHeader className="pb-2">
-                  <div className="flex justify-between items-start">
+                  <div className="flex items-start justify-between">
                     <div>
-                      <CardTitle className="text-xl text-blue-900">{item.title}</CardTitle>
-                      <CardDescription className="flex items-center mt-2 text-blue-600">
-                        <CalendarIcon className="w-4 h-4 mr-1" />
+                      <CardTitle className="text-xl text-blue-900">
+                        {item.title}
+                      </CardTitle>
+                      <CardDescription className="mt-2 flex items-center text-blue-600">
+                        <CalendarIcon className="mr-1 h-4 w-4" />
                         {formatDate(item.date)}
                       </CardDescription>
                     </div>
@@ -166,19 +189,19 @@ export default function LatexNewsPage() {
                 <CardContent>
                   <p className="text-blue-800">{item.summary}</p>
                 </CardContent>
-                <CardFooter className="flex justify-between items-center pt-4 border-t border-blue-100">
+                <CardFooter className="flex items-center justify-between border-t border-blue-100 pt-4">
                   <div className="flex items-center text-blue-500">
-                    <Globe className="w-4 h-4 mr-1" />
+                    <Globe className="mr-1 h-4 w-4" />
                     <span className="text-sm">{item.source}</span>
                   </div>
                   <a
                     href={item.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-blue-600 hover:text-blue-800 flex items-center text-sm font-medium"
+                    className="flex items-center text-sm font-medium text-blue-600 hover:text-blue-800"
                   >
                     Read more
-                    <ArrowRight className="w-4 h-4 ml-1" />
+                    <ArrowRight className="ml-1 h-4 w-4" />
                   </a>
                 </CardFooter>
               </Card>
@@ -188,4 +211,4 @@ export default function LatexNewsPage() {
       </main>
     </div>
   );
-} 
+}

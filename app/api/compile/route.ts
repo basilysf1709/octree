@@ -4,7 +4,7 @@ import katex from 'katex';
 export async function POST(request: Request) {
   try {
     const { content } = await request.json();
-    
+
     // KaTeX macro definitions for custom commands
     const macros = {
       '\\Ric': '\\mathrm{Ric}',
@@ -28,56 +28,80 @@ export async function POST(request: Request) {
       '\\tensor[3]': '\\text{#1}\\,{\\vphantom{#1}}^{#2}_{#3}',
       '\\tensor{R}': 'R^{#1}_{#2}',
       '\\tensor{S}': 'S^{#1}_{#2}',
-      '\\indices': '{\\vphantom{X}}^{#1}_{#2}'
+      '\\indices': '{\\vphantom{X}}^{#1}_{#2}',
     };
 
     // Extract content between \begin{document} and \end{document}
-    const documentMatch = content.match(/\\begin{document}([\s\S]*?)\\end{document}/);
+    const documentMatch = content.match(
+      /\\begin{document}([\s\S]*?)\\end{document}/
+    );
     if (!documentMatch) {
       throw new Error('No document environment found');
     }
 
     // Extract metadata
-    const title = content.match(/\\title{(.*?)}/)?.[ 1 ] || '';
-    const author = content.match(/\\author{(.*?)}/)?.[ 1 ] || '';
-    const date = content.match(/\\date{(.*?)}/)?.[ 1 ] || '';
+    const title = content.match(/\\title{(.*?)}/)?.[1] || '';
+    const author = content.match(/\\author{(.*?)}/)?.[1] || '';
+    const date = content.match(/\\date{(.*?)}/)?.[1] || '';
 
     // Process document content
     const documentContent = documentMatch[1]
       // Handle document structure
-      .replace(/\\maketitle/, `
+      .replace(
+        /\\maketitle/,
+        `
         <div class="title-block">
           <h1>${title}</h1>
           ${author ? `<p class="author">${author}</p>` : ''}
           ${date ? `<p class="date">${date}</p>` : ''}
         </div>
-      `)
+      `
+      )
       .replace(/\\section{(.*?)}/g, '<h2>$1</h2>')
       .replace(/\\subsection{(.*?)}/g, '<h3>$1</h3>')
-      .replace(/\\begin{abstract}([\s\S]*?)\\end{abstract}/g, '<div class="abstract">$1</div>')
-      .replace(/\\begin{theorem}([\s\S]*?)\\end{theorem}/g, '<div class="theorem"><strong>Theorem.</strong>$1</div>')
-      .replace(/\\begin{lemma}([\s\S]*?)\\end{lemma}/g, '<div class="theorem"><strong>Lemma.</strong>$1</div>')
-      .replace(/\\begin{equation}([\s\S]*?)\\end{equation}/g, (_: string, math: string) => 
-        `<div class="equation">${katex.renderToString(math.trim(), { displayMode: true, macros })}</div>`
+      .replace(
+        /\\begin{abstract}([\s\S]*?)\\end{abstract}/g,
+        '<div class="abstract">$1</div>'
       )
-      .replace(/\\begin{align}([\s\S]*?)\\end{align}/g, (_: string, math: string) => {
-        // Convert align to array environment
-        const alignedMath = math
-          .trim()
-          .split('\n')
-          .map(line => line.trim())
-          .filter(line => line)
-          .join('\\\\');
-        return `<div class="equation">${
-          katex.renderToString(`\\begin{array}{rcl}${alignedMath}\\end{array}`, {
-            displayMode: true,
-            macros
-          })
-        }</div>`;
-      })
+      .replace(
+        /\\begin{theorem}([\s\S]*?)\\end{theorem}/g,
+        '<div class="theorem"><strong>Theorem.</strong>$1</div>'
+      )
+      .replace(
+        /\\begin{lemma}([\s\S]*?)\\end{lemma}/g,
+        '<div class="theorem"><strong>Lemma.</strong>$1</div>'
+      )
+      .replace(
+        /\\begin{equation}([\s\S]*?)\\end{equation}/g,
+        (_: string, math: string) =>
+          `<div class="equation">${katex.renderToString(math.trim(), { displayMode: true, macros })}</div>`
+      )
+      .replace(
+        /\\begin{align}([\s\S]*?)\\end{align}/g,
+        (_: string, math: string) => {
+          // Convert align to array environment
+          const alignedMath = math
+            .trim()
+            .split('\n')
+            .map((line) => line.trim())
+            .filter((line) => line)
+            .join('\\\\');
+          return `<div class="equation">${katex.renderToString(
+            `\\begin{array}{rcl}${alignedMath}\\end{array}`,
+            {
+              displayMode: true,
+              macros,
+            }
+          )}</div>`;
+        }
+      )
       // Handle inline math
-      .replace(/\$\$(.*?)\$\$/g, (_: string, math: string) => katex.renderToString(math.trim(), { displayMode: true, macros }))
-      .replace(/\$(.*?)\$/g, (_: string, math: string) => katex.renderToString(math.trim(), { macros }));
+      .replace(/\$\$(.*?)\$\$/g, (_: string, math: string) =>
+        katex.renderToString(math.trim(), { displayMode: true, macros })
+      )
+      .replace(/\$(.*?)\$/g, (_: string, math: string) =>
+        katex.renderToString(math.trim(), { macros })
+      );
 
     const styledHtml = `
       <!DOCTYPE html>
@@ -131,9 +155,11 @@ export async function POST(request: Request) {
     `;
 
     return NextResponse.json({ html: styledHtml });
-
   } catch (error) {
     console.error('Compilation error:', error);
-    return NextResponse.json({ error: 'Failed to compile LaTeX' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Failed to compile LaTeX' },
+      { status: 500 }
+    );
   }
-} 
+}

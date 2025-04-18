@@ -14,7 +14,7 @@ export default function PricingPage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-        }
+        },
       });
 
       const { url } = await response.json();
@@ -31,20 +31,26 @@ export default function PricingPage() {
   return (
     <div className="min-h-screen bg-blue-50 py-20">
       <div className="container mx-auto px-4">
-        <div className="max-w-3xl mx-auto text-center mb-12">
-          <h1 className="text-4xl font-bold text-blue-900 mb-4">Simple, transparent pricing</h1>
-          <p className="text-lg text-blue-600">Get started with our pro features today</p>
+        <div className="mx-auto mb-12 max-w-3xl text-center">
+          <h1 className="mb-4 text-4xl font-bold text-blue-900">
+            Simple, transparent pricing
+          </h1>
+          <p className="text-lg text-blue-600">
+            Get started with our pro features today
+          </p>
         </div>
 
-        <div className="max-w-md mx-auto bg-white rounded-2xl shadow-sm">
+        <div className="mx-auto max-w-md rounded-2xl bg-white shadow-sm">
           <div className="p-8">
-            <h2 className="text-2xl font-semibold text-blue-900 mb-4">Pro Plan</h2>
-            <div className="flex items-baseline mb-8">
+            <h2 className="mb-4 text-2xl font-semibold text-blue-900">
+              Pro Plan
+            </h2>
+            <div className="mb-8 flex items-baseline">
               <span className="text-5xl font-bold text-blue-900">$20</span>
-              <span className="text-blue-600 ml-2">/month</span>
+              <span className="ml-2 text-blue-600">/month</span>
             </div>
 
-            <ul className="space-y-4 mb-8">
+            <ul className="mb-8 space-y-4">
               {[
                 'Advanced AI features',
                 'Unlimited documents',
@@ -52,7 +58,7 @@ export default function PricingPage() {
                 'Custom templates',
               ].map((feature) => (
                 <li key={feature} className="flex items-center text-blue-900">
-                  <Check className="w-5 h-5 text-green-500 mr-3" />
+                  <Check className="mr-3 h-5 w-5 text-green-500" />
                   {feature}
                 </li>
               ))}
@@ -61,10 +67,10 @@ export default function PricingPage() {
             <Button
               onClick={handleSubscribe}
               disabled={isLoading}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white h-12 text-lg"
+              className="h-12 w-full bg-blue-600 text-lg text-white hover:bg-blue-700"
             >
               {isLoading ? (
-                <Loader2 className="w-5 h-5 animate-spin" />
+                <Loader2 className="h-5 w-5 animate-spin" />
               ) : (
                 'Upgrade to Pro'
               )}
@@ -74,4 +80,4 @@ export default function PricingPage() {
       </div>
     </div>
   );
-} 
+}

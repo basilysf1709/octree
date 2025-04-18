@@ -22,7 +22,7 @@ export function Chat({ onEditSuggestion, fileContent }: ChatProps) {
     const editRegex = /```latex-diff\n([\s\S]*?)\n```/g;
     let match;
     let cleanContent = content;
-    
+
     while ((match = editRegex.exec(content)) !== null) {
       const diffContent = match[1];
       const lines = diffContent.split('\n');
@@ -30,15 +30,17 @@ export function Chat({ onEditSuggestion, fileContent }: ChatProps) {
       let suggested = '';
       let startLine = 0;
       let lineCount = 0;
-      
+
       // Find the context in the file
-      const contextMatch = diffContent.match(/@@\s*-(\d+),(\d+)\s*\+\d+,\d+\s*@@/);
+      const contextMatch = diffContent.match(
+        /@@\s*-(\d+),(\d+)\s*\+\d+,\d+\s*@@/
+      );
       if (contextMatch) {
         startLine = parseInt(contextMatch[1]);
         lineCount = parseInt(contextMatch[2]);
       }
-      
-      lines.forEach(line => {
+
+      lines.forEach((line) => {
         if (line.startsWith('-')) {
           original += line.slice(1) + '\n';
         } else if (line.startsWith('+')) {
@@ -53,7 +55,7 @@ export function Chat({ onEditSuggestion, fileContent }: ChatProps) {
           suggested: suggested.trim(),
           startLine,
           endLine: startLine + lineCount - 1,
-          status: 'pending'
+          status: 'pending',
         };
         onEditSuggestion(suggestion);
       }
@@ -65,14 +67,20 @@ export function Chat({ onEditSuggestion, fileContent }: ChatProps) {
     return cleanContent;
   };
 
-  const { messages, input, handleInputChange, handleSubmit: originalHandleSubmit, isLoading } = useChat({
+  const {
+    messages,
+    input,
+    handleInputChange,
+    handleSubmit: originalHandleSubmit,
+    isLoading,
+  } = useChat({
     api: '/api/octra',
     body: {
-      fileContent
+      fileContent,
     },
     onFinish: (message) => {
       message.content = parseEditSuggestions(message.content);
-    }
+    },
   });
 
   // Keyboard shortcut handler
@@ -80,7 +88,7 @@ export function Chat({ onEditSuggestion, fileContent }: ChatProps) {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'b') {
         e.preventDefault();
-        setIsOpen(prev => !prev);
+        setIsOpen((prev) => !prev);
       }
     };
 
@@ -94,16 +102,24 @@ export function Chat({ onEditSuggestion, fileContent }: ChatProps) {
         initial={{ scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         exit={{ scale: 0.9, opacity: 0 }}
-        className="fixed bottom-4 right-4 flex flex-col items-end space-y-2"
+        className="fixed right-4 bottom-4 flex flex-col items-end space-y-2"
       >
-        <div className="bg-white/80 backdrop-blur-sm px-3 py-1.5 rounded-full text-sm text-blue-600 shadow-sm border border-blue-100 mb-2">
-          Press <kbd className="px-1.5 py-0.5 bg-blue-50 rounded-md text-xs font-mono">⌘</kbd>+<kbd className="px-1.5 py-0.5 bg-blue-50 rounded-md text-xs font-mono">B</kbd> to open
+        <div className="mb-2 rounded-full border border-blue-100 bg-white/80 px-3 py-1.5 text-sm text-blue-600 shadow-sm backdrop-blur-sm">
+          Press{' '}
+          <kbd className="rounded-md bg-blue-50 px-1.5 py-0.5 font-mono text-xs">
+            ⌘
+          </kbd>
+          +
+          <kbd className="rounded-md bg-blue-50 px-1.5 py-0.5 font-mono text-xs">
+            B
+          </kbd>{' '}
+          to open
         </div>
-        <Button 
+        <Button
           onClick={() => setIsOpen(true)}
-          className="bg-blue-600 hover:bg-blue-700 text-white rounded-full p-4 shadow-lg hover:shadow-xl transition-all duration-200 ease-in-out"
+          className="rounded-full bg-blue-600 p-4 text-white shadow-lg transition-all duration-200 ease-in-out hover:bg-blue-700 hover:shadow-xl"
         >
-          <OctreeLogo className="w-6 h-6 text-white" />
+          <OctreeLogo className="h-6 w-6 text-white" />
         </Button>
       </motion.div>
     );
@@ -114,13 +130,13 @@ export function Chat({ onEditSuggestion, fileContent }: ChatProps) {
       initial={{ y: 20, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       exit={{ y: 20, opacity: 0 }}
-      className={`fixed bottom-16 right-4 w-96 bg-white rounded-2xl shadow-2xl border border-blue-100 transition-all duration-200 ${isMinimized ? 'h-14' : 'h-[580px]'}`}
+      className={`fixed right-4 bottom-16 w-96 rounded-2xl border border-blue-100 bg-white shadow-2xl transition-all duration-200 ${isMinimized ? 'h-14' : 'h-[580px]'}`}
     >
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-blue-100/50">
+      <div className="flex items-center justify-between border-b border-blue-100/50 p-4">
         <div className="flex items-center space-x-3">
-          <div className="p-1.5 bg-blue-100/50 rounded-lg">
-            <OctreeLogo className="w-5 h-5 text-blue-600" />
+          <div className="rounded-lg bg-blue-100/50 p-1.5">
+            <OctreeLogo className="h-5 w-5 text-blue-600" />
           </div>
           <div>
             <h3 className="font-semibold text-blue-900">Octra</h3>
@@ -132,7 +148,7 @@ export function Chat({ onEditSuggestion, fileContent }: ChatProps) {
             variant="ghost"
             size="sm"
             onClick={() => setIsMinimized(!isMinimized)}
-            className="text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg h-8 w-8 p-0"
+            className="h-8 w-8 rounded-lg p-0 text-blue-600 hover:bg-blue-50 hover:text-blue-800"
           >
             {isMinimized ? <Maximize2 size={16} /> : <Minimize2 size={16} />}
           </Button>
@@ -140,7 +156,7 @@ export function Chat({ onEditSuggestion, fileContent }: ChatProps) {
             variant="ghost"
             size="sm"
             onClick={() => setIsOpen(false)}
-            className="text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg h-8 w-8 p-0"
+            className="h-8 w-8 rounded-lg p-0 text-blue-600 hover:bg-blue-50 hover:text-blue-800"
           >
             <X size={16} />
           </Button>
@@ -155,15 +171,19 @@ export function Chat({ onEditSuggestion, fileContent }: ChatProps) {
             exit={{ opacity: 0 }}
           >
             {/* Messages */}
-            <div className="p-4 h-[480px] overflow-auto scrollbar-thin scrollbar-thumb-blue-200 scrollbar-track-transparent">
+            <div className="scrollbar-thin scrollbar-thumb-blue-200 scrollbar-track-transparent h-[480px] overflow-auto p-4">
               {messages.length === 0 && (
-                <div className="flex flex-col items-center justify-center h-full text-center space-y-4">
-                  <div className="p-4 bg-blue-50 rounded-full">
-                    <Command className="w-8 h-8 text-blue-600" />
+                <div className="flex h-full flex-col items-center justify-center space-y-4 text-center">
+                  <div className="rounded-full bg-blue-50 p-4">
+                    <Command className="h-8 w-8 text-blue-600" />
                   </div>
                   <div>
-                    <h3 className="text-lg font-semibold text-blue-900">How can I help?</h3>
-                    <p className="text-sm text-blue-600">Ask me anything about LaTeX</p>
+                    <h3 className="text-lg font-semibold text-blue-900">
+                      How can I help?
+                    </h3>
+                    <p className="text-sm text-blue-600">
+                      Ask me anything about LaTeX
+                    </p>
                   </div>
                 </div>
               )}
@@ -174,53 +194,61 @@ export function Chat({ onEditSuggestion, fileContent }: ChatProps) {
                   key={i}
                   className={`mb-4 ${
                     message.role === 'assistant'
-                      ? 'bg-gradient-to-br from-blue-50 to-blue-50/50 rounded-lg p-3'
-                      : 'bg-white border border-blue-100 rounded-lg p-3'
+                      ? 'rounded-lg bg-gradient-to-br from-blue-50 to-blue-50/50 p-3'
+                      : 'rounded-lg border border-blue-100 bg-white p-3'
                   }`}
                 >
-                  <div className="text-sm font-medium mb-1 text-blue-900">
+                  <div className="mb-1 text-sm font-medium text-blue-900">
                     {message.role === 'assistant' ? 'Octra' : 'You'}
                   </div>
-                  <div className="text-blue-800 text-sm leading-relaxed whitespace-pre-wrap">
-                    {message.content.split(/```latex-diff\n[\s\S]*?\n```/g).map((text, i, array) => (
-                      <div key={`message-${message.id}-part-${i}`}>
-                        {i === array.length - 1 ? text : (
-                          <>
-                            {text}
-                            {message.content.match(/```latex-diff\n[\s\S]*?\n```/g)?.[i]}
-                          </>
-                        )}
-                      </div>
-                    ))}
+                  <div className="text-sm leading-relaxed whitespace-pre-wrap text-blue-800">
+                    {message.content
+                      .split(/```latex-diff\n[\s\S]*?\n```/g)
+                      .map((text, i, array) => (
+                        <div key={`message-${message.id}-part-${i}`}>
+                          {i === array.length - 1 ? (
+                            text
+                          ) : (
+                            <>
+                              {text}
+                              {
+                                message.content.match(
+                                  /```latex-diff\n[\s\S]*?\n```/g
+                                )?.[i]
+                              }
+                            </>
+                          )}
+                        </div>
+                      ))}
                   </div>
                 </motion.div>
               ))}
               {isLoading && (
-                <motion.div 
+                <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   className="flex justify-center"
                 >
-                  <div className="bg-blue-50 p-2 rounded-full">
-                    <Loader2 className="w-5 h-5 animate-spin text-blue-600" />
+                  <div className="rounded-full bg-blue-50 p-2">
+                    <Loader2 className="h-5 w-5 animate-spin text-blue-600" />
                   </div>
                 </motion.div>
               )}
             </div>
 
             {/* Input */}
-            <div className="border-t border-blue-100/50 p-4 bg-white/50 backdrop-blur-sm rounded-b-2xl">
+            <div className="rounded-b-2xl border-t border-blue-100/50 bg-white/50 p-4 backdrop-blur-sm">
               <form onSubmit={originalHandleSubmit} className="relative">
                 <input
                   value={input}
                   onChange={handleInputChange}
                   placeholder="Ask about LaTeX..."
-                  className="w-full px-4 py-2.5 pr-12 bg-blue-50/50 border border-blue-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 text-blue-900 placeholder-blue-400"
+                  className="focus:ring-opacity-50 w-full rounded-xl border border-blue-200 bg-blue-50/50 px-4 py-2.5 pr-12 text-blue-900 placeholder-blue-400 focus:ring-2 focus:ring-blue-500 focus:outline-none"
                 />
-                <Button 
-                  type="submit" 
-                  disabled={isLoading} 
-                  className="absolute right-1 top-1 bg-blue-600 hover:bg-blue-700 text-white h-8 w-8 p-0 rounded-lg"
+                <Button
+                  type="submit"
+                  disabled={isLoading}
+                  className="absolute top-1 right-1 h-8 w-8 rounded-lg bg-blue-600 p-0 text-white hover:bg-blue-700"
                 >
                   <Send size={14} />
                 </Button>
@@ -231,4 +259,4 @@ export function Chat({ onEditSuggestion, fileContent }: ChatProps) {
       </AnimatePresence>
     </motion.div>
   );
-} 
+}

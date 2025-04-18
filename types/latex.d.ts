@@ -3,4 +3,4 @@ declare module 'latex.js' {
     constructor(options?: { customHeaders?: string[] });
     parse(content: string): string;
   }
-} 
+}

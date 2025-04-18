@@ -1,19 +1,16 @@
-export function OctreeLogo({ className = "w-6 h-6" }: { className?: string }) {
+export function OctreeLogo({ className = 'w-6 h-6' }: { className?: string }) {
   return (
-    <svg 
-      viewBox="0 0 24 24" 
-      fill="none" 
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
       xmlns="http://www.w3.org/2000/svg"
       className={className}
     >
-      <path 
-        d="M17.6 3.6c-.4-.4-.9-.6-1.4-.6h-8.5l-4.2 4.2v11.4c0 1.1.9 2 2 2h10.7c1.1 0 2-.9 2-2v-13.6c0-.5-.2-1-.6-1.4zm-2.9 13.4h-6.4c-.3 0-.5-.2-.5-.5s.2-.5.5-.5h6.4c.3 0 .5.2.5.5s-.2.5-.5.5zm0-2h-6.4c-.3 0-.5-.2-.5-.5s.2-.5.5-.5h6.4c.3 0 .5.2.5.5s-.2.5-.5.5zm0-2h-6.4c-.3 0-.5-.2-.5-.5s.2-.5.5-.5h6.4c.3 0 .5.2.5.5s-.2.5-.5.5z" 
+      <path
+        d="M17.6 3.6c-.4-.4-.9-.6-1.4-.6h-8.5l-4.2 4.2v11.4c0 1.1.9 2 2 2h10.7c1.1 0 2-.9 2-2v-13.6c0-.5-.2-1-.6-1.4zm-2.9 13.4h-6.4c-.3 0-.5-.2-.5-.5s.2-.5.5-.5h6.4c.3 0 .5.2.5.5s-.2.5-.5.5zm0-2h-6.4c-.3 0-.5-.2-.5-.5s.2-.5.5-.5h6.4c.3 0 .5.2.5.5s-.2.5-.5.5zm0-2h-6.4c-.3 0-.5-.2-.5-.5s.2-.5.5-.5h6.4c.3 0 .5.2.5.5s-.2.5-.5.5z"
         fill="currentColor"
       />
-      <path 
-        d="M7.7 3v4.2h-4.2l4.2-4.2z" 
-        fill="currentColor"
-      />
+      <path d="M7.7 3v4.2h-4.2l4.2-4.2z" fill="currentColor" />
     </svg>
   );
-} 
+}

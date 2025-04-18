@@ -5,4 +5,4 @@ export interface EditSuggestion {
   startLine: number;
   endLine: number;
   status: 'pending' | 'accepted' | 'rejected';
-} 
+}

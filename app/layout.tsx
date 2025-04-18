@@ -1,19 +1,19 @@
-import type { Metadata } from "next";
-import { Inter } from 'next/font/google'
-import { Analytics } from "@vercel/analytics/react"
-import "./globals.css";
+import type { Metadata } from 'next';
+import { Inter } from 'next/font/google';
+import { Analytics } from '@vercel/analytics/react';
+import './globals.css';
 
-const inter = Inter({ subsets: ['latin'] })
+const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: "Octree",
-  description: "This is a latex editor that uses AI to help you write latex",
+  title: 'Octree',
+  description: 'This is a latex editor that uses AI to help you write latex',
 };
 
 export default function RootLayout({
   children,
 }: {
-  children: React.ReactNode
+  children: React.ReactNode;
 }) {
   return (
     <html lang="en">
@@ -22,5 +22,5 @@ export default function RootLayout({
         <Analytics />
       </body>
     </html>
-  )
+  );
 }

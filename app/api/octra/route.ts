@@ -1,13 +1,13 @@
-import { NextResponse } from 'next/server'
-import { deepseek } from '@ai-sdk/deepseek'
-import { streamText } from 'ai'
+import { NextResponse } from 'next/server';
+import { deepseek } from '@ai-sdk/deepseek';
+import { streamText } from 'ai';
 
-export const runtime = 'edge'
-export const preferredRegion = 'auto'
+export const runtime = 'edge';
+export const preferredRegion = 'auto';
 
 export async function POST(request: Request) {
   try {
-    const { messages, fileContent } = await request.json()
+    const { messages, fileContent } = await request.json();
 
     const result = streamText({
       model: deepseek('deepseek-chat'),
@@ -22,22 +22,24 @@ export async function POST(request: Request) {
 +new code
 \`\`\`
 
-Be clear and helpful, and always explain your suggested changes. Provide the exact line numbers where changes should be made.`
+Be clear and helpful, and always explain your suggested changes. Provide the exact line numbers where changes should be made.`,
         },
         {
           role: 'system',
-          content: `Current file content:\n${fileContent}`
+          content: `Current file content:\n${fileContent}`,
         },
-        ...messages.slice(-3)
+        ...messages.slice(-3),
       ],
       temperature: 0.3,
       maxTokens: 1000,
-    })
+    });
 
-    return result.toDataStreamResponse()
-
+    return result.toDataStreamResponse();
   } catch (error) {
-    console.error('AI API error:', error)
-    return NextResponse.json({ error: 'Failed to process request' }, { status: 500 })
+    console.error('AI API error:', error);
+    return NextResponse.json(
+      { error: 'Failed to process request' },
+      { status: 500 }
+    );
   }
-} 
+}

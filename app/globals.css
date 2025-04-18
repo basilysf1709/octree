@@ -1,5 +1,4 @@
-@import "tailwindcss";
-
+@import 'tailwindcss';
 @plugin "tailwindcss-animate";
 
 @custom-variant dark (&:is(.dark *));
@@ -120,22 +119,27 @@
   body {
     @apply bg-background text-foreground;
   }
+
+  button:not(:disabled),
+  [role='button']:not(:disabled) {
+    cursor: pointer;
+  }
 }
 
 @layer utilities {
   .scrollbar-thin {
     scrollbar-width: thin;
   }
-  
+
   .scrollbar-thumb-blue-200::-webkit-scrollbar-thumb {
     background-color: #bfdbfe;
     border-radius: 6px;
   }
-  
+
   .scrollbar-track-transparent::-webkit-scrollbar-track {
     background-color: transparent;
   }
-  
+
   .scrollbar-thin::-webkit-scrollbar {
     width: 6px;
   }
@@ -146,24 +150,24 @@
     background-color: rgba(34, 197, 94, 0.1);
     border-left: 2px solid #22c55e;
   }
-  
+
   .suggestion-deleted {
     background-color: rgba(239, 68, 68, 0.1);
     text-decoration: line-through;
     color: #ef4444;
   }
-  
+
   .suggestion-added {
     background-color: rgba(34, 197, 94, 0.1);
     color: #22c55e;
   }
-  
+
   .suggestion-glyph {
     background-color: #22c55e;
     border-radius: 50%;
     margin-left: 5px;
   }
-  
+
   .after-suggestion {
     background-color: #22c55e;
     color: white;

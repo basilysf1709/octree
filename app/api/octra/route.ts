@@ -12,7 +12,7 @@ export async function POST(request: Request) {
     // --- Add Line Numbers to Content ---
     const lines = fileContent.split('\n');
     const numberedContent = lines
-      .map((line: any, index: number) => `${index + 1}: ${line}`)
+      .map((line: unknown, index: number) => `${index + 1}: ${line}`)
       .join('\n');
     // ------------------------------------
 

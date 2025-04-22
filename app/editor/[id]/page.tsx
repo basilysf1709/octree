@@ -18,6 +18,7 @@ import type * as Monaco from 'monaco-editor';
 import { PDFViewer } from '@/components/PDFViewer';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { useParams, useRouter } from 'next/navigation';
+import { initialContent } from '@/lib/utils';
 
 export default function EditorPage() {
   // Add Supabase client and params
@@ -47,59 +48,7 @@ export default function EditorPage() {
     });
   }, []); // Empty dependency array means this runs once on mount
 
-  const [content, setContent] = useState(`\\documentclass{article}
-\\usepackage{amsmath}
-\\usepackage{amssymb}
-\\title{Sample LaTeX Document with Equations}
-\\author{Basil Yusuf}
-\\date{18th Jan, 1991}
-
-\\begin{document}
-
-\\maketitle
-
-\\section{Introduction}
-This is a sample LaTeX document containing various equations to test your LaTeX to HTML compiler.
-
-\\section{Simple Equations}
-Here is a simple inline equation: $E = mc^2$. This famous equation relates energy and mass.
-
-Here is a displayed equation:
-\\begin{equation}
-    F = G \\frac{m_1 m_2}{r^2}
-\\end{equation}
-
-\\section{More Complex Equations}
-The quadratic formula for solving $ax^2 + bx + c = 0$ is:
-\\begin{equation}
-    x = \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}
-\\end{equation}
-
-The binomial theorem provides the expansion:
-\\begin{equation}
-    (x + y)^n = \\sum_{k=0}^{n} \\binom{n}{k} x^{n-k} y^k
-\\end{equation}
-
-Maxwell's equations in differential form include:
-\\begin{align}
-    \\nabla \\cdot \\mathbf{E} &= \\frac{\\rho}{\\varepsilon_0} \\\\
-    \\nabla \\cdot \\mathbf{B} &= 0 \\\\
-    \\nabla \\times \\mathbf{E} &= -\\frac{\\partial \\mathbf{B}}{\\partial t} \\\\
-    \\nabla \\times \\mathbf{B} &= \\mu_0 \\mathbf{J} + \\mu_0 \\varepsilon_0 \\frac{\\partial \\mathbf{E}}{\\partial t}
-\\end{align}
-
-\\section{Advanced Mathematical Notation}
-The infinite series for $e^x$ is given by:
-\\begin{equation}
-    e^x = \\sum_{n=0}^{\\infty} \\frac{x^n}{n!} = 1 + x + \\frac{x^2}{2!} + \\frac{x^3}{3!} + \\cdots
-\\end{equation}
-
-The definition of an integral:
-\\begin{equation}
-    \\int_{a}^{b} f(x) \\, dx = \\lim_{n \\to \\infty} \\sum_{i=1}^{n} f(x_i^*) \\Delta x
-\\end{equation}
-
-\\end{document}`);
+  const [content, setContent] = useState(initialContent);
 
   const [compiling, setCompiling] = useState(false);
   const [pdfData, setPdfData] = useState<string | null>(null);
@@ -309,15 +258,11 @@ The definition of an integral:
     // Ensure editor and monaco are ready
     const editor = editorRef.current; // Get current editor instance
     if (!editor || !monacoInstance) {
-      console.log('Editor or Monaco instance not ready for decorations.');
       return;
     }
 
-    console.log('Applying decorations for suggestions:', editSuggestions);
-
     const model = editor.getModel();
     if (!model) {
-      console.log('Editor model not available for decorations.');
       return;
     }
 
@@ -329,7 +274,6 @@ The definition of an integral:
     );
 
     pendingSuggestions.forEach((suggestion) => {
-      console.log(`Processing suggestion: ${suggestion.id}`, suggestion);
 
       const startLineNumber = suggestion.startLine;
       // Ensure endLineNumber is valid and >= startLineNumber
@@ -354,8 +298,6 @@ The definition of an integral:
         endColumn
       );
 
-      console.log(`Suggestion ${suggestion.id}: Original Range = ${originalRange.toString()}`);
-
       // --- Decoration 1: Mark original text (if any) + Glyph ---
       if (suggestion.originalLineCount > 0) {
         // Apply red strikethrough to the original range
@@ -368,7 +310,6 @@ The definition of an integral:
             stickiness: monacoInstance.editor.TrackedRangeStickiness.NeverGrowsWhenTypingAtEdges,
           },
         });
-        console.log(`Suggestion ${suggestion.id}: Added deletion decoration.`);
       } else {
          // If it's a pure insertion, just add the glyph marker at the start line
          newDecorations.push({
@@ -379,7 +320,6 @@ The definition of an integral:
                stickiness: monacoInstance.editor.TrackedRangeStickiness.NeverGrowsWhenTypingAtEdges,
             }
          });
-         console.log(`Suggestion ${suggestion.id}: Added insertion glyph decoration.`);
       }
 
       // --- Decoration 2: Show suggested text inline (if any) ---
@@ -403,15 +343,12 @@ The definition of an integral:
               stickiness: monacoInstance.editor.TrackedRangeStickiness.NeverGrowsWhenTypingAtEdges,
             },
           });
-          console.log(`Suggestion ${suggestion.id}: Added inline suggestion decoration: "${inlineSuggestedContent}"`);
       }
     });
 
     // --- Apply Decorations ---
     // This is crucial: deltaDecorations removes old IDs and applies new ones atomically
-    console.log('Applying final decorations. Old IDs:', oldDecorationIds, 'New Decorations:', newDecorations);
     const newDecorationIds = editor.deltaDecorations(oldDecorationIds, newDecorations);
-    console.log('New decoration IDs:', newDecorationIds);
     // Update the state to store the IDs of the *currently applied* decorations
     setDecorationIds(newDecorationIds);
 

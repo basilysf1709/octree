@@ -179,3 +179,33 @@
 
   /* ... any other component styles ... */
 }
+
+/* Add these styles for Monaco Editor Diff Highlighting */
+.octra-suggestion-deleted {
+  background-color: rgba(255, 0, 0, 0.15); /* Light red background */
+  text-decoration: line-through; /* Strikethrough */
+}
+
+.octra-suggestion-added {
+  background-color: rgba(0, 255, 0, 0.15); /* Light green background */
+  font-weight: 600; /* Slightly bolder */
+  /* Ensure it doesn't inherit strikethrough if nested weirdly */
+  text-decoration: none !important;
+}
+
+.octra-suggestion-glyph {
+  background-color: #007acc; /* Blue indicator color, adjust as needed */
+  width: 4px !important; /* Adjust width as needed */
+  margin-left: 2px !important; /* Adjust spacing */
+}
+
+/* Optional: Style for the 'after' widget's newline indicator */
+.octra-suggestion-added::after {
+  /* Style the '↵' character if needed, e.g., color */
+  /* color: #somecolor; */
+}
+
+/* Ensure editor container allows overflow if needed, though usually handled */
+.monaco-editor .view-lines {
+  /* overflow: visible; */ /* Usually not needed */
+}

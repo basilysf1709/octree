@@ -25,29 +25,55 @@ export function Chat({ onEditSuggestion, fileContent }: ChatProps) {
 
     while ((match = editRegex.exec(content)) !== null) {
       const diffBlockContent = match[1];
-      const lines = diffBlockContent.split('\n');
+      const lines = diffBlockContent.trim().split('\n');
 
       let originalContent = '';
       let suggestedContent = '';
-      let startLine = 0;
-      let originalLineCount = 0;
+      let referenceStartLine = 0;
+      let referenceOriginalCount = 0;
+      let referenceNewStartLine = 0;
+      let referenceNewCount = 0;
 
       const headerMatch = lines[0]?.match(
         /@@\s*-(\d+)(?:,(\d+))?\s*\+(\d+)(?:,(\d+))?\s*@@/
       );
 
       if (headerMatch) {
-        startLine = parseInt(headerMatch[1], 10);
-        originalLineCount = headerMatch[2] ? parseInt(headerMatch[2], 10) : 1;
+        referenceStartLine = parseInt(headerMatch[1], 10);
+        referenceOriginalCount = headerMatch[2] ? parseInt(headerMatch[2], 10) : 0;
+        referenceNewStartLine = parseInt(headerMatch[3], 10);
+        referenceNewCount = headerMatch[4] ? parseInt(headerMatch[4], 10) : 0;
+
+        let actualOriginalLineCount = 0;
+        let firstChangeIndex = -1;
 
         for (let i = 1; i < lines.length; i++) {
           const line = lines[i];
+          const lineContent = line.slice(1);
+
           if (line.startsWith('-')) {
-            originalContent += line.slice(1) + '\n';
+            originalContent += lineContent + '\n';
+            actualOriginalLineCount++;
+            if (firstChangeIndex === -1) {
+              firstChangeIndex = i - 1;
+            }
           } else if (line.startsWith('+')) {
-            suggestedContent += line.slice(1) + '\n';
+            suggestedContent += lineContent + '\n';
+            if (firstChangeIndex === -1) {
+              firstChangeIndex = i - 1;
+            }
+          } else if (line.startsWith(' ')) {
+            // Context line - important for finding the *real* start line
+            // If we haven't found a change yet, this context line pushes the start further
+            // No action needed here for count, but helps visualize firstChangeIndex logic
+          } else if (line.trim() !== '') {
+            console.warn("Diff line doesn't start with space, +, or -:", line);
           }
         }
+
+        const correctedStartLine = firstChangeIndex !== -1
+            ? referenceStartLine + firstChangeIndex
+            : referenceStartLine;
 
         originalContent = originalContent.replace(/\n$/, '');
         suggestedContent = suggestedContent.replace(/\n$/, '');
@@ -57,10 +83,11 @@ export function Chat({ onEditSuggestion, fileContent }: ChatProps) {
             id: uuidv4(),
             original: originalContent,
             suggested: suggestedContent,
-            startLine: startLine,
-            originalLineCount: originalLineCount,
+            startLine: correctedStartLine,
+            originalLineCount: actualOriginalLineCount,
             status: 'pending',
           };
+          console.log("Parsed Suggestion (Recalculated):", suggestion);
           onEditSuggestion(suggestion);
         }
       } else {
@@ -69,7 +96,6 @@ export function Chat({ onEditSuggestion, fileContent }: ChatProps) {
 
       cleanContent = cleanContent.replace(match[0], '');
     }
-
     return cleanContent.trim();
   };
 

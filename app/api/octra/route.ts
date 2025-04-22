@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { openai } from '@ai-sdk/openai';
+import { deepseek } from '@ai-sdk/deepseek';
 import { streamText } from 'ai';
 
 export const runtime = 'edge';
@@ -17,7 +17,7 @@ export async function POST(request: Request) {
     // ------------------------------------
 
     const result = streamText({
-      model: openai('o4-mini'),
+      model: deepseek('deepseek-coder'),
       messages: [
         {
           role: 'system',

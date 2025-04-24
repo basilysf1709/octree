@@ -32,7 +32,7 @@ export function PDFViewer({ pdfData, isLoading = false }: PDFViewerProps) {
     <div className="h-full w-full">
       <iframe
         src={viewerUrl}
-        className="h-[80vh] w-full border-none"
+        className="w-full border-none"
         title="PDF Viewer"
       />
     </div>

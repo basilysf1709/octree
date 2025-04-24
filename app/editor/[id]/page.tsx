@@ -18,6 +18,7 @@ import { PDFViewer } from '@/components/PDFViewer';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { useParams } from 'next/navigation';
 import { defaultLatexContent } from '../default-content';
+import Menu from '../components/menu';
 
 export default function EditorPage() {
   // Add Supabase client and params
@@ -387,56 +388,64 @@ export default function EditorPage() {
 
   return (
     <div className="min-h-screen bg-blue-50">
-      {/* Navigation */}
       <nav className="border-b border-blue-100 bg-white">
-        <div className="container mx-auto px-4">
-          <div className="flex h-16 items-center justify-between">
-            <div className="flex items-center">
-              <Link href="/dashboard" className="flex items-center space-x-2">
-                <OctreeLogo className="h-8 w-8 text-blue-600" />
-                <span className="text-xl font-bold text-blue-900">Octree</span>
-              </Link>
-              {lastSaved && (
-                <span className="ml-6 text-sm text-gray-500">
-                  {isSaving
-                    ? 'Saving...'
-                    : `Last saved: ${lastSaved.toLocaleTimeString()}`}
-                </span>
-              )}
-            </div>
-            <div className="flex items-center space-x-4">
-              <Button
-                onClick={handleCompile}
-                disabled={compiling}
-                className="bg-blue-600 text-white hover:bg-blue-700"
-              >
-                {compiling ? 'Compiling...' : 'Compile'}
-              </Button>
-              <Button
-                onClick={handleExportPDF}
-                disabled={exportingPDF}
-                className="bg-blue-500 text-white hover:bg-blue-600"
-              >
-                {exportingPDF ? (
-                  <div className="flex items-center">
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Exporting...
-                  </div>
-                ) : (
-                  'Export PDF'
-                )}
-              </Button>
-            </div>
+        <div className="mx-auto px-4 py-2">
+          <div className="flex items-center">
+            <Link href="/dashboard" className="flex items-center space-x-2">
+              <OctreeLogo className="h-8 w-8 text-blue-600" />
+              <span className="text-lg font-semibold text-blue-900">
+                octree
+              </span>
+            </Link>
+
+            {lastSaved && (
+              <span className="ml-6 text-sm text-gray-500">
+                {isSaving
+                  ? 'Saving...'
+                  : `Last saved: ${lastSaved.toLocaleTimeString()}`}
+              </span>
+            )}
           </div>
         </div>
       </nav>
 
-      <div className="container mx-auto px-4 py-6">
-        <div className="flex gap-6">
-          {/* Editor */}
-          <div className="flex-1 overflow-hidden rounded-lg bg-white shadow-sm">
+      <div className="mx-auto space-y-1 px-2 py-2 h-[calc(100vh-3rem)]">
+        <div className="bg-background ml-auto flex w-fit items-center gap-1 rounded-md border p-1 shadow-xs">
+          <Button
+            variant="ghost"
+            size="xs"
+            onClick={handleCompile}
+            disabled={compiling}
+          >
+            {compiling ? (
+              <>
+                <Loader2 className="animate-spin" />
+                Compiling
+              </>
+            ) : (
+              'Compile'
+            )}
+          </Button>
+          <Button
+            variant="ghost"
+            size="xs"
+            onClick={handleExportPDF}
+            disabled={exportingPDF}
+          >
+            {exportingPDF ? (
+              <>
+                <Loader2 className="animate-spin" />
+                Exporting
+              </>
+            ) : (
+              'Export'
+            )}
+          </Button>
+        </div>
+        <div className="flex h-[calc(100%-2.5rem)] gap-6">
+          <div className="flex-1 overflow-hidden rounded-lg bg-white shadow-sm h-full">
             <Editor
-              height="80vh"
+              height="100%"
               defaultLanguage="latex"
               value={content}
               onChange={(value) => setContent(value || '')}
@@ -501,8 +510,7 @@ export default function EditorPage() {
             />
           </div>
 
-          {/* Preview - Replace with PDFViewer */}
-          <div className="flex-1 overflow-auto rounded-lg bg-white p-4 shadow-sm">
+          <div className="flex-1 overflow-auto rounded-lg bg-white p-4 shadow-sm h-full">
             <PDFViewer pdfData={pdfData} isLoading={compiling} />
           </div>
         </div>

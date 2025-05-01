@@ -3,14 +3,12 @@
 import { useEffect, useState } from 'react';
 import Editor, { loader } from '@monaco-editor/react';
 import { Button } from '@/components/ui/button';
-import Link from 'next/link';
 import {
   latexLanguageConfiguration,
   latexTokenProvider,
   registerLatexCompletions,
 } from '@/lib/editor-config';
 import { Chat } from '@/components/chat';
-import { OctreeLogo } from '@/components/icons/octree-logo';
 import { EditSuggestion } from '@/types/edit';
 import { Check, X, Loader2 } from 'lucide-react';
 import type * as Monaco from 'monaco-editor';
@@ -18,7 +16,15 @@ import { PDFViewer } from '@/components/PDFViewer';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { useParams } from 'next/navigation';
 import { defaultLatexContent } from '../default-content';
-import Menu from '../components/menu';
+import { ButtonGroup, ButtonGroupItem } from '@/components/ui/button-group';
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from '@/components/ui/breadcrumb';
 
 export default function EditorPage() {
   // Add Supabase client and params
@@ -29,6 +35,9 @@ export default function EditorPage() {
   // Add document metadata state
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const [buttonPos, setButtonPos] = useState({ top: 0, left: 0 });
+  const [showButton, setShowButton] = useState(false);
+  const [selectedText, setSelectedText] = useState('');
 
   const [content, setContent] = useState(defaultLatexContent);
 
@@ -386,64 +395,78 @@ export default function EditorPage() {
     fetchDocument();
   }, [documentId, supabase]);
 
-  return (
-    <div className="min-h-screen bg-blue-50">
-      <nav className="border-b border-blue-100 bg-white">
-        <div className="mx-auto px-4 py-2">
-          <div className="flex items-center">
-            <Link href="/dashboard" className="flex items-center space-x-2">
-              <OctreeLogo className="h-8 w-8 text-blue-600" />
-              <span className="text-lg font-semibold text-blue-900">
-                octree
-              </span>
-            </Link>
+  function handleCopy() {
+    console.log('Copying text');
+  }
 
-            {lastSaved && (
-              <span className="ml-6 text-sm text-gray-500">
-                {isSaving
-                  ? 'Saving...'
-                  : `Last saved: ${lastSaved.toLocaleTimeString()}`}
-              </span>
-            )}
+  return (
+    <div className="min-h-screen bg-slate-100">
+      <div className="mx-auto h-[calc(100vh-4rem)] px-2 py-2">
+        <div className="flex justify-center pt-1">
+          <Breadcrumb>
+            <BreadcrumbList>
+              <BreadcrumbItem>
+                <BreadcrumbLink href="/dashboard">Documents</BreadcrumbLink>
+              </BreadcrumbItem>
+
+              <BreadcrumbSeparator />
+
+              <BreadcrumbItem>
+                <BreadcrumbPage>Untitled Document</BreadcrumbPage>
+              </BreadcrumbItem>
+            </BreadcrumbList>
+          </Breadcrumb>
+        </div>
+
+        <div className="mb-1 flex items-center justify-between">
+          <ButtonGroup>
+            <ButtonGroupItem>
+              <span className="text-sm font-bold">B</span>
+            </ButtonGroupItem>
+            <ButtonGroupItem>
+              <span className="text-sm italic">I</span>
+            </ButtonGroupItem>
+            <ButtonGroupItem>
+              <span className="text-sm underline">U</span>
+            </ButtonGroupItem>
+          </ButtonGroup>
+
+          <div className="bg-background flex w-fit items-center gap-1 rounded-md border border-slate-300 p-1 shadow-xs">
+            <Button
+              variant="ghost"
+              size="xs"
+              onClick={handleCompile}
+              disabled={compiling}
+            >
+              {compiling ? (
+                <>
+                  <Loader2 className="animate-spin" />
+                  Compiling
+                </>
+              ) : (
+                'Compile'
+              )}
+            </Button>
+            <Button
+              variant="ghost"
+              size="xs"
+              onClick={handleExportPDF}
+              disabled={exportingPDF}
+            >
+              {exportingPDF ? (
+                <>
+                  <Loader2 className="animate-spin" />
+                  Exporting
+                </>
+              ) : (
+                'Export'
+              )}
+            </Button>
           </div>
         </div>
-      </nav>
 
-      <div className="mx-auto space-y-1 px-2 py-2 h-[calc(100vh-3rem)]">
-        <div className="bg-background ml-auto flex w-fit items-center gap-1 rounded-md border p-1 shadow-xs">
-          <Button
-            variant="ghost"
-            size="xs"
-            onClick={handleCompile}
-            disabled={compiling}
-          >
-            {compiling ? (
-              <>
-                <Loader2 className="animate-spin" />
-                Compiling
-              </>
-            ) : (
-              'Compile'
-            )}
-          </Button>
-          <Button
-            variant="ghost"
-            size="xs"
-            onClick={handleExportPDF}
-            disabled={exportingPDF}
-          >
-            {exportingPDF ? (
-              <>
-                <Loader2 className="animate-spin" />
-                Exporting
-              </>
-            ) : (
-              'Export'
-            )}
-          </Button>
-        </div>
-        <div className="flex h-[calc(100%-2.5rem)] gap-6">
-          <div className="flex-1 overflow-hidden rounded-lg bg-white shadow-sm h-full">
+        <div className="flex h-full gap-1">
+          <div className="relative h-full flex-4 overflow-hidden rounded-md bg-white shadow-sm">
             <Editor
               height="100%"
               defaultLanguage="latex"
@@ -460,7 +483,7 @@ export default function EditorPage() {
                   ignoreHorizontalScrollbarInContentHeight: false,
                 },
                 minimap: { enabled: false },
-                fontSize: 14,
+                fontSize: 13,
                 wordWrap: 'on',
                 lineNumbers: 'on',
                 renderWhitespace: 'all',
@@ -506,11 +529,59 @@ export default function EditorPage() {
                     }
                   },
                 });
+
+                editor.onDidChangeCursorSelection((event) => {
+                  const selection = event.selection;
+                  const model = editor.getModel();
+                  const text = model?.getValueInRange(selection);
+
+                  if (text && !selection.isEmpty()) {
+                    const range = {
+                      startLineNumber: selection.startLineNumber,
+                      startColumn: selection.startColumn,
+                      endLineNumber: selection.endLineNumber,
+                      endColumn: selection.endColumn,
+                    };
+                    const startCoords = editor.getScrolledVisiblePosition({
+                      lineNumber: range.startLineNumber,
+                      column: range.startColumn,
+                    });
+
+                    if (startCoords) {
+                      setButtonPos({
+                        top: startCoords.top - 30, // position above the selection
+                        left: startCoords.left,
+                      });
+                      setSelectedText(text);
+                      setShowButton(true);
+                    }
+                  } else {
+                    setShowButton(false);
+                  }
+                });
               }}
             />
+
+            {showButton && (
+              <Button
+                variant="outline"
+                size="xs"
+                onClick={handleCopy}
+                className="absolute z-10 py-3 font-medium"
+                style={{
+                  top: buttonPos.top,
+                  left: buttonPos.left,
+                }}
+              >
+                Edit
+                <kbd className="text-muted-foreground ml-auto pt-0.5 font-mono text-xs tracking-widest">
+                  ⌘B
+                </kbd>
+              </Button>
+            )}
           </div>
 
-          <div className="flex-1 overflow-auto rounded-lg bg-white p-4 shadow-sm h-full">
+          <div className="h-full flex-3 overflow-auto">
             <PDFViewer pdfData={pdfData} isLoading={compiling} />
           </div>
         </div>

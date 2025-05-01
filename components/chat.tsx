@@ -8,6 +8,8 @@ import { OctreeLogo } from '@/components/icons/octree-logo';
 import { motion, AnimatePresence } from 'framer-motion';
 import { EditSuggestion } from '@/types/edit';
 import { v4 as uuidv4 } from 'uuid';
+import { Input } from './ui/input';
+import { cn } from '@/lib/utils';
 
 interface ChatProps {
   onEditSuggestion: (edit: EditSuggestion) => void;
@@ -102,25 +104,20 @@ export function Chat({ onEditSuggestion, fileContent }: ChatProps) {
         initial={{ scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         exit={{ scale: 0.9, opacity: 0 }}
-        className="fixed right-4 bottom-4 flex flex-col items-end space-y-2"
+        className="fixed right-4 bottom-4 flex cursor-pointer flex-col items-end space-y-2"
+        onClick={() => setIsOpen(true)}
       >
-        <div className="mb-2 rounded-full border border-blue-100 bg-white/80 px-3 py-1.5 text-sm text-blue-600 shadow-sm backdrop-blur-sm">
+        <div className="text-foreground mb-2 rounded-md border border-blue-100 bg-white/80 px-3 py-1.5 text-sm shadow-sm backdrop-blur-sm">
           Press{' '}
-          <kbd className="rounded-md bg-blue-50 px-1.5 py-0.5 font-mono text-xs">
+          <kbd className="rounded-sm bg-slate-100 px-1.5 py-0.5 font-mono text-xs">
             ⌘
           </kbd>
-          +
-          <kbd className="rounded-md bg-blue-50 px-1.5 py-0.5 font-mono text-xs">
+          {' + '}
+          <kbd className="rounded-sm bg-slate-100 px-1.5 py-0.5 font-mono text-xs">
             B
           </kbd>{' '}
-          to open
+          to edit
         </div>
-        <Button
-          onClick={() => setIsOpen(true)}
-          className="rounded-full bg-blue-600 p-4 text-white shadow-lg transition-all duration-200 ease-in-out hover:bg-blue-700 hover:shadow-xl"
-        >
-          <OctreeLogo className="h-6 w-6 text-white" />
-        </Button>
       </motion.div>
     );
   }
@@ -130,19 +127,25 @@ export function Chat({ onEditSuggestion, fileContent }: ChatProps) {
       initial={{ y: 20, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       exit={{ y: 20, opacity: 0 }}
-      className={`fixed right-4 bottom-16 w-96 rounded-2xl border border-blue-100 bg-white shadow-2xl transition-all duration-200 ${isMinimized ? 'h-14' : 'h-[580px]'}`}
+      className={`fixed right-4 bottom-4 w-96 rounded-md border border-blue-100 bg-white shadow-2xl transition-all duration-200 ${isMinimized ? 'h-15' : 'h-[610px]'}`}
     >
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-blue-100/50 p-4">
+      <div
+        className={cn(
+          'flex items-center justify-between px-3 py-2',
+          !isMinimized && 'border-b border-blue-100/50'
+        )}
+      >
         <div className="flex items-center space-x-3">
           <div className="rounded-lg bg-blue-100/50 p-1.5">
             <OctreeLogo className="h-5 w-5 text-blue-600" />
           </div>
           <div>
-            <h3 className="font-semibold text-blue-900">Octra</h3>
-            <p className="text-xs text-blue-500">LaTeX Assistant</p>
+            <h3 className="font-semibold text-blue-900">Octree</h3>
+            <p className="text-xs text-slate-500">LaTeX Assistant</p>
           </div>
         </div>
+
         <div className="flex gap-1">
           <Button
             variant="ghost"
@@ -174,14 +177,11 @@ export function Chat({ onEditSuggestion, fileContent }: ChatProps) {
             <div className="scrollbar-thin scrollbar-thumb-blue-200 scrollbar-track-transparent h-[480px] overflow-auto p-4">
               {messages.length === 0 && (
                 <div className="flex h-full flex-col items-center justify-center space-y-4 text-center">
-                  <div className="rounded-full bg-blue-50 p-4">
-                    <Command className="h-8 w-8 text-blue-600" />
-                  </div>
                   <div>
-                    <h3 className="text-lg font-semibold text-blue-900">
+                    <h3 className="text-md font-semibold text-slate-800">
                       How can I help?
                     </h3>
-                    <p className="text-sm text-blue-600">
+                    <p className="text-sm text-slate-500">
                       Ask me anything about LaTeX
                     </p>
                   </div>
@@ -237,21 +237,19 @@ export function Chat({ onEditSuggestion, fileContent }: ChatProps) {
             </div>
 
             {/* Input */}
-            <div className="rounded-b-2xl border-t border-blue-100/50 bg-white/50 p-4 backdrop-blur-sm">
+            <div className="rounded-b-2xl border-t border-blue-100/50 p-4">
               <form onSubmit={originalHandleSubmit} className="relative">
-                <input
-                  value={input}
-                  onChange={handleInputChange}
-                  placeholder="Ask about LaTeX..."
-                  className="focus:ring-opacity-50 w-full rounded-xl border border-blue-200 bg-blue-50/50 px-4 py-2.5 pr-12 text-blue-900 placeholder-blue-400 focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                />
-                <Button
-                  type="submit"
-                  disabled={isLoading}
-                  className="absolute top-1 right-1 h-8 w-8 rounded-lg bg-blue-600 p-0 text-white hover:bg-blue-700"
-                >
-                  <Send size={14} />
-                </Button>
+                <div className="flex w-full max-w-sm items-center space-x-2">
+                  <Input
+                    value={input}
+                    type="text"
+                    placeholder="Ask about LaTeX..."
+                    onChange={handleInputChange}
+                  />
+                  <Button type="submit" variant="default" disabled={isLoading}>
+                    <Send />
+                  </Button>
+                </div>
               </form>
             </div>
           </motion.div>

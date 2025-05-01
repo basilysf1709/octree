@@ -3,6 +3,6 @@ export interface EditSuggestion {
   original: string;
   suggested: string;
   startLine: number;
-  endLine: number;
+  originalLineCount: number;
   status: 'pending' | 'accepted' | 'rejected';
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import Editor, { loader } from '@monaco-editor/react';
 import { Button } from '@/components/ui/button';
 import {
@@ -25,6 +25,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
+import { initialContent } from '@/lib/utils';
 
 export default function EditorPage() {
   // Add Supabase client and params
@@ -39,7 +40,23 @@ export default function EditorPage() {
   const [showButton, setShowButton] = useState(false);
   const [selectedText, setSelectedText] = useState('');
 
-  const [content, setContent] = useState(defaultLatexContent);
+  // Add editor ref
+  const editorRef = useRef<Monaco.editor.IStandaloneCodeEditor | null>(null);
+
+  // Move Monaco initialization into useEffect
+  useEffect(() => {
+    loader.init().then((monaco) => {
+      monaco.languages.register({ id: 'latex' });
+      monaco.languages.setLanguageConfiguration(
+        'latex',
+        latexLanguageConfiguration
+      );
+      monaco.languages.setMonarchTokensProvider('latex', latexTokenProvider);
+      registerLatexCompletions(monaco);
+    });
+  }, []); // Empty dependency array means this runs once on mount
+
+  const [content, setContent] = useState(initialContent);
 
   const [compiling, setCompiling] = useState(false);
   const [pdfData, setPdfData] = useState<string | null>(null);
@@ -124,8 +141,6 @@ export default function EditorPage() {
       // Save document in the background
       const savePromise = saveDocument();
 
-      // Start PDF compilation immediately
-      console.log('Starting PDF export...');
       const response = await fetch('/api/compilePDF', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -139,16 +154,11 @@ export default function EditorPage() {
 
       // Log raw response for debugging
       const rawText = await response.text();
-      console.log('Raw response (first 100 chars):', rawText.substring(0, 100));
 
       // Parse manually to avoid potential issues
       let data;
       try {
         data = JSON.parse(rawText);
-        console.log('JSON parsed successfully');
-        console.log('PDF data present:', !!data.pdf);
-        console.log('PDF size:', data.size);
-        console.log('Base64 length:', data.pdf?.length);
       } catch (e) {
         console.error('Failed to parse JSON:', e);
         throw new Error('Failed to parse server response');
@@ -156,8 +166,6 @@ export default function EditorPage() {
 
       // Continue with PDF processing...
       if (data.pdf) {
-        console.log('Converting Base64 to binary...');
-
         // Convert Base64 back to binary
         const binaryString = atob(data.pdf);
         const bytes = new Uint8Array(binaryString.length);
@@ -165,12 +173,10 @@ export default function EditorPage() {
           bytes[i] = binaryString.charCodeAt(i);
         }
 
-        console.log('Creating blob from binary data...');
         // Create downloadable blob
         const blob = new Blob([bytes], { type: 'application/pdf' });
         const url = URL.createObjectURL(blob);
-
-        console.log('Initiating download...');
+        
         // Download
         const a = document.createElement('a');
         a.href = url;
@@ -181,7 +187,6 @@ export default function EditorPage() {
         // Clean up
         URL.revokeObjectURL(url);
         document.body.removeChild(a);
-        console.log('Download complete!');
       } else {
         throw new Error('No PDF data received from server');
       }
@@ -196,178 +201,177 @@ export default function EditorPage() {
     setEditSuggestions((prev) => [...prev, suggestion]);
   };
 
-  const handleAcceptEdit = (id: string) => {
-    const suggestion = editSuggestions.find((s) => s.id === id);
-    if (!suggestion || !editor || !monacoInstance) {
-      console.log('Missing dependencies:', {
-        suggestion: !!suggestion,
-        editor: !!editor,
-        monaco: !!monacoInstance,
-      });
+  const handleAcceptEdit = (suggestionId: string) => {
+    const suggestion = editSuggestions.find(s => s.id === suggestionId);
+    if (!suggestion || suggestion.status !== 'pending') return;
+    // Get editor from ref
+    const editor = editorRef.current;
+    const monaco = monacoInstance;
+
+    if (!editor || !monaco) {
+      console.error('Editor or Monaco instance not available.');
       return;
     }
 
     const model = editor.getModel();
     if (!model) {
-      console.log('No editor model found');
+      console.error('Editor model not available.');
       return;
     }
 
-    // Find the actual lines containing our target text
-    let actualStartLine = -1;
-    let actualEndLine = -1;
+    try {
+      const startLineNumber = suggestion.startLine;
+      const endLineNumber = suggestion.originalLineCount > 0
+                           ? startLineNumber + suggestion.originalLineCount - 1
+                           : startLineNumber;
+      const endColumn = suggestion.originalLineCount > 0
+                       ? model.getLineMaxColumn(endLineNumber)
+                       : 1;
 
-    // Search in a window around the suggested line numbers
-    const searchStart = Math.max(1, suggestion.startLine - 5);
-    const searchEnd = suggestion.endLine + 5;
-
-    const originalLines = suggestion.original.trim().split('\n');
-    const firstOriginalLine = originalLines[0].trim();
-
-    for (let i = searchStart; i <= searchEnd; i++) {
-      const lineContent = model.getLineContent(i).trim();
-      if (lineContent.includes(firstOriginalLine)) {
-        actualStartLine = i;
-        // Check subsequent lines if multiline
-        let allLinesMatch = true;
-        for (let j = 1; j < originalLines.length; j++) {
-          const nextLineContent = model.getLineContent(i + j).trim();
-          if (!nextLineContent.includes(originalLines[j].trim())) {
-            allLinesMatch = false;
-            break;
-          }
-        }
-        if (allLinesMatch) {
-          actualEndLine = i + originalLines.length - 1;
-          break;
-        }
-      }
-    }
-
-    if (actualStartLine === -1 || actualEndLine === -1) {
-      console.log('Could not find matching text');
-      return;
-    }
-
-    const range = new monacoInstance.Range(
-      actualStartLine,
-      1,
-      actualEndLine + 1,
-      1
-    );
-
-    const edit = {
-      range,
-      text: suggestion.suggested + '\n',
-      forceMoveMarkers: true,
-    };
-
-    editor.executeEdits('suggestion', [edit]);
-    const newContent = editor.getValue();
-    setContent(newContent);
-
-    setEditSuggestions((prev) =>
-      prev.map((s) => (s.id === id ? { ...s, status: 'accepted' } : s))
-    );
-  };
-
-  const handleRejectEdit = (id: string) => {
-    setEditSuggestions((prev) =>
-      prev.map((s) => (s.id === id ? { ...s, status: 'rejected' } : s))
-    );
-  };
-
-  // Move Monaco initialization into useEffect
-  useEffect(() => {
-    loader.init().then((monaco) => {
-      monaco.languages.register({ id: 'latex' });
-      monaco.languages.setLanguageConfiguration(
-        'latex',
-        latexLanguageConfiguration
+      const rangeToReplace = new monaco.Range(
+        startLineNumber,
+        1,
+        endLineNumber,
+        endColumn
       );
-      monaco.languages.setMonarchTokensProvider('latex', latexTokenProvider);
-      registerLatexCompletions(monaco);
-    });
-  }, []); // Empty dependency array means this runs once on mount
 
-  // Update the decoration effect
+      editor.executeEdits('accept-ai-suggestion', [
+        {
+          range: rangeToReplace,
+          text: suggestion.suggested,
+          forceMoveMarkers: true
+        }
+      ]);
+
+      setEditSuggestions(prev =>
+        prev.map(s => s.id === suggestionId ? { ...s, status: 'accepted' } : s)
+      );
+
+    } catch (error) {
+       console.error("Error applying edit:", error);
+       setEditSuggestions(prev =>
+         prev.map(s => s.id === suggestionId ? { ...s, status: 'pending' } : s)
+       );
+    }
+  };
+
+  const handleRejectEdit = (suggestionId: string) => {
+     setEditSuggestions(prev =>
+       prev.map(s => s.id === suggestionId ? { ...s, status: 'rejected' } : s)
+     );
+  };
+
+  // Update the decoration effect for a clear inline diff view
   useEffect(() => {
-    if (!editor || !monacoInstance || editSuggestions.length === 0) {
+    // Ensure editor and monaco are ready
+    const editor = editorRef.current; // Get current editor instance
+    if (!editor || !monacoInstance) {
       return;
     }
 
-    // Clear existing decorations
-    if (decorationIds.length) {
-      editor.deltaDecorations(decorationIds, []);
-      setDecorationIds([]); // Clear the IDs after removing decorations
-      return; // Exit early to prevent infinite loop
+    const model = editor.getModel();
+    if (!model) {
+      return;
     }
 
-    // Get pending suggestions
+    const oldDecorationIds = decorationIds; // Get IDs of previous decorations
+    const newDecorations: Monaco.editor.IModelDeltaDecoration[] = [];
+
     const pendingSuggestions = editSuggestions.filter(
       (s) => s.status === 'pending'
     );
 
-    // Skip processing if no pending suggestions
-    if (pendingSuggestions.length === 0) return;
+    pendingSuggestions.forEach((suggestion) => {
 
-    // Create decorations for the first pending suggestion only
-    const suggestion = pendingSuggestions[0];
+      const startLineNumber = suggestion.startLine;
+      // Ensure endLineNumber is valid and >= startLineNumber
+      const endLineNumber = Math.max(startLineNumber, startLineNumber + suggestion.originalLineCount - 1);
 
-    const model = editor.getModel();
-    if (!model) return;
+      // Validate line numbers against the current model state
+      if (startLineNumber <= 0 || endLineNumber <= 0 || startLineNumber > model.getLineCount() || endLineNumber > model.getLineCount()) {
+        console.warn(`Suggestion ${suggestion.id} line numbers [${startLineNumber}-${endLineNumber}] are out of bounds for model line count ${model.getLineCount()}. Skipping decoration.`);
+        return; // Skip this suggestion if lines are invalid
+      }
 
-    const decorations = [
-      // Original text decoration (red)
-      {
-        range: new monacoInstance.Range(
-          suggestion.startLine,
-          1,
-          suggestion.endLine + 1,
-          1
-        ),
-        options: {
-          isWholeLine: false,
-          className: 'suggestion-deleted',
-          glyphMarginClassName: 'suggestion-glyph',
-          glyphMarginHoverMessage: { value: 'Edit suggestion' },
-        },
-      },
-      // Suggested text decoration (green)
-      {
-        range: new monacoInstance.Range(
-          suggestion.startLine,
-          1,
-          suggestion.endLine + 1,
-          1
-        ),
-        options: {
-          isWholeLine: false,
-          className: 'suggestion-added',
-          after: {
-            content: `  ${suggestion.suggested}`,
-            inlineClassName: 'suggestion-added',
-            attachedData: suggestion.id,
+      // Calculate end column precisely
+      const endColumn = suggestion.originalLineCount > 0
+                       ? model.getLineMaxColumn(endLineNumber) // End of the last original line
+                       : 1; // Insertion point column 1
+
+      // Define the range for the original text (or insertion point)
+      const originalRange = new monacoInstance.Range(
+        startLineNumber,
+        1, // Start column is always 1
+        endLineNumber,
+        endColumn
+      );
+
+      // --- Decoration 1: Mark original text (if any) + Glyph ---
+      if (suggestion.originalLineCount > 0) {
+        // Apply red strikethrough to the original range
+        newDecorations.push({
+          range: originalRange,
+          options: {
+            className: 'octra-suggestion-deleted', // Red strikethrough style
+            glyphMarginClassName: 'octra-suggestion-glyph', // Blue margin indicator
+            glyphMarginHoverMessage: { value: `Suggestion: Replace Lines ${startLineNumber}-${endLineNumber}` },
+            stickiness: monacoInstance.editor.TrackedRangeStickiness.NeverGrowsWhenTypingAtEdges,
           },
-        },
-      },
-    ];
+        });
+      } else {
+         // If it's a pure insertion, just add the glyph marker at the start line
+         newDecorations.push({
+            range: new monacoInstance.Range(startLineNumber, 1, startLineNumber, 1), // Point decoration
+            options: {
+               glyphMarginClassName: 'octra-suggestion-glyph',
+               glyphMarginHoverMessage: { value: `Suggestion: Insert at Line ${startLineNumber}` },
+               stickiness: monacoInstance.editor.TrackedRangeStickiness.NeverGrowsWhenTypingAtEdges,
+            }
+         });
+      }
 
-    // Store new decoration IDs without calling setDecorationIds inside the effect
-    const newDecorationIds = editor.deltaDecorations([], decorations);
+      // --- Decoration 2: Show suggested text inline (if any) ---
+      if (suggestion.suggested && suggestion.suggested.trim().length > 0) {
+          // Use 'after' content widget placed at the end of the original range
+          // The range for the 'after' widget itself should be zero-length
+          const afterWidgetRange = new monacoInstance.Range(
+              endLineNumber, endColumn, endLineNumber, endColumn
+          );
 
-    // Use a ref to track if we've already set the IDs
-    if (newDecorationIds.length > 0) {
-      setDecorationIds(newDecorationIds);
-    }
-  }, [editSuggestions, editor, monacoInstance]); // Remove decorationIds from dependencies
+          // Prepare suggested content, replacing newlines for inline view
+          const inlineSuggestedContent = ` ${suggestion.suggested.replace(/\n/g, ' ↵ ')}`;
+
+          newDecorations.push({
+            range: afterWidgetRange, // Position the widget *after* the original range
+            options: {
+              after: {
+                content: inlineSuggestedContent,
+                inlineClassName: 'octra-suggestion-added', // Bold green style
+              },
+              stickiness: monacoInstance.editor.TrackedRangeStickiness.NeverGrowsWhenTypingAtEdges,
+            },
+          });
+      }
+    });
+
+    // --- Apply Decorations ---
+    // This is crucial: deltaDecorations removes old IDs and applies new ones atomically
+    const newDecorationIds = editor.deltaDecorations(oldDecorationIds, newDecorations);
+    // Update the state to store the IDs of the *currently applied* decorations
+    setDecorationIds(newDecorationIds);
+
+  // Dependencies: Re-run when suggestions change, or editor/monaco become available.
+  }, [editSuggestions, editor, monacoInstance]); // Removed decorationIds from deps
 
   // Cleanup on unmount (adjust to remove any references to pdfUrl)
   useEffect(() => {
     return () => {
-      // No URL objects to revoke now that we're using data URLs
+      // Optional: Clear decorations when component unmounts
+      if (editorRef.current && decorationIds.length > 0) {
+         editorRef.current.deltaDecorations(decorationIds, []);
+      }
     };
-  }, []);
+  }, []); // Empty dependency array for unmount cleanup
 
   // Load document on initial render
   useEffect(() => {
@@ -398,6 +402,69 @@ export default function EditorPage() {
   function handleCopy() {
     console.log('Copying text');
   }
+        
+  // Update onMount handler to store editor ref
+  const handleEditorDidMount = (editor: Monaco.editor.IStandaloneCodeEditor, monaco: typeof Monaco) => {
+    editorRef.current = editor;
+    setEditor(editor);
+    setMonacoInstance(monaco);
+    // Add suggestion actions
+    editor.addAction({
+      id: 'accept-suggestion',
+      label: 'Accept Suggestion',
+      contextMenuGroupId: 'suggestion',
+      run: (ed) => {
+        const position = ed.getPosition();
+        if (!position) return;
+
+        const decorations = ed.getLineDecorations(
+          position.lineNumber
+        );
+        const suggestion = decorations?.find(
+          (d) =>
+            d.options.after && 'attachedData' in d.options.after
+        );
+        if (
+          suggestion?.options.after &&
+          'attachedData' in suggestion.options.after
+        ) {
+          handleAcceptEdit(
+            suggestion.options.after.attachedData as string
+          );
+        }
+      },
+    });
+    
+                    editor.onDidChangeCursorSelection((event) => {
+                  const selection = event.selection;
+                  const model = editor.getModel();
+                  const text = model?.getValueInRange(selection);
+
+                  if (text && !selection.isEmpty()) {
+                    const range = {
+                      startLineNumber: selection.startLineNumber,
+                      startColumn: selection.startColumn,
+                      endLineNumber: selection.endLineNumber,
+                      endColumn: selection.endColumn,
+                    };
+                    const startCoords = editor.getScrolledVisiblePosition({
+                      lineNumber: range.startLineNumber,
+                      column: range.startColumn,
+                    });
+
+                    if (startCoords) {
+                      setButtonPos({
+                        top: startCoords.top - 30, // position above the selection
+                        left: startCoords.left,
+                      });
+                      setSelectedText(text);
+                      setShowButton(true);
+                    }
+                  } else {
+                    setShowButton(false);
+                  }
+                });
+  };
 
   return (
     <div className="min-h-screen bg-slate-100">
@@ -500,66 +567,7 @@ export default function EditorPage() {
                   bottom: 10,
                 },
               }}
-              onMount={(editor, monaco) => {
-                setEditor(editor);
-                setMonacoInstance(monaco);
-                // Add suggestion actions
-                editor.addAction({
-                  id: 'accept-suggestion',
-                  label: 'Accept Suggestion',
-                  contextMenuGroupId: 'suggestion',
-                  run: (ed) => {
-                    const position = ed.getPosition();
-                    if (!position) return;
-
-                    const decorations = ed.getLineDecorations(
-                      position.lineNumber
-                    );
-                    const suggestion = decorations?.find(
-                      (d) =>
-                        d.options.after && 'attachedData' in d.options.after
-                    );
-                    if (
-                      suggestion?.options.after &&
-                      'attachedData' in suggestion.options.after
-                    ) {
-                      handleAcceptEdit(
-                        suggestion.options.after.attachedData as string
-                      );
-                    }
-                  },
-                });
-
-                editor.onDidChangeCursorSelection((event) => {
-                  const selection = event.selection;
-                  const model = editor.getModel();
-                  const text = model?.getValueInRange(selection);
-
-                  if (text && !selection.isEmpty()) {
-                    const range = {
-                      startLineNumber: selection.startLineNumber,
-                      startColumn: selection.startColumn,
-                      endLineNumber: selection.endLineNumber,
-                      endColumn: selection.endColumn,
-                    };
-                    const startCoords = editor.getScrolledVisiblePosition({
-                      lineNumber: range.startLineNumber,
-                      column: range.startColumn,
-                    });
-
-                    if (startCoords) {
-                      setButtonPos({
-                        top: startCoords.top - 30, // position above the selection
-                        left: startCoords.left,
-                      });
-                      setSelectedText(text);
-                      setShowButton(true);
-                    }
-                  } else {
-                    setShowButton(false);
-                  }
-                });
-              }}
+              onMount={handleEditorDidMount}
             />
 
             {showButton && (
@@ -600,7 +608,7 @@ export default function EditorPage() {
               className="flex flex-col gap-2 rounded-lg border border-blue-100 bg-white p-3 shadow-lg"
             >
               <div className="text-sm text-blue-600">
-                Lines {suggestion.startLine}-{suggestion.endLine}
+                Lines {suggestion.startLine}-{suggestion.startLine + suggestion.originalLineCount - 1}
               </div>
               <div className="flex items-center gap-2">
                 <Button

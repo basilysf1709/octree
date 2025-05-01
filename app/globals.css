@@ -1,3 +1,7 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 @import 'tailwindcss';
 @plugin "tailwindcss-animate";
 
@@ -146,34 +150,62 @@
 }
 
 @layer components {
-  .suggestion-line {
-    background-color: rgba(34, 197, 94, 0.1);
-    border-left: 2px solid #22c55e;
+  /* Style for the original text to be replaced (Red Strikethrough) */
+  .octra-suggestion-deleted {
+     color: #f43f5e !important;
+     text-decoration: line-through !important;
+     /* Optional: Add slight background if needed */
+     /* background-color: rgba(255, 0, 0, 0.05) !important; */
   }
 
-  .suggestion-deleted {
-    background-color: rgba(239, 68, 68, 0.1);
-    text-decoration: line-through;
-    color: #ef4444;
+  /* Style for the new suggested text (Bold Green) */
+  .octra-suggestion-added {
+     color: #22c55e !important;
+     font-weight: bold !important;
+     /* Optional: Add light green background */
+     /* background-color: rgba(0, 255, 0, 0.1) !important; */
+     /* Add a little space before the green text */
+     margin-left: 4px !important;
+     /* Ensure it doesn't wrap unexpectedly */
+     white-space: pre !important;
   }
 
-  .suggestion-added {
-    background-color: rgba(34, 197, 94, 0.1);
-    color: #22c55e;
+  /* Style for the glyph margin indicator (Optional, but recommended) */
+  .octra-suggestion-glyph {
+    background-color: #3b82f6 !important; /* Blue */
+    width: 4px !important;
+    margin-left: 2px !important;
   }
 
-  .suggestion-glyph {
-    background-color: #22c55e;
-    border-radius: 50%;
-    margin-left: 5px;
-  }
+  /* ... any other component styles ... */
+}
 
-  .after-suggestion {
-    background-color: #22c55e;
-    color: white;
-    padding: 2px 6px;
-    border-radius: 4px;
-    margin-left: 8px;
-    font-size: 12px;
-  }
+/* Add these styles for Monaco Editor Diff Highlighting */
+.octra-suggestion-deleted {
+  background-color: rgba(255, 0, 0, 0.15); /* Light red background */
+  text-decoration: line-through; /* Strikethrough */
+}
+
+.octra-suggestion-added {
+  background-color: rgba(0, 255, 0, 0.15); /* Light green background */
+  font-weight: 600; /* Slightly bolder */
+  /* Ensure it doesn't inherit strikethrough if nested weirdly */
+  text-decoration: none !important;
+}
+
+.octra-suggestion-glyph {
+  background-color: #007acc; /* Blue indicator color, adjust as needed */
+  width: 4px !important; /* Adjust width as needed */
+  margin-left: 2px !important; /* Adjust spacing */
+}
+
+/* Optional: Style for the 'after' widget's newline indicator */
+.octra-suggestion-added::after {
+  /* Style the '↵' character if needed, e.g., color */
+  /* color: #somecolor; */
+}
+
+/* Ensure editor container allows overflow if needed, though usually handled */
+.monaco-editor .view-lines {
+  /* overflow: visible; */ /* Usually not needed */
 }

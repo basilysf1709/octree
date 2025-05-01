@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
@@ -15,7 +16,6 @@ import type * as Monaco from 'monaco-editor';
 import { PDFViewer } from '@/components/PDFViewer';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { useParams } from 'next/navigation';
-import { defaultLatexContent } from '../default-content';
 import { ButtonGroup, ButtonGroupItem } from '@/components/ui/button-group';
 import {
   Breadcrumb,
@@ -399,7 +399,7 @@ export default function EditorPage() {
     setDecorationIds(newDecorationIds);
 
     // Dependencies: Re-run when suggestions change, or editor/monaco become available.
-  }, [editSuggestions, editor, monacoInstance]); // Removed decorationIds from deps
+  }, [decorationIds, editSuggestions, editor, monacoInstance]); // Removed decorationIds from deps
 
   // Cleanup on unmount (adjust to remove any references to pdfUrl)
   useEffect(() => {
@@ -409,7 +409,7 @@ export default function EditorPage() {
         editorRef.current.deltaDecorations(decorationIds, []);
       }
     };
-  }, []); // Empty dependency array for unmount cleanup
+  }, [decorationIds]); // Empty dependency array for unmount cleanup
 
   // Load document on initial render
   useEffect(() => {
@@ -534,37 +534,50 @@ export default function EditorPage() {
             </ButtonGroupItem>
           </ButtonGroup>
 
-          <div className="bg-background flex w-fit items-center gap-1 rounded-md border border-slate-300 p-1 shadow-xs">
-            <Button
-              variant="ghost"
-              size="xs"
-              onClick={handleCompile}
-              disabled={compiling}
-            >
-              {compiling ? (
-                <>
-                  <Loader2 className="animate-spin" />
-                  Compiling
-                </>
-              ) : (
-                'Compile'
-              )}
-            </Button>
-            <Button
-              variant="ghost"
-              size="xs"
-              onClick={handleExportPDF}
-              disabled={exportingPDF}
-            >
-              {exportingPDF ? (
-                <>
-                  <Loader2 className="animate-spin" />
-                  Exporting
-                </>
-              ) : (
-                'Export'
-              )}
-            </Button>
+          <div className="flex items-center gap-2">
+            <div className="bg-background flex w-fit items-center gap-1 rounded-md border border-slate-300 p-1 shadow-xs">
+              <Button
+                variant="ghost"
+                size="xs"
+                onClick={handleCompile}
+                disabled={compiling}
+              >
+                {compiling ? (
+                  <>
+                    <Loader2 className="animate-spin" />
+                    Compiling
+                  </>
+                ) : (
+                  'Compile'
+                )}
+              </Button>
+              <Button
+                variant="ghost"
+                size="xs"
+                onClick={handleExportPDF}
+                disabled={exportingPDF || isSaving}
+              >
+                {exportingPDF ? (
+                  <>
+                    <Loader2 className="animate-spin" />
+                    Exporting
+                  </>
+                ) : isSaving ? (
+                  <>
+                    <Loader2 className="animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  'Export'
+                )}
+              </Button>
+            </div>
+            
+            {lastSaved && (
+              <span className="text-xs text-slate-500">
+                Last saved: {lastSaved.toLocaleTimeString()}
+              </span>
+            )}
           </div>
         </div>
 

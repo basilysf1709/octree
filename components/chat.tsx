@@ -3,7 +3,7 @@
 import { useChat } from 'ai/react';
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Loader2, Send, X, Maximize2, Minimize2, Command } from 'lucide-react';
+import { Loader2, Send, X, Maximize2, Minimize2 } from 'lucide-react';
 import { OctreeLogo } from '@/components/icons/octree-logo';
 import { motion, AnimatePresence } from 'framer-motion';
 import { EditSuggestion } from '@/types/edit';

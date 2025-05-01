@@ -553,7 +553,7 @@ export default function Home() {
                 Ready to elevate your academic writing?
               </h2>
               <p className="mb-8 text-lg text-blue-100">
-                Join thousands of researchers who've simplified their LaTeX workflow
+                Join thousands of researchers who&apos;ve simplified their LaTeX workflow
               </p>
               <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
                 <Link href="/auth">

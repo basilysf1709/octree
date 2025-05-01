@@ -21,7 +21,6 @@ export async function POST(request: Request) {
     if (isProd) {
       // Use the remote TeX Live service in production
       try {
-
         const response = await fetch('http://142.93.195.236:3001/compile', {
           method: 'POST',
           headers: {
@@ -46,7 +45,6 @@ export async function POST(request: Request) {
         // Convert to Base64
         const pdfBuffer = Buffer.from(pdfArrayBuffer);
         const base64PDF = pdfBuffer.toString('base64');
-
 
         // Return with verbose info
         return NextResponse.json({

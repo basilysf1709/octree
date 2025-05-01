@@ -76,7 +76,6 @@ Correct Output Diff Block:
     // --- Return Response ---
     // Directly convert the result to the response format.
     return result.toDataStreamResponse();
-
   } catch (error) {
     console.error('AI API error:', error);
     return NextResponse.json(

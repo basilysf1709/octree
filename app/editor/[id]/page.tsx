@@ -176,7 +176,7 @@ export default function EditorPage() {
         // Create downloadable blob
         const blob = new Blob([bytes], { type: 'application/pdf' });
         const url = URL.createObjectURL(blob);
-        
+
         // Download
         const a = document.createElement('a');
         a.href = url;
@@ -202,7 +202,7 @@ export default function EditorPage() {
   };
 
   const handleAcceptEdit = (suggestionId: string) => {
-    const suggestion = editSuggestions.find(s => s.id === suggestionId);
+    const suggestion = editSuggestions.find((s) => s.id === suggestionId);
     if (!suggestion || suggestion.status !== 'pending') return;
     // Get editor from ref
     const editor = editorRef.current;
@@ -221,12 +221,14 @@ export default function EditorPage() {
 
     try {
       const startLineNumber = suggestion.startLine;
-      const endLineNumber = suggestion.originalLineCount > 0
-                           ? startLineNumber + suggestion.originalLineCount - 1
-                           : startLineNumber;
-      const endColumn = suggestion.originalLineCount > 0
-                       ? model.getLineMaxColumn(endLineNumber)
-                       : 1;
+      const endLineNumber =
+        suggestion.originalLineCount > 0
+          ? startLineNumber + suggestion.originalLineCount - 1
+          : startLineNumber;
+      const endColumn =
+        suggestion.originalLineCount > 0
+          ? model.getLineMaxColumn(endLineNumber)
+          : 1;
 
       const rangeToReplace = new monaco.Range(
         startLineNumber,
@@ -239,26 +241,31 @@ export default function EditorPage() {
         {
           range: rangeToReplace,
           text: suggestion.suggested,
-          forceMoveMarkers: true
-        }
+          forceMoveMarkers: true,
+        },
       ]);
 
-      setEditSuggestions(prev =>
-        prev.map(s => s.id === suggestionId ? { ...s, status: 'accepted' } : s)
+      setEditSuggestions((prev) =>
+        prev.map((s) =>
+          s.id === suggestionId ? { ...s, status: 'accepted' } : s
+        )
       );
-
     } catch (error) {
-       console.error("Error applying edit:", error);
-       setEditSuggestions(prev =>
-         prev.map(s => s.id === suggestionId ? { ...s, status: 'pending' } : s)
-       );
+      console.error('Error applying edit:', error);
+      setEditSuggestions((prev) =>
+        prev.map((s) =>
+          s.id === suggestionId ? { ...s, status: 'pending' } : s
+        )
+      );
     }
   };
 
   const handleRejectEdit = (suggestionId: string) => {
-     setEditSuggestions(prev =>
-       prev.map(s => s.id === suggestionId ? { ...s, status: 'rejected' } : s)
-     );
+    setEditSuggestions((prev) =>
+      prev.map((s) =>
+        s.id === suggestionId ? { ...s, status: 'rejected' } : s
+      )
+    );
   };
 
   // Update the decoration effect for a clear inline diff view
@@ -282,21 +289,31 @@ export default function EditorPage() {
     );
 
     pendingSuggestions.forEach((suggestion) => {
-
       const startLineNumber = suggestion.startLine;
       // Ensure endLineNumber is valid and >= startLineNumber
-      const endLineNumber = Math.max(startLineNumber, startLineNumber + suggestion.originalLineCount - 1);
+      const endLineNumber = Math.max(
+        startLineNumber,
+        startLineNumber + suggestion.originalLineCount - 1
+      );
 
       // Validate line numbers against the current model state
-      if (startLineNumber <= 0 || endLineNumber <= 0 || startLineNumber > model.getLineCount() || endLineNumber > model.getLineCount()) {
-        console.warn(`Suggestion ${suggestion.id} line numbers [${startLineNumber}-${endLineNumber}] are out of bounds for model line count ${model.getLineCount()}. Skipping decoration.`);
+      if (
+        startLineNumber <= 0 ||
+        endLineNumber <= 0 ||
+        startLineNumber > model.getLineCount() ||
+        endLineNumber > model.getLineCount()
+      ) {
+        console.warn(
+          `Suggestion ${suggestion.id} line numbers [${startLineNumber}-${endLineNumber}] are out of bounds for model line count ${model.getLineCount()}. Skipping decoration.`
+        );
         return; // Skip this suggestion if lines are invalid
       }
 
       // Calculate end column precisely
-      const endColumn = suggestion.originalLineCount > 0
-                       ? model.getLineMaxColumn(endLineNumber) // End of the last original line
-                       : 1; // Insertion point column 1
+      const endColumn =
+        suggestion.originalLineCount > 0
+          ? model.getLineMaxColumn(endLineNumber) // End of the last original line
+          : 1; // Insertion point column 1
 
       // Define the range for the original text (or insertion point)
       const originalRange = new monacoInstance.Range(
@@ -314,53 +331,74 @@ export default function EditorPage() {
           options: {
             className: 'octra-suggestion-deleted', // Red strikethrough style
             glyphMarginClassName: 'octra-suggestion-glyph', // Blue margin indicator
-            glyphMarginHoverMessage: { value: `Suggestion: Replace Lines ${startLineNumber}-${endLineNumber}` },
-            stickiness: monacoInstance.editor.TrackedRangeStickiness.NeverGrowsWhenTypingAtEdges,
+            glyphMarginHoverMessage: {
+              value: `Suggestion: Replace Lines ${startLineNumber}-${endLineNumber}`,
+            },
+            stickiness:
+              monacoInstance.editor.TrackedRangeStickiness
+                .NeverGrowsWhenTypingAtEdges,
           },
         });
       } else {
-         // If it's a pure insertion, just add the glyph marker at the start line
-         newDecorations.push({
-            range: new monacoInstance.Range(startLineNumber, 1, startLineNumber, 1), // Point decoration
-            options: {
-               glyphMarginClassName: 'octra-suggestion-glyph',
-               glyphMarginHoverMessage: { value: `Suggestion: Insert at Line ${startLineNumber}` },
-               stickiness: monacoInstance.editor.TrackedRangeStickiness.NeverGrowsWhenTypingAtEdges,
-            }
-         });
+        // If it's a pure insertion, just add the glyph marker at the start line
+        newDecorations.push({
+          range: new monacoInstance.Range(
+            startLineNumber,
+            1,
+            startLineNumber,
+            1
+          ), // Point decoration
+          options: {
+            glyphMarginClassName: 'octra-suggestion-glyph',
+            glyphMarginHoverMessage: {
+              value: `Suggestion: Insert at Line ${startLineNumber}`,
+            },
+            stickiness:
+              monacoInstance.editor.TrackedRangeStickiness
+                .NeverGrowsWhenTypingAtEdges,
+          },
+        });
       }
 
       // --- Decoration 2: Show suggested text inline (if any) ---
       if (suggestion.suggested && suggestion.suggested.trim().length > 0) {
-          // Use 'after' content widget placed at the end of the original range
-          // The range for the 'after' widget itself should be zero-length
-          const afterWidgetRange = new monacoInstance.Range(
-              endLineNumber, endColumn, endLineNumber, endColumn
-          );
+        // Use 'after' content widget placed at the end of the original range
+        // The range for the 'after' widget itself should be zero-length
+        const afterWidgetRange = new monacoInstance.Range(
+          endLineNumber,
+          endColumn,
+          endLineNumber,
+          endColumn
+        );
 
-          // Prepare suggested content, replacing newlines for inline view
-          const inlineSuggestedContent = ` ${suggestion.suggested.replace(/\n/g, ' ↵ ')}`;
+        // Prepare suggested content, replacing newlines for inline view
+        const inlineSuggestedContent = ` ${suggestion.suggested.replace(/\n/g, ' ↵ ')}`;
 
-          newDecorations.push({
-            range: afterWidgetRange, // Position the widget *after* the original range
-            options: {
-              after: {
-                content: inlineSuggestedContent,
-                inlineClassName: 'octra-suggestion-added', // Bold green style
-              },
-              stickiness: monacoInstance.editor.TrackedRangeStickiness.NeverGrowsWhenTypingAtEdges,
+        newDecorations.push({
+          range: afterWidgetRange, // Position the widget *after* the original range
+          options: {
+            after: {
+              content: inlineSuggestedContent,
+              inlineClassName: 'octra-suggestion-added', // Bold green style
             },
-          });
+            stickiness:
+              monacoInstance.editor.TrackedRangeStickiness
+                .NeverGrowsWhenTypingAtEdges,
+          },
+        });
       }
     });
 
     // --- Apply Decorations ---
     // This is crucial: deltaDecorations removes old IDs and applies new ones atomically
-    const newDecorationIds = editor.deltaDecorations(oldDecorationIds, newDecorations);
+    const newDecorationIds = editor.deltaDecorations(
+      oldDecorationIds,
+      newDecorations
+    );
     // Update the state to store the IDs of the *currently applied* decorations
     setDecorationIds(newDecorationIds);
 
-  // Dependencies: Re-run when suggestions change, or editor/monaco become available.
+    // Dependencies: Re-run when suggestions change, or editor/monaco become available.
   }, [editSuggestions, editor, monacoInstance]); // Removed decorationIds from deps
 
   // Cleanup on unmount (adjust to remove any references to pdfUrl)
@@ -368,7 +406,7 @@ export default function EditorPage() {
     return () => {
       // Optional: Clear decorations when component unmounts
       if (editorRef.current && decorationIds.length > 0) {
-         editorRef.current.deltaDecorations(decorationIds, []);
+        editorRef.current.deltaDecorations(decorationIds, []);
       }
     };
   }, []); // Empty dependency array for unmount cleanup
@@ -402,9 +440,12 @@ export default function EditorPage() {
   function handleCopy() {
     console.log('Copying text');
   }
-        
+
   // Update onMount handler to store editor ref
-  const handleEditorDidMount = (editor: Monaco.editor.IStandaloneCodeEditor, monaco: typeof Monaco) => {
+  const handleEditorDidMount = (
+    editor: Monaco.editor.IStandaloneCodeEditor,
+    monaco: typeof Monaco
+  ) => {
     editorRef.current = editor;
     setEditor(editor);
     setMonacoInstance(monaco);
@@ -417,53 +458,48 @@ export default function EditorPage() {
         const position = ed.getPosition();
         if (!position) return;
 
-        const decorations = ed.getLineDecorations(
-          position.lineNumber
-        );
+        const decorations = ed.getLineDecorations(position.lineNumber);
         const suggestion = decorations?.find(
-          (d) =>
-            d.options.after && 'attachedData' in d.options.after
+          (d) => d.options.after && 'attachedData' in d.options.after
         );
         if (
           suggestion?.options.after &&
           'attachedData' in suggestion.options.after
         ) {
-          handleAcceptEdit(
-            suggestion.options.after.attachedData as string
-          );
+          handleAcceptEdit(suggestion.options.after.attachedData as string);
         }
       },
     });
-    
-                    editor.onDidChangeCursorSelection((event) => {
-                  const selection = event.selection;
-                  const model = editor.getModel();
-                  const text = model?.getValueInRange(selection);
 
-                  if (text && !selection.isEmpty()) {
-                    const range = {
-                      startLineNumber: selection.startLineNumber,
-                      startColumn: selection.startColumn,
-                      endLineNumber: selection.endLineNumber,
-                      endColumn: selection.endColumn,
-                    };
-                    const startCoords = editor.getScrolledVisiblePosition({
-                      lineNumber: range.startLineNumber,
-                      column: range.startColumn,
-                    });
+    editor.onDidChangeCursorSelection((event) => {
+      const selection = event.selection;
+      const model = editor.getModel();
+      const text = model?.getValueInRange(selection);
 
-                    if (startCoords) {
-                      setButtonPos({
-                        top: startCoords.top - 30, // position above the selection
-                        left: startCoords.left,
-                      });
-                      setSelectedText(text);
-                      setShowButton(true);
-                    }
-                  } else {
-                    setShowButton(false);
-                  }
-                });
+      if (text && !selection.isEmpty()) {
+        const range = {
+          startLineNumber: selection.startLineNumber,
+          startColumn: selection.startColumn,
+          endLineNumber: selection.endLineNumber,
+          endColumn: selection.endColumn,
+        };
+        const startCoords = editor.getScrolledVisiblePosition({
+          lineNumber: range.startLineNumber,
+          column: range.startColumn,
+        });
+
+        if (startCoords) {
+          setButtonPos({
+            top: startCoords.top - 30, // position above the selection
+            left: startCoords.left,
+          });
+          setSelectedText(text);
+          setShowButton(true);
+        }
+      } else {
+        setShowButton(false);
+      }
+    });
   };
 
   return (
@@ -608,7 +644,8 @@ export default function EditorPage() {
               className="flex flex-col gap-2 rounded-lg border border-blue-100 bg-white p-3 shadow-lg"
             >
               <div className="text-sm text-blue-600">
-                Lines {suggestion.startLine}-{suggestion.startLine + suggestion.originalLineCount - 1}
+                Lines {suggestion.startLine}-
+                {suggestion.startLine + suggestion.originalLineCount - 1}
               </div>
               <div className="flex items-center gap-2">
                 <Button

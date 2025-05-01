@@ -42,13 +42,15 @@ export function Chat({ onEditSuggestion, fileContent }: ChatProps) {
 
       if (headerMatch) {
         referenceStartLine = parseInt(headerMatch[1], 10);
-        referenceOriginalCount = headerMatch[2] ? parseInt(headerMatch[2], 10) : 0;
+        referenceOriginalCount = headerMatch[2]
+          ? parseInt(headerMatch[2], 10)
+          : 0;
         referenceNewStartLine = parseInt(headerMatch[3], 10);
         referenceNewCount = headerMatch[4] ? parseInt(headerMatch[4], 10) : 0;
-        console.log("Reference Start Line:", referenceStartLine);
-        console.log("Reference Original Count:", referenceOriginalCount);
-        console.log("Reference New Start Line:", referenceNewStartLine);
-        console.log("Reference New Count:", referenceNewCount);
+        console.log('Reference Start Line:', referenceStartLine);
+        console.log('Reference Original Count:', referenceOriginalCount);
+        console.log('Reference New Start Line:', referenceNewStartLine);
+        console.log('Reference New Count:', referenceNewCount);
 
         let actualOriginalLineCount = 0;
         let firstChangeIndex = -1;
@@ -77,7 +79,8 @@ export function Chat({ onEditSuggestion, fileContent }: ChatProps) {
           }
         }
 
-        const correctedStartLine = firstChangeIndex !== -1
+        const correctedStartLine =
+          firstChangeIndex !== -1
             ? referenceStartLine + firstChangeIndex
             : referenceStartLine;
 
@@ -93,11 +96,11 @@ export function Chat({ onEditSuggestion, fileContent }: ChatProps) {
             originalLineCount: actualOriginalLineCount,
             status: 'pending',
           };
-          console.log("Parsed Suggestion (Recalculated):", suggestion);
+          console.log('Parsed Suggestion (Recalculated):', suggestion);
           onEditSuggestion(suggestion);
         }
       } else {
-        console.warn("Could not parse diff header:", lines[0]);
+        console.warn('Could not parse diff header:', lines[0]);
       }
 
       cleanContent = cleanContent.replace(match[0], '');
@@ -111,7 +114,7 @@ export function Chat({ onEditSuggestion, fileContent }: ChatProps) {
     handleInputChange,
     handleSubmit: originalHandleSubmit,
     isLoading,
-    setMessages
+    setMessages,
   } = useChat({
     api: '/api/octra',
     body: {
@@ -120,9 +123,11 @@ export function Chat({ onEditSuggestion, fileContent }: ChatProps) {
     onFinish: (message) => {
       const cleanedContent = parseEditSuggestions(message.content);
 
-      setMessages(prevMessages => prevMessages.map(m =>
-        m.id === message.id ? { ...m, content: cleanedContent } : m
-      ));
+      setMessages((prevMessages) =>
+        prevMessages.map((m) =>
+          m.id === message.id ? { ...m, content: cleanedContent } : m
+        )
+      );
     },
   });
 
@@ -144,7 +149,7 @@ export function Chat({ onEditSuggestion, fileContent }: ChatProps) {
         initial={{ scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         exit={{ scale: 0.9, opacity: 0 }}
-        className="fixed right-4 bottom-4 flex cursor-pointer flex-col items-end space-y-2"
+        className="fixed right-4 bottom-4 z-20 flex cursor-pointer flex-col items-end space-y-2"
         onClick={() => setIsOpen(true)}
       >
         <div className="text-foreground mb-2 rounded-md border border-blue-100 bg-white/80 px-3 py-1.5 text-sm shadow-sm backdrop-blur-sm">
@@ -167,7 +172,10 @@ export function Chat({ onEditSuggestion, fileContent }: ChatProps) {
       initial={{ y: 20, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       exit={{ y: 20, opacity: 0 }}
-      className={`fixed right-4 bottom-4 w-96 rounded-md border border-blue-100 bg-white shadow-2xl transition-all duration-200 ${isMinimized ? 'h-15' : 'h-[610px]'}`}
+      className={cn(
+        'fixed right-4 bottom-4 z-20 w-96 rounded-md border border-blue-100 bg-white shadow-2xl transition-all duration-200',
+        isMinimized ? 'h-15' : 'h-[610px]'
+      )}
     >
       {/* Header */}
       <div

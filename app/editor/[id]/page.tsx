@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable */
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
@@ -399,7 +399,7 @@ export default function EditorPage() {
     setDecorationIds(newDecorationIds);
 
     // Dependencies: Re-run when suggestions change, or editor/monaco become available.
-  }, [decorationIds, editSuggestions, editor, monacoInstance]); // Removed decorationIds from deps
+  }, [editSuggestions, editor, monacoInstance]); // Removed decorationIds from deps
 
   // Cleanup on unmount (adjust to remove any references to pdfUrl)
   useEffect(() => {
@@ -409,7 +409,7 @@ export default function EditorPage() {
         editorRef.current.deltaDecorations(decorationIds, []);
       }
     };
-  }, [decorationIds]); // Empty dependency array for unmount cleanup
+  }, []); // Empty dependency array for unmount cleanup
 
   // Load document on initial render
   useEffect(() => {

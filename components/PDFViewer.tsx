@@ -1,4 +1,20 @@
+'use client';
+
+import { Loader2 } from 'lucide-react';
 import React from 'react';
+import { Document, Page, pdfjs } from 'react-pdf';
+import 'react-pdf/dist/Page/AnnotationLayer.css';
+import 'react-pdf/dist/Page/TextLayer.css';
+
+pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+  'pdfjs-dist/build/pdf.worker.min.mjs',
+  import.meta.url
+).toString();
+
+const options = {
+  cMapUrl: '/cmaps/',
+  standardFontDataUrl: '/standard_fonts/',
+};
 
 interface PDFViewerProps {
   pdfData?: string | null; // Accept null as a possible value
@@ -9,32 +25,28 @@ export function PDFViewer({ pdfData, isLoading = false }: PDFViewerProps) {
   if (isLoading) {
     return (
       <div className="flex h-full items-center justify-center">
-        <div className="h-12 w-12 animate-spin rounded-full border-b-2 border-blue-600"></div>
+        <Loader2 className="text-primary h-6 w-6 animate-spin" />
       </div>
     );
   }
 
   if (!pdfData) {
     return (
-      <div className="flex h-full items-center justify-center text-blue-600">
-        Click &quot;Compile&quot; to see the PDF preview
-      </div>
+      <p className="flex h-full items-center justify-center text-sm whitespace-pre text-slate-600">
+        Click <span className="font-semibold">Compile</span> to see the PDF
+        preview
+      </p>
     );
   }
 
   // Create a data URL from the Base64 PDF
   const pdfUrl = `data:application/pdf;base64,${pdfData}`;
 
-  // Create a URL with parameters to control the PDF viewer appearance
-  const viewerUrl = `${pdfUrl}#toolbar=0&navpanes=0&scrollbar=1&page=1&view=FitH`;
-
   return (
-    <div className="h-full w-full">
-      <iframe
-        src={viewerUrl}
-        className="h-[80vh] w-full border-none"
-        title="PDF Viewer"
-      />
+    <div className="flex h-full w-full justify-end">
+      <Document file={pdfUrl} options={options}>
+        <Page pageNumber={1} className="border border-slate-200" />
+      </Document>
     </div>
   );
 }

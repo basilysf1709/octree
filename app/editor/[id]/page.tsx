@@ -1,23 +1,30 @@
-/* eslint-disable */
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
 import Editor, { loader } from '@monaco-editor/react';
 import { Button } from '@/components/ui/button';
-import Link from 'next/link';
 import {
   latexLanguageConfiguration,
   latexTokenProvider,
   registerLatexCompletions,
 } from '@/lib/editor-config';
 import { Chat } from '@/components/chat';
-import { OctreeLogo } from '@/components/icons/octree-logo';
 import { EditSuggestion } from '@/types/edit';
 import { Check, X, Loader2 } from 'lucide-react';
 import type * as Monaco from 'monaco-editor';
 import { PDFViewer } from '@/components/PDFViewer';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
+import { defaultLatexContent } from '../default-content';
+import { ButtonGroup, ButtonGroupItem } from '@/components/ui/button-group';
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from '@/components/ui/breadcrumb';
 import { initialContent } from '@/lib/utils';
 
 export default function EditorPage() {
@@ -25,12 +32,13 @@ export default function EditorPage() {
   const supabase = createClientComponentClient();
   const params = useParams();
   const documentId = params.id as string;
-  const router = useRouter();
 
   // Add document metadata state
-  const [documentTitle, setDocumentTitle] = useState<string>('LaTeX Document');
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const [buttonPos, setButtonPos] = useState({ top: 0, left: 0 });
+  const [showButton, setShowButton] = useState(false);
+  const [selectedText, setSelectedText] = useState('');
 
   // Add editor ref
   const editorRef = useRef<Monaco.editor.IStandaloneCodeEditor | null>(null);
@@ -168,7 +176,7 @@ export default function EditorPage() {
         // Create downloadable blob
         const blob = new Blob([bytes], { type: 'application/pdf' });
         const url = URL.createObjectURL(blob);
-        
+
         // Download
         const a = document.createElement('a');
         a.href = url;
@@ -194,7 +202,7 @@ export default function EditorPage() {
   };
 
   const handleAcceptEdit = (suggestionId: string) => {
-    const suggestion = editSuggestions.find(s => s.id === suggestionId);
+    const suggestion = editSuggestions.find((s) => s.id === suggestionId);
     if (!suggestion || suggestion.status !== 'pending') return;
     // Get editor from ref
     const editor = editorRef.current;
@@ -213,12 +221,14 @@ export default function EditorPage() {
 
     try {
       const startLineNumber = suggestion.startLine;
-      const endLineNumber = suggestion.originalLineCount > 0
-                           ? startLineNumber + suggestion.originalLineCount - 1
-                           : startLineNumber;
-      const endColumn = suggestion.originalLineCount > 0
-                       ? model.getLineMaxColumn(endLineNumber)
-                       : 1;
+      const endLineNumber =
+        suggestion.originalLineCount > 0
+          ? startLineNumber + suggestion.originalLineCount - 1
+          : startLineNumber;
+      const endColumn =
+        suggestion.originalLineCount > 0
+          ? model.getLineMaxColumn(endLineNumber)
+          : 1;
 
       const rangeToReplace = new monaco.Range(
         startLineNumber,
@@ -231,26 +241,31 @@ export default function EditorPage() {
         {
           range: rangeToReplace,
           text: suggestion.suggested,
-          forceMoveMarkers: true
-        }
+          forceMoveMarkers: true,
+        },
       ]);
 
-      setEditSuggestions(prev =>
-        prev.map(s => s.id === suggestionId ? { ...s, status: 'accepted' } : s)
+      setEditSuggestions((prev) =>
+        prev.map((s) =>
+          s.id === suggestionId ? { ...s, status: 'accepted' } : s
+        )
       );
-
     } catch (error) {
-       console.error("Error applying edit:", error);
-       setEditSuggestions(prev =>
-         prev.map(s => s.id === suggestionId ? { ...s, status: 'pending' } : s)
-       );
+      console.error('Error applying edit:', error);
+      setEditSuggestions((prev) =>
+        prev.map((s) =>
+          s.id === suggestionId ? { ...s, status: 'pending' } : s
+        )
+      );
     }
   };
 
   const handleRejectEdit = (suggestionId: string) => {
-     setEditSuggestions(prev =>
-       prev.map(s => s.id === suggestionId ? { ...s, status: 'rejected' } : s)
-     );
+    setEditSuggestions((prev) =>
+      prev.map((s) =>
+        s.id === suggestionId ? { ...s, status: 'rejected' } : s
+      )
+    );
   };
 
   // Update the decoration effect for a clear inline diff view
@@ -274,21 +289,31 @@ export default function EditorPage() {
     );
 
     pendingSuggestions.forEach((suggestion) => {
-
       const startLineNumber = suggestion.startLine;
       // Ensure endLineNumber is valid and >= startLineNumber
-      const endLineNumber = Math.max(startLineNumber, startLineNumber + suggestion.originalLineCount - 1);
+      const endLineNumber = Math.max(
+        startLineNumber,
+        startLineNumber + suggestion.originalLineCount - 1
+      );
 
       // Validate line numbers against the current model state
-      if (startLineNumber <= 0 || endLineNumber <= 0 || startLineNumber > model.getLineCount() || endLineNumber > model.getLineCount()) {
-        console.warn(`Suggestion ${suggestion.id} line numbers [${startLineNumber}-${endLineNumber}] are out of bounds for model line count ${model.getLineCount()}. Skipping decoration.`);
+      if (
+        startLineNumber <= 0 ||
+        endLineNumber <= 0 ||
+        startLineNumber > model.getLineCount() ||
+        endLineNumber > model.getLineCount()
+      ) {
+        console.warn(
+          `Suggestion ${suggestion.id} line numbers [${startLineNumber}-${endLineNumber}] are out of bounds for model line count ${model.getLineCount()}. Skipping decoration.`
+        );
         return; // Skip this suggestion if lines are invalid
       }
 
       // Calculate end column precisely
-      const endColumn = suggestion.originalLineCount > 0
-                       ? model.getLineMaxColumn(endLineNumber) // End of the last original line
-                       : 1; // Insertion point column 1
+      const endColumn =
+        suggestion.originalLineCount > 0
+          ? model.getLineMaxColumn(endLineNumber) // End of the last original line
+          : 1; // Insertion point column 1
 
       // Define the range for the original text (or insertion point)
       const originalRange = new monacoInstance.Range(
@@ -306,53 +331,74 @@ export default function EditorPage() {
           options: {
             className: 'octra-suggestion-deleted', // Red strikethrough style
             glyphMarginClassName: 'octra-suggestion-glyph', // Blue margin indicator
-            glyphMarginHoverMessage: { value: `Suggestion: Replace Lines ${startLineNumber}-${endLineNumber}` },
-            stickiness: monacoInstance.editor.TrackedRangeStickiness.NeverGrowsWhenTypingAtEdges,
+            glyphMarginHoverMessage: {
+              value: `Suggestion: Replace Lines ${startLineNumber}-${endLineNumber}`,
+            },
+            stickiness:
+              monacoInstance.editor.TrackedRangeStickiness
+                .NeverGrowsWhenTypingAtEdges,
           },
         });
       } else {
-         // If it's a pure insertion, just add the glyph marker at the start line
-         newDecorations.push({
-            range: new monacoInstance.Range(startLineNumber, 1, startLineNumber, 1), // Point decoration
-            options: {
-               glyphMarginClassName: 'octra-suggestion-glyph',
-               glyphMarginHoverMessage: { value: `Suggestion: Insert at Line ${startLineNumber}` },
-               stickiness: monacoInstance.editor.TrackedRangeStickiness.NeverGrowsWhenTypingAtEdges,
-            }
-         });
+        // If it's a pure insertion, just add the glyph marker at the start line
+        newDecorations.push({
+          range: new monacoInstance.Range(
+            startLineNumber,
+            1,
+            startLineNumber,
+            1
+          ), // Point decoration
+          options: {
+            glyphMarginClassName: 'octra-suggestion-glyph',
+            glyphMarginHoverMessage: {
+              value: `Suggestion: Insert at Line ${startLineNumber}`,
+            },
+            stickiness:
+              monacoInstance.editor.TrackedRangeStickiness
+                .NeverGrowsWhenTypingAtEdges,
+          },
+        });
       }
 
       // --- Decoration 2: Show suggested text inline (if any) ---
       if (suggestion.suggested && suggestion.suggested.trim().length > 0) {
-          // Use 'after' content widget placed at the end of the original range
-          // The range for the 'after' widget itself should be zero-length
-          const afterWidgetRange = new monacoInstance.Range(
-              endLineNumber, endColumn, endLineNumber, endColumn
-          );
+        // Use 'after' content widget placed at the end of the original range
+        // The range for the 'after' widget itself should be zero-length
+        const afterWidgetRange = new monacoInstance.Range(
+          endLineNumber,
+          endColumn,
+          endLineNumber,
+          endColumn
+        );
 
-          // Prepare suggested content, replacing newlines for inline view
-          const inlineSuggestedContent = ` ${suggestion.suggested.replace(/\n/g, ' ↵ ')}`;
+        // Prepare suggested content, replacing newlines for inline view
+        const inlineSuggestedContent = ` ${suggestion.suggested.replace(/\n/g, ' ↵ ')}`;
 
-          newDecorations.push({
-            range: afterWidgetRange, // Position the widget *after* the original range
-            options: {
-              after: {
-                content: inlineSuggestedContent,
-                inlineClassName: 'octra-suggestion-added', // Bold green style
-              },
-              stickiness: monacoInstance.editor.TrackedRangeStickiness.NeverGrowsWhenTypingAtEdges,
+        newDecorations.push({
+          range: afterWidgetRange, // Position the widget *after* the original range
+          options: {
+            after: {
+              content: inlineSuggestedContent,
+              inlineClassName: 'octra-suggestion-added', // Bold green style
             },
-          });
+            stickiness:
+              monacoInstance.editor.TrackedRangeStickiness
+                .NeverGrowsWhenTypingAtEdges,
+          },
+        });
       }
     });
 
     // --- Apply Decorations ---
     // This is crucial: deltaDecorations removes old IDs and applies new ones atomically
-    const newDecorationIds = editor.deltaDecorations(oldDecorationIds, newDecorations);
+    const newDecorationIds = editor.deltaDecorations(
+      oldDecorationIds,
+      newDecorations
+    );
     // Update the state to store the IDs of the *currently applied* decorations
     setDecorationIds(newDecorationIds);
 
-  // Dependencies: Re-run when suggestions change, or editor/monaco become available.
+    // Dependencies: Re-run when suggestions change, or editor/monaco become available.
   }, [editSuggestions, editor, monacoInstance]); // Removed decorationIds from deps
 
   // Cleanup on unmount (adjust to remove any references to pdfUrl)
@@ -360,7 +406,7 @@ export default function EditorPage() {
     return () => {
       // Optional: Clear decorations when component unmounts
       if (editorRef.current && decorationIds.length > 0) {
-         editorRef.current.deltaDecorations(decorationIds, []);
+        editorRef.current.deltaDecorations(decorationIds, []);
       }
     };
   }, []); // Empty dependency array for unmount cleanup
@@ -381,7 +427,6 @@ export default function EditorPage() {
 
         if (data) {
           setContent(data.content || '');
-          setDocumentTitle(data.title || 'LaTeX Document');
           setLastSaved(new Date());
         }
       } catch (error) {
@@ -392,8 +437,15 @@ export default function EditorPage() {
     fetchDocument();
   }, [documentId, supabase]);
 
+  function handleCopy() {
+    console.log('Copying text');
+  }
+
   // Update onMount handler to store editor ref
-  const handleEditorDidMount = (editor: Monaco.editor.IStandaloneCodeEditor, monaco: typeof Monaco) => {
+  const handleEditorDidMount = (
+    editor: Monaco.editor.IStandaloneCodeEditor,
+    monaco: typeof Monaco
+  ) => {
     editorRef.current = editor;
     setEditor(editor);
     setMonacoInstance(monaco);
@@ -406,84 +458,135 @@ export default function EditorPage() {
         const position = ed.getPosition();
         if (!position) return;
 
-        const decorations = ed.getLineDecorations(
-          position.lineNumber
-        );
+        const decorations = ed.getLineDecorations(position.lineNumber);
         const suggestion = decorations?.find(
-          (d) =>
-            d.options.after && 'attachedData' in d.options.after
+          (d) => d.options.after && 'attachedData' in d.options.after
         );
         if (
           suggestion?.options.after &&
           'attachedData' in suggestion.options.after
         ) {
-          handleAcceptEdit(
-            suggestion.options.after.attachedData as string
-          );
+          handleAcceptEdit(suggestion.options.after.attachedData as string);
         }
       },
+    });
+
+    editor.onDidChangeCursorSelection((event) => {
+      const selection = event.selection;
+      const model = editor.getModel();
+      const text = model?.getValueInRange(selection);
+
+      if (text && !selection.isEmpty()) {
+        const range = {
+          startLineNumber: selection.startLineNumber,
+          startColumn: selection.startColumn,
+          endLineNumber: selection.endLineNumber,
+          endColumn: selection.endColumn,
+        };
+        const startCoords = editor.getScrolledVisiblePosition({
+          lineNumber: range.startLineNumber,
+          column: range.startColumn,
+        });
+
+        if (startCoords) {
+          setButtonPos({
+            top: startCoords.top - 30, // position above the selection
+            left: startCoords.left,
+          });
+          setSelectedText(text);
+          setShowButton(true);
+        }
+      } else {
+        setShowButton(false);
+      }
     });
   };
 
   return (
-    <div className="min-h-screen bg-blue-50">
-      {/* Navigation */}
-      <nav className="border-b border-blue-100 bg-white">
-        <div className="container mx-auto px-4">
-          <div className="flex h-16 items-center justify-between">
-            <div className="flex items-center">
-              <Link href="/dashboard" className="flex items-center space-x-2">
-                <OctreeLogo className="h-8 w-8 text-blue-600" />
-                <span className="text-xl font-bold text-blue-900">Octree</span>
-              </Link>
-              {lastSaved && (
-                <span className="ml-6 text-sm text-gray-500">
-                  {isSaving
-                    ? 'Saving...'
-                    : `Last saved: ${lastSaved.toLocaleTimeString()}`}
-                </span>
+    <div className="min-h-screen bg-slate-100">
+      <div className="mx-auto h-[calc(100vh-4rem)] px-2 py-2">
+        <div className="flex justify-center pt-1">
+          <Breadcrumb>
+            <BreadcrumbList>
+              <BreadcrumbItem>
+                <BreadcrumbLink href="/dashboard">Documents</BreadcrumbLink>
+              </BreadcrumbItem>
+
+              <BreadcrumbSeparator />
+
+              <BreadcrumbItem>
+                <BreadcrumbPage>Untitled Document</BreadcrumbPage>
+              </BreadcrumbItem>
+            </BreadcrumbList>
+          </Breadcrumb>
+        </div>
+
+        <div className="mb-1 flex items-center justify-between">
+          <ButtonGroup>
+            <ButtonGroupItem>
+              <span className="text-sm font-bold">B</span>
+            </ButtonGroupItem>
+            <ButtonGroupItem>
+              <span className="text-sm italic">I</span>
+            </ButtonGroupItem>
+            <ButtonGroupItem>
+              <span className="text-sm underline">U</span>
+            </ButtonGroupItem>
+          </ButtonGroup>
+
+          <div className="bg-background flex w-fit items-center gap-1 rounded-md border border-slate-300 p-1 shadow-xs">
+            <Button
+              variant="ghost"
+              size="xs"
+              onClick={handleCompile}
+              disabled={compiling}
+            >
+              {compiling ? (
+                <>
+                  <Loader2 className="animate-spin" />
+                  Compiling
+                </>
+              ) : (
+                'Compile'
               )}
-            </div>
-            <div className="flex items-center space-x-4">
-              <Button
-                onClick={handleCompile}
-                disabled={compiling}
-                className="bg-blue-600 text-white hover:bg-blue-700"
-              >
-                {compiling ? 'Compiling...' : 'Compile'}
-              </Button>
-              <Button
-                onClick={handleExportPDF}
-                disabled={exportingPDF}
-                className="bg-blue-500 text-white hover:bg-blue-600"
-              >
-                {exportingPDF ? (
-                  <div className="flex items-center">
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Exporting...
-                  </div>
-                ) : (
-                  'Export PDF'
-                )}
-              </Button>
-            </div>
+            </Button>
+            <Button
+              variant="ghost"
+              size="xs"
+              onClick={handleExportPDF}
+              disabled={exportingPDF}
+            >
+              {exportingPDF ? (
+                <>
+                  <Loader2 className="animate-spin" />
+                  Exporting
+                </>
+              ) : (
+                'Export'
+              )}
+            </Button>
           </div>
         </div>
-      </nav>
 
-      <div className="container mx-auto px-4 py-6">
-        <div className="flex gap-6">
-          {/* Editor */}
-          <div className="flex-1 rounded-lg bg-white shadow-sm">
+        <div className="flex h-full gap-1">
+          <div className="relative h-full flex-4 overflow-hidden rounded-md bg-white shadow-sm">
             <Editor
-              height="80vh"
+              height="100%"
               defaultLanguage="latex"
               value={content}
               onChange={(value) => setContent(value || '')}
               theme="vs-light"
               options={{
+                scrollbar: {
+                  vertical: 'auto',
+                  horizontal: 'auto',
+                  verticalScrollbarSize: 8,
+                  horizontalScrollbarSize: 8,
+                  scrollByPage: false,
+                  ignoreHorizontalScrollbarInContentHeight: false,
+                },
                 minimap: { enabled: false },
-                fontSize: 14,
+                fontSize: 13,
                 wordWrap: 'on',
                 lineNumbers: 'on',
                 renderWhitespace: 'all',
@@ -495,13 +598,34 @@ export default function EditorPage() {
                 suggest: {
                   snippetsPreventQuickSuggestions: false,
                 },
+                padding: {
+                  top: 10,
+                  bottom: 10,
+                },
               }}
               onMount={handleEditorDidMount}
             />
+
+            {showButton && (
+              <Button
+                variant="outline"
+                size="xs"
+                onClick={handleCopy}
+                className="absolute z-10 py-3 font-medium"
+                style={{
+                  top: buttonPos.top,
+                  left: buttonPos.left,
+                }}
+              >
+                Edit
+                <kbd className="text-muted-foreground ml-auto pt-0.5 font-mono text-xs tracking-widest">
+                  ⌘B
+                </kbd>
+              </Button>
+            )}
           </div>
 
-          {/* Preview - Replace with PDFViewer */}
-          <div className="flex-1 overflow-auto rounded-lg bg-white p-4 shadow-sm">
+          <div className="h-full flex-3 overflow-auto">
             <PDFViewer pdfData={pdfData} isLoading={compiling} />
           </div>
         </div>
@@ -520,7 +644,8 @@ export default function EditorPage() {
               className="flex flex-col gap-2 rounded-lg border border-blue-100 bg-white p-3 shadow-lg"
             >
               <div className="text-sm text-blue-600">
-                Lines {suggestion.startLine}-{suggestion.startLine + suggestion.originalLineCount - 1}
+                Lines {suggestion.startLine}-
+                {suggestion.startLine + suggestion.originalLineCount - 1}
               </div>
               <div className="flex items-center gap-2">
                 <Button

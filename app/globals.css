@@ -55,7 +55,7 @@
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
+  --primary: oklch(0.57 0.2378 262.6);
   --primary-foreground: oklch(0.985 0 0);
   --secondary: oklch(0.97 0 0);
   --secondary-foreground: oklch(0.205 0 0);
@@ -152,22 +152,22 @@
 @layer components {
   /* Style for the original text to be replaced (Red Strikethrough) */
   .octra-suggestion-deleted {
-     color: #f43f5e !important;
-     text-decoration: line-through !important;
-     /* Optional: Add slight background if needed */
-     /* background-color: rgba(255, 0, 0, 0.05) !important; */
+    color: #f43f5e !important;
+    text-decoration: line-through !important;
+    /* Optional: Add slight background if needed */
+    /* background-color: rgba(255, 0, 0, 0.05) !important; */
   }
 
   /* Style for the new suggested text (Bold Green) */
   .octra-suggestion-added {
-     color: #22c55e !important;
-     font-weight: bold !important;
-     /* Optional: Add light green background */
-     /* background-color: rgba(0, 255, 0, 0.1) !important; */
-     /* Add a little space before the green text */
-     margin-left: 4px !important;
-     /* Ensure it doesn't wrap unexpectedly */
-     white-space: pre !important;
+    color: #22c55e !important;
+    font-weight: bold !important;
+    /* Optional: Add light green background */
+    /* background-color: rgba(0, 255, 0, 0.1) !important; */
+    /* Add a little space before the green text */
+    margin-left: 4px !important;
+    /* Ensure it doesn't wrap unexpectedly */
+    white-space: pre !important;
   }
 
   /* Style for the glyph margin indicator (Optional, but recommended) */

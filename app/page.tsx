@@ -87,12 +87,6 @@ export default function Home() {
                 >
                   Pricing
                 </Link>
-                <Link
-                  href="#docs"
-                  className="text-sm font-medium text-blue-600 hover:text-blue-800"
-                >
-                  Documentation
-                </Link>
               </div>
             </div>
             <div className="flex items-center space-x-4">
@@ -627,15 +621,15 @@ export default function Home() {
               © 2023 Octree. All rights reserved.
             </p>
             <div className="flex space-x-6">
-              <a href="#" className="text-sm text-blue-300 hover:text-white">
+              <Link href="/privacy" className="text-sm text-blue-300 hover:text-white">
                 Privacy Policy
-              </a>
-              <a href="#" className="text-sm text-blue-300 hover:text-white">
+              </Link>
+              <Link href="/terms" className="text-sm text-blue-300 hover:text-white">
                 Terms of Service
-              </a>
-              <a href="#" className="text-sm text-blue-300 hover:text-white">
+              </Link>
+              <Link href="/cookies" className="text-sm text-blue-300 hover:text-white">
                 Cookie Policy
-              </a>
+              </Link>
             </div>
           </div>
         </div>
@@ -750,8 +744,8 @@ const footerLinks = [
     links: [
       { label: 'About', href: '#' },
       { label: 'Careers', href: '#' },
-      { label: 'Privacy', href: '#' },
-      { label: 'Terms', href: '#' },
+      { label: 'Privacy', href: '/privacy' },
+      { label: 'Terms', href: '/terms' },
     ],
   },
 ];

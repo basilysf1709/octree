@@ -1,7 +1,7 @@
 'use client';
 
 import { useChat } from 'ai/react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Loader2, Send, X, Maximize2, Minimize2 } from 'lucide-react';
 import { OctreeLogo } from '@/components/icons/octree-logo';
@@ -14,11 +14,19 @@ import { cn } from '@/lib/utils';
 interface ChatProps {
   onEditSuggestion: (edit: EditSuggestion) => void;
   fileContent: string;
+  textForInput: string | null;
+  onInputSet: () => void;
 }
 
-export function Chat({ onEditSuggestion, fileContent }: ChatProps) {
+export function Chat({
+  onEditSuggestion,
+  fileContent,
+  textForInput,
+  onInputSet,
+}: ChatProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const parseEditSuggestions = (content: string): string => {
     const editRegex = /```latex-diff\n([\s\S]*?)\n```/g;
@@ -115,16 +123,16 @@ export function Chat({ onEditSuggestion, fileContent }: ChatProps) {
     handleSubmit: originalHandleSubmit,
     isLoading,
     setMessages,
+    setInput,
   } = useChat({
     api: '/api/octra',
     body: {
-      fileContent,
+      fileContent: fileContent,
     },
-    onFinish: (message) => {
+    onFinish(message) {
       const cleanedContent = parseEditSuggestions(message.content);
-
-      setMessages((prevMessages) =>
-        prevMessages.map((m) =>
+      setMessages((prev) =>
+        prev.map((m) =>
           m.id === message.id ? { ...m, content: cleanedContent } : m
         )
       );
@@ -132,10 +140,41 @@ export function Chat({ onEditSuggestion, fileContent }: ChatProps) {
   });
 
   useEffect(() => {
+    console.log('[Chat] useEffect watching textForInput triggered. Value:', textForInput);
+    if (textForInput) {
+      console.log('[Chat] textForInput is valid, calling setInput...');
+      setInput(textForInput);
+
+      if (!isOpen) {
+        console.log('[Chat] Opening chat window.');
+        setIsOpen(true);
+      }
+      if (isMinimized) {
+        console.log('[Chat] Unminimizing chat window.');
+        setIsMinimized(false);
+      }
+      setTimeout(() => {
+        inputRef.current?.focus();
+        console.log('[Chat] Attempted to focus input field.');
+      }, 100);
+
+      console.log('[Chat] Calling onInputSet to reset prop.');
+      onInputSet();
+    }
+  }, [textForInput, setInput, onInputSet, isOpen, isMinimized]);
+
+  useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'b') {
-        e.preventDefault();
-        setIsOpen((prev) => !prev);
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        const target = e.target as HTMLElement;
+        if (
+           target.tagName !== 'INPUT' &&
+           target.tagName !== 'TEXTAREA' &&
+           !target.closest('.monaco-editor')
+         ) {
+           e.preventDefault();
+           setIsOpen((prev) => !prev);
+         }
       }
     };
 
@@ -161,7 +200,7 @@ export function Chat({ onEditSuggestion, fileContent }: ChatProps) {
           <kbd className="rounded-sm bg-slate-100 px-1.5 py-0.5 font-mono text-xs">
             B
           </kbd>{' '}
-          to edit
+          to chat
         </div>
       </motion.div>
     );
@@ -222,14 +261,14 @@ export function Chat({ onEditSuggestion, fileContent }: ChatProps) {
             exit={{ opacity: 0 }}
           >
             <div className="scrollbar-thin scrollbar-thumb-blue-200 scrollbar-track-transparent h-[480px] overflow-auto p-4">
-              {messages.length === 0 && (
+              {messages.length === 0 && !isLoading && (
                 <div className="flex h-full flex-col items-center justify-center space-y-4 text-center">
                   <div>
                     <h3 className="text-md font-semibold text-slate-800">
                       How can I help?
                     </h3>
                     <p className="text-sm text-slate-500">
-                      Ask me anything about LaTeX
+                      Ask about LaTeX or select text & press ⌘B to improve.
                     </p>
                   </div>
                 </div>
@@ -239,7 +278,7 @@ export function Chat({ onEditSuggestion, fileContent }: ChatProps) {
                   initial={{ y: 10, opacity: 0 }}
                   animate={{ y: 0, opacity: 1 }}
                   key={message.id}
-                  className={`mb-4 ${
+                  className={`mb-4 whitespace-pre-wrap break-words ${
                     message.role === 'assistant'
                       ? 'rounded-lg bg-gradient-to-br from-blue-50 to-blue-50/50 p-3'
                       : 'rounded-lg border border-blue-100 bg-white p-3'
@@ -248,7 +287,7 @@ export function Chat({ onEditSuggestion, fileContent }: ChatProps) {
                   <div className="mb-1 text-sm font-medium text-blue-900">
                     {message.role === 'assistant' ? 'Octra' : 'You'}
                   </div>
-                  <div className="text-sm leading-relaxed whitespace-pre-wrap text-blue-800">
+                  <div className="text-sm leading-relaxed text-blue-800">
                     {message.content}
                   </div>
                 </motion.div>
@@ -257,7 +296,7 @@ export function Chat({ onEditSuggestion, fileContent }: ChatProps) {
                 <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  className="flex justify-center"
+                  className="flex justify-center py-2"
                 >
                   <div className="rounded-full bg-blue-50 p-2">
                     <Loader2 className="h-5 w-5 animate-spin text-blue-600" />
@@ -266,18 +305,19 @@ export function Chat({ onEditSuggestion, fileContent }: ChatProps) {
               )}
             </div>
 
-            {/* Input */}
-            <div className="rounded-b-2xl border-t border-blue-100/50 p-4">
+            <div className="rounded-b-md border-t border-blue-100/50 p-3">
               <form onSubmit={originalHandleSubmit} className="relative">
-                <div className="flex w-full max-w-sm items-center space-x-2">
+                <div className="flex w-full items-center space-x-2">
                   <Input
+                    ref={inputRef}
                     value={input}
                     type="text"
                     placeholder="Ask about LaTeX..."
                     onChange={handleInputChange}
+                    className="flex-1"
                   />
-                  <Button type="submit" variant="default" disabled={isLoading}>
-                    <Send />
+                  <Button type="submit" size="icon" variant="default" disabled={isLoading}>
+                    <Send size={16} />
                   </Button>
                 </div>
               </form>

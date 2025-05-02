@@ -39,6 +39,7 @@ export default function EditorPage() {
   const [buttonPos, setButtonPos] = useState({ top: 0, left: 0 });
   const [showButton, setShowButton] = useState(false);
   const [selectedText, setSelectedText] = useState('');
+  const [textForChatInput, setTextForChatInput] = useState<string | null>(null);
 
   // Add editor ref
   const editorRef = useRef<Monaco.editor.IStandaloneCodeEditor | null>(null);
@@ -437,19 +438,34 @@ export default function EditorPage() {
     fetchDocument();
   }, [documentId, supabase]);
 
-  function handleCopy() {
-    console.log('Copying text');
+  // Modify handleCopy to set the new state
+  function handleCopy(textToCopy?: string) {
+    console.log('[EditorPage] handleCopy called with text:', textToCopy);
+    const currentSelectedText = textToCopy ?? selectedText;
+
+    if (currentSelectedText.trim()) {
+      console.log('[EditorPage] Text valid, preparing for chat input:', currentSelectedText);
+      const messageForInput = `Attached from editor:\n\n${currentSelectedText}`;
+      setTextForChatInput(messageForInput);
+      console.log('[EditorPage] setTextForChatInput called with:', messageForInput);
+      setShowButton(false);
+    } else {
+       console.log('[EditorPage] handleCopy called but no valid text found.');
+    }
   }
 
-  // Update onMount handler to store editor ref
+  // Update onMount handler to store editor ref AND add Cmd+B shortcut
   const handleEditorDidMount = (
     editor: Monaco.editor.IStandaloneCodeEditor,
     monaco: typeof Monaco
   ) => {
+    console.log('[EditorPage] handleEditorDidMount CALLED.');
+
     editorRef.current = editor;
     setEditor(editor);
     setMonacoInstance(monaco);
-    // Add suggestion actions
+
+    // Add suggestion actions (Accept/Reject in context menu)
     editor.addAction({
       id: 'accept-suggestion',
       label: 'Accept Suggestion',
@@ -471,6 +487,7 @@ export default function EditorPage() {
       },
     });
 
+    // Listener for selection change (updates state for the button)
     editor.onDidChangeCursorSelection((event) => {
       const selection = event.selection;
       const model = editor.getModel();
@@ -493,13 +510,52 @@ export default function EditorPage() {
             top: startCoords.top - 30, // position above the selection
             left: startCoords.left,
           });
-          setSelectedText(text);
+          setSelectedText(text); // Update state for button logic
           setShowButton(true);
         }
       } else {
         setShowButton(false);
+        setSelectedText(''); // Clear state for button logic
       }
     });
+
+    // Cmd+B shortcut - calls handleCopy which now sets textForChatInput
+    editor.addCommand(
+      monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyB,
+      () => {
+        console.log('[EditorPage] Cmd+B command triggered.');
+        const currentEditor = editorRef.current;
+        if (!currentEditor) {
+          console.error('[EditorPage] Cmd+B Error: editorRef is not set.');
+          return;
+        }
+
+        const selection = currentEditor.getSelection();
+        console.log('[EditorPage] Cmd+B: Editor selection object:', selection);
+
+        if (!selection || selection.isEmpty()) {
+          console.log('[EditorPage] Cmd+B: No selection in editor (selection object was null or isEmpty() was true).');
+          return;
+        }
+
+        const model = currentEditor.getModel();
+        if (!model) {
+          console.error('[EditorPage] Cmd+B Error: Editor model is not available.');
+          return;
+        }
+
+        const directlySelectedText = model.getValueInRange(selection);
+        console.log('[EditorPage] Cmd+B: Text retrieved from model.getValueInRange:', `"${directlySelectedText}"`);
+
+        if (directlySelectedText && directlySelectedText.trim()) {
+          console.log('[EditorPage] Cmd+B: Text is valid. Calling handleCopy...');
+          handleCopy(directlySelectedText);
+        } else {
+          console.log('[EditorPage] Cmd+B: Text retrieved was null, empty, or whitespace. Not calling handleCopy.');
+        }
+      },
+      'editorTextFocus'
+    );
   };
 
   return (
@@ -619,11 +675,12 @@ export default function EditorPage() {
               onMount={handleEditorDidMount}
             />
 
+            {/* Floating Button - still uses handleCopy without args, relying on state */}
             {showButton && (
               <Button
                 variant="outline"
                 size="xs"
-                onClick={handleCopy}
+                onClick={() => handleCopy()} // Button click uses state via default arg
                 className="absolute z-10 py-3 font-medium"
                 style={{
                   top: buttonPos.top,
@@ -645,7 +702,12 @@ export default function EditorPage() {
       </div>
 
       {/* Add Chat component */}
-      <Chat onEditSuggestion={handleEditSuggestion} fileContent={content} />
+      <Chat
+        onEditSuggestion={handleEditSuggestion}
+        fileContent={content}
+        textForInput={textForChatInput}
+        onInputSet={() => setTextForChatInput(null)}
+      />
 
       {/* Suggestion Actions */}
       <div className="fixed top-24 right-6 z-50 space-y-2">

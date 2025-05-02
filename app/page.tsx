@@ -618,7 +618,7 @@ export default function Home() {
 
           <div className="flex flex-col items-center justify-between border-t border-blue-800 pt-8 md:flex-row">
             <p className="mb-4 text-sm text-blue-300 md:mb-0">
-              © 2023 Octree. All rights reserved.
+              © 2025 Octree. All rights reserved.
             </p>
             <div className="flex space-x-6">
               <Link href="/privacy" className="text-sm text-blue-300 hover:text-white">

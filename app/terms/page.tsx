@@ -32,7 +32,7 @@ export default function TermsOfService() {
             <section className="mb-10">
               <h2 className="font-serif text-2xl font-bold text-blue-800">1. Acceptance of Terms</h2>
               <p className="mt-4 text-blue-700">
-                By accessing or using Octree's LaTeX editing platform ("Service"), you agree to be bound by these 
+                By accessing or using Octree&apos;s LaTeX editing platform (&quot;Service&quot;), you agree to be bound by these 
                 Terms of Service. If you disagree with any part of these terms, you may not access the Service.
               </p>
             </section>
@@ -73,7 +73,7 @@ export default function TermsOfService() {
                 <li>Infringe upon intellectual property rights</li>
                 <li>Upload or transmit malicious code</li>
                 <li>Attempt to gain unauthorized access to the Service</li>
-                <li>Interfere with other users' enjoyment of the Service</li>
+                <li>Interfere with other users&apos; enjoyment of the Service</li>
                 <li>Generate content that is illegal, harmful, or unethical using our AI features</li>
               </ul>
             </section>
@@ -98,7 +98,7 @@ export default function TermsOfService() {
             <section className="mb-10">
               <h2 className="font-serif text-2xl font-bold text-blue-800">8. Disclaimer of Warranties</h2>
               <p className="mt-4 text-blue-700">
-                The Service is provided "as is" without warranties of any kind, either express or implied. We do not 
+                The Service is provided &quot;as is&quot; without warranties of any kind, either express or implied. We do not 
                 warrant that the Service will be error-free or uninterrupted.
               </p>
             </section>

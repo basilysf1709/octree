@@ -32,7 +32,7 @@ export default function CookiePolicy() {
             <section className="mb-10">
               <h2 className="font-serif text-2xl font-bold text-blue-800">1. Introduction</h2>
               <p className="mt-4 text-blue-700">
-                This Cookie Policy explains how Octree ("we", "us", "our") uses cookies and similar technologies 
+                This Cookie Policy explains how Octree (&quot;we&quot;, &quot;us&quot;, &quot;our&quot;) uses cookies and similar technologies 
                 to recognize you when you visit our LaTeX editing platform. It explains what these technologies are 
                 and why we use them, as well as your rights to control our use of them.
               </p>

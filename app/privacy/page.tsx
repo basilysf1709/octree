@@ -32,7 +32,7 @@ export default function PrivacyPolicy() {
             <section className="mb-10">
               <h2 className="font-serif text-2xl font-bold text-blue-800">1. Introduction</h2>
               <p className="mt-4 text-blue-700">
-                Welcome to Octree ("we," "our," or "us"). We respect your privacy and are committed to 
+                Welcome to Octree (&quot;we&quot;, &quot;our&quot;, or &quot;us&quot;). We respect your privacy and are committed to 
                 protecting your personal data. This privacy policy explains how we collect, use, and 
                 safeguard your information when you use our LaTeX editing platform.
               </p>

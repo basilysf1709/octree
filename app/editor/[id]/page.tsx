@@ -13,7 +13,7 @@ import { Chat } from '@/components/chat';
 import { EditSuggestion } from '@/types/edit';
 import { Check, X, Loader2 } from 'lucide-react';
 import type * as Monaco from 'monaco-editor';
-import { PDFViewer } from '@/components/PDFViewer';
+import PDFViewer from '@/components/PDFViewer';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { useParams } from 'next/navigation';
 import { ButtonGroup, ButtonGroupItem } from '@/components/ui/button-group';

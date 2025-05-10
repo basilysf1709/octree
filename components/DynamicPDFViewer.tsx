@@ -28,7 +28,6 @@ function DynamicPDFViewer({ pdfData, isLoading = false }: PDFViewerProps) {
   const [pageLoading, setPageLoading] = useState<boolean>(false);
 
   function onDocumentLoadSuccess({ numPages }: { numPages: number }) {
-    console.log(`PDF loaded with ${numPages} pages`);
     setNumPages(numPages);
     setPageNumber(1);
   }

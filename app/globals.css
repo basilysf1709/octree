@@ -4,6 +4,7 @@
 
 @import 'tailwindcss';
 @plugin "tailwindcss-animate";
+@plugin 'tailwind-scrollbar';
 
 @custom-variant dark (&:is(.dark *));
 
@@ -127,25 +128,6 @@
   button:not(:disabled),
   [role='button']:not(:disabled) {
     cursor: pointer;
-  }
-}
-
-@layer utilities {
-  .scrollbar-thin {
-    scrollbar-width: thin;
-  }
-
-  .scrollbar-thumb-blue-200::-webkit-scrollbar-thumb {
-    background-color: #bfdbfe;
-    border-radius: 6px;
-  }
-
-  .scrollbar-track-transparent::-webkit-scrollbar-track {
-    background-color: transparent;
-  }
-
-  .scrollbar-thin::-webkit-scrollbar {
-    width: 6px;
   }
 }
 

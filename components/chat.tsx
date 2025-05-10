@@ -3,13 +3,13 @@
 import { useChat } from 'ai/react';
 import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
-import { Loader2, Send, X, Maximize2, Minimize2 } from 'lucide-react';
+import { Loader2, X, Maximize2, Minimize2, ArrowUp } from 'lucide-react';
 import { OctreeLogo } from '@/components/icons/octree-logo';
 import { motion, AnimatePresence } from 'framer-motion';
 import { EditSuggestion } from '@/types/edit';
 import { v4 as uuidv4 } from 'uuid';
-import { Input } from './ui/input';
 import { cn } from '@/lib/utils';
+import { Textarea } from './ui/textarea';
 
 interface ChatProps {
   onEditSuggestion: (edit: EditSuggestion) => void;
@@ -26,7 +26,7 @@ export function Chat({
 }: ChatProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
 
   const parseEditSuggestions = (content: string): string => {
     const editRegex = /```latex-diff\n([\s\S]*?)\n```/g;
@@ -140,41 +140,38 @@ export function Chat({
   });
 
   useEffect(() => {
-    console.log('[Chat] useEffect watching textForInput triggered. Value:', textForInput);
     if (textForInput) {
-      console.log('[Chat] textForInput is valid, calling setInput...');
       setInput(textForInput);
 
       if (!isOpen) {
-        console.log('[Chat] Opening chat window.');
         setIsOpen(true);
       }
+
       if (isMinimized) {
-        console.log('[Chat] Unminimizing chat window.');
         setIsMinimized(false);
       }
+
       setTimeout(() => {
         inputRef.current?.focus();
-        console.log('[Chat] Attempted to focus input field.');
       }, 100);
 
-      console.log('[Chat] Calling onInputSet to reset prop.');
       onInputSet();
     }
   }, [textForInput, setInput, onInputSet, isOpen, isMinimized]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'b') {
         const target = e.target as HTMLElement;
+
         if (
-           target.tagName !== 'INPUT' &&
-           target.tagName !== 'TEXTAREA' &&
-           !target.closest('.monaco-editor')
-         ) {
-           e.preventDefault();
-           setIsOpen((prev) => !prev);
-         }
+          target.tagName !== 'INPUT' &&
+          target.tagName !== 'TEXTAREA' &&
+          !target.closest('.monaco-editor')
+        ) {
+          e.preventDefault();
+          setIsOpen((prev) => !prev);
+        }
       }
     };
 
@@ -260,7 +257,7 @@ export function Chat({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
           >
-            <div className="scrollbar-thin scrollbar-thumb-blue-200 scrollbar-track-transparent h-[480px] overflow-auto p-4">
+            <div className="scrollbar-thin scrollbar-thumb-neutral-300 scrollbar-track-transparent h-[440px] overflow-auto p-4">
               {messages.length === 0 && !isLoading && (
                 <div className="flex h-full flex-col items-center justify-center space-y-4 text-center">
                   <div>
@@ -278,7 +275,7 @@ export function Chat({
                   initial={{ y: 10, opacity: 0 }}
                   animate={{ y: 0, opacity: 1 }}
                   key={message.id}
-                  className={`mb-4 whitespace-pre-wrap break-words ${
+                  className={`mb-4 break-words whitespace-pre-wrap ${
                     message.role === 'assistant'
                       ? 'rounded-lg bg-gradient-to-br from-blue-50 to-blue-50/50 p-3'
                       : 'rounded-lg border border-blue-100 bg-white p-3'
@@ -305,21 +302,33 @@ export function Chat({
               )}
             </div>
 
-            <div className="rounded-b-md border-t border-blue-100/50 p-3">
-              <form onSubmit={originalHandleSubmit} className="relative">
-                <div className="flex w-full items-center space-x-2">
-                  <Input
-                    ref={inputRef}
-                    value={input}
-                    type="text"
-                    placeholder="Ask about LaTeX..."
-                    onChange={handleInputChange}
-                    className="flex-1"
-                  />
-                  <Button type="submit" size="icon" variant="default" disabled={isLoading}>
-                    <Send size={16} />
-                  </Button>
-                </div>
+            <div className="px-2">
+              <form
+                onSubmit={originalHandleSubmit}
+                className="relative flex w-full flex-col items-end rounded-md border p-1"
+              >
+                <Textarea
+                  ref={inputRef}
+                  value={input}
+                  placeholder="Prompt to edit your document..."
+                  onChange={handleInputChange}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      originalHandleSubmit(e);
+                    }
+                  }}
+                  className="scrollbar-thin scrollbar-thumb-neutral-300 scrollbar-track-transparent h-[70px] resize-none border-none shadow-none focus-visible:ring-0"
+                />
+                <Button
+                  type="submit"
+                  size="icon"
+                  variant="default"
+                  disabled={isLoading}
+                  className="size-6 rounded-full"
+                >
+                  <ArrowUp />
+                </Button>
               </form>
             </div>
           </motion.div>

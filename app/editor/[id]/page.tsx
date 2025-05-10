@@ -26,6 +26,7 @@ import {
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
 import { initialContent } from '@/lib/utils';
+import { useDebouncedCallback } from 'use-debounce';
 
 export default function EditorPage() {
   // Add Supabase client and params
@@ -440,27 +441,54 @@ export default function EditorPage() {
 
   // Modify handleCopy to set the new state
   function handleCopy(textToCopy?: string) {
-    console.log('[EditorPage] handleCopy called with text:', textToCopy);
     const currentSelectedText = textToCopy ?? selectedText;
 
     if (currentSelectedText.trim()) {
-      console.log('[EditorPage] Text valid, preparing for chat input:', currentSelectedText);
       const messageForInput = `Attached from editor:\n\n${currentSelectedText}`;
       setTextForChatInput(messageForInput);
-      console.log('[EditorPage] setTextForChatInput called with:', messageForInput);
       setShowButton(false);
-    } else {
-       console.log('[EditorPage] handleCopy called but no valid text found.');
     }
   }
+
+  const debouncedCursorSelection = useDebouncedCallback(
+    (editor: Monaco.editor.IStandaloneCodeEditor) => {
+      const selection = editor.getSelection();
+      const model = editor.getModel();
+      const text = model?.getValueInRange(selection!);
+
+      if (text && selection && !selection?.isEmpty()) {
+        const range = {
+          startLineNumber: selection.startLineNumber,
+          startColumn: selection.startColumn,
+          endLineNumber: selection.endLineNumber,
+          endColumn: selection.endColumn,
+        };
+        const startCoords = editor.getScrolledVisiblePosition({
+          lineNumber: range.startLineNumber,
+          column: range.startColumn,
+        });
+
+        if (startCoords) {
+          setButtonPos({
+            top: startCoords.top - 30,
+            left: startCoords.left,
+          });
+          setSelectedText(text);
+          setShowButton(true);
+        }
+      } else {
+        setShowButton(false);
+        setSelectedText('');
+      }
+    },
+    200
+  ); // debounce delay in ms
 
   // Update onMount handler to store editor ref AND add Cmd+B shortcut
   const handleEditorDidMount = (
     editor: Monaco.editor.IStandaloneCodeEditor,
     monaco: typeof Monaco
   ) => {
-    console.log('[EditorPage] handleEditorDidMount CALLED.');
-
     editorRef.current = editor;
     setEditor(editor);
     setMonacoInstance(monaco);
@@ -488,42 +516,24 @@ export default function EditorPage() {
     });
 
     // Listener for selection change (updates state for the button)
-    editor.onDidChangeCursorSelection((event) => {
-      const selection = event.selection;
-      const model = editor.getModel();
-      const text = model?.getValueInRange(selection);
-
-      if (text && !selection.isEmpty()) {
-        const range = {
-          startLineNumber: selection.startLineNumber,
-          startColumn: selection.startColumn,
-          endLineNumber: selection.endLineNumber,
-          endColumn: selection.endColumn,
-        };
-        const startCoords = editor.getScrolledVisiblePosition({
-          lineNumber: range.startLineNumber,
-          column: range.startColumn,
-        });
-
-        if (startCoords) {
-          setButtonPos({
-            top: startCoords.top - 30, // position above the selection
-            left: startCoords.left,
-          });
-          setSelectedText(text); // Update state for button logic
-          setShowButton(true);
-        }
-      } else {
+    editor.onDidChangeCursorSelection((e) => {
+      if (e.selection.isEmpty()) {
         setShowButton(false);
-        setSelectedText(''); // Clear state for button logic
+        setSelectedText('');
+      } else {
+        debouncedCursorSelection(editor);
       }
+    });
+
+    // Add scroll event listener to hide button when editor is scrolled
+    editor.onDidScrollChange(() => {
+      setShowButton(false);
     });
 
     // Cmd+B shortcut - calls handleCopy which now sets textForChatInput
     editor.addCommand(
       monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyB,
       () => {
-        console.log('[EditorPage] Cmd+B command triggered.');
         const currentEditor = editorRef.current;
         if (!currentEditor) {
           console.error('[EditorPage] Cmd+B Error: editorRef is not set.');
@@ -531,27 +541,19 @@ export default function EditorPage() {
         }
 
         const selection = currentEditor.getSelection();
-        console.log('[EditorPage] Cmd+B: Editor selection object:', selection);
-
         if (!selection || selection.isEmpty()) {
-          console.log('[EditorPage] Cmd+B: No selection in editor (selection object was null or isEmpty() was true).');
           return;
         }
 
         const model = currentEditor.getModel();
         if (!model) {
-          console.error('[EditorPage] Cmd+B Error: Editor model is not available.');
           return;
         }
 
         const directlySelectedText = model.getValueInRange(selection);
-        console.log('[EditorPage] Cmd+B: Text retrieved from model.getValueInRange:', `"${directlySelectedText}"`);
 
         if (directlySelectedText && directlySelectedText.trim()) {
-          console.log('[EditorPage] Cmd+B: Text is valid. Calling handleCopy...');
           handleCopy(directlySelectedText);
-        } else {
-          console.log('[EditorPage] Cmd+B: Text retrieved was null, empty, or whitespace. Not calling handleCopy.');
         }
       },
       'editorTextFocus'
@@ -561,8 +563,8 @@ export default function EditorPage() {
   return (
     <div className="min-h-screen bg-slate-100">
       <div className="mx-auto h-[calc(100vh-4rem)] px-2 py-2">
-        <div className="flex justify-center pt-1">
-          <Breadcrumb>
+        <div className="relative flex h-6 justify-end gap-1 py-1">
+          <Breadcrumb className="absolute top-0 left-1/2 -translate-x-1/2">
             <BreadcrumbList>
               <BreadcrumbItem>
                 <BreadcrumbLink href="/dashboard">Documents</BreadcrumbLink>
@@ -575,6 +577,12 @@ export default function EditorPage() {
               </BreadcrumbItem>
             </BreadcrumbList>
           </Breadcrumb>
+
+          {lastSaved && (
+            <span className="flex items-center gap-1 text-xs text-slate-500">
+              Last saved: {lastSaved.toLocaleTimeString()}
+            </span>
+          )}
         </div>
 
         <div className="mb-1 flex items-center justify-between">
@@ -618,22 +626,11 @@ export default function EditorPage() {
                     <Loader2 className="animate-spin" />
                     Exporting
                   </>
-                ) : isSaving ? (
-                  <>
-                    <Loader2 className="animate-spin" />
-                    Saving...
-                  </>
                 ) : (
                   'Export'
                 )}
               </Button>
             </div>
-            
-            {lastSaved && (
-              <span className="text-xs text-slate-500">
-                Last saved: {lastSaved.toLocaleTimeString()}
-              </span>
-            )}
           </div>
         </div>
 

@@ -140,36 +140,30 @@ export function Chat({
   });
 
   useEffect(() => {
-    console.log(
-      '[Chat] useEffect watching textForInput triggered. Value:',
-      textForInput
-    );
     if (textForInput) {
-      console.log('[Chat] textForInput is valid, calling setInput...');
       setInput(textForInput);
 
       if (!isOpen) {
-        console.log('[Chat] Opening chat window.');
         setIsOpen(true);
       }
+
       if (isMinimized) {
-        console.log('[Chat] Unminimizing chat window.');
         setIsMinimized(false);
       }
+
       setTimeout(() => {
         inputRef.current?.focus();
-        console.log('[Chat] Attempted to focus input field.');
       }, 100);
 
-      console.log('[Chat] Calling onInputSet to reset prop.');
       onInputSet();
     }
   }, [textForInput, setInput, onInputSet, isOpen, isMinimized]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'b') {
         const target = e.target as HTMLElement;
+
         if (
           target.tagName !== 'INPUT' &&
           target.tagName !== 'TEXTAREA' &&

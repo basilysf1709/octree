@@ -441,23 +441,12 @@ export default function EditorPage() {
 
   // Modify handleCopy to set the new state
   function handleCopy(textToCopy?: string) {
-    console.log('[EditorPage] handleCopy called with text:', textToCopy);
     const currentSelectedText = textToCopy ?? selectedText;
 
     if (currentSelectedText.trim()) {
-      console.log(
-        '[EditorPage] Text valid, preparing for chat input:',
-        currentSelectedText
-      );
       const messageForInput = `Attached from editor:\n\n${currentSelectedText}`;
       setTextForChatInput(messageForInput);
-      console.log(
-        '[EditorPage] setTextForChatInput called with:',
-        messageForInput
-      );
       setShowButton(false);
-    } else {
-      console.log('[EditorPage] handleCopy called but no valid text found.');
     }
   }
 
@@ -500,8 +489,6 @@ export default function EditorPage() {
     editor: Monaco.editor.IStandaloneCodeEditor,
     monaco: typeof Monaco
   ) => {
-    console.log('[EditorPage] handleEditorDidMount CALLED.');
-
     editorRef.current = editor;
     setEditor(editor);
     setMonacoInstance(monaco);
@@ -547,7 +534,6 @@ export default function EditorPage() {
     editor.addCommand(
       monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyB,
       () => {
-        console.log('[EditorPage] Cmd+B command triggered.');
         const currentEditor = editorRef.current;
         if (!currentEditor) {
           console.error('[EditorPage] Cmd+B Error: editorRef is not set.');
@@ -555,38 +541,19 @@ export default function EditorPage() {
         }
 
         const selection = currentEditor.getSelection();
-        console.log('[EditorPage] Cmd+B: Editor selection object:', selection);
-
         if (!selection || selection.isEmpty()) {
-          console.log(
-            '[EditorPage] Cmd+B: No selection in editor (selection object was null or isEmpty() was true).'
-          );
           return;
         }
 
         const model = currentEditor.getModel();
         if (!model) {
-          console.error(
-            '[EditorPage] Cmd+B Error: Editor model is not available.'
-          );
           return;
         }
 
         const directlySelectedText = model.getValueInRange(selection);
-        console.log(
-          '[EditorPage] Cmd+B: Text retrieved from model.getValueInRange:',
-          `"${directlySelectedText}"`
-        );
 
         if (directlySelectedText && directlySelectedText.trim()) {
-          console.log(
-            '[EditorPage] Cmd+B: Text is valid. Calling handleCopy...'
-          );
           handleCopy(directlySelectedText);
-        } else {
-          console.log(
-            '[EditorPage] Cmd+B: Text retrieved was null, empty, or whitespace. Not calling handleCopy.'
-          );
         }
       },
       'editorTextFocus'

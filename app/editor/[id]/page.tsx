@@ -40,6 +40,7 @@ export default function EditorPage() {
   const [buttonPos, setButtonPos] = useState({ top: 0, left: 0 });
   const [showButton, setShowButton] = useState(false);
   const [selectedText, setSelectedText] = useState('');
+  const [textFromEditor, setTextFromEditor] = useState<string | null>(null);
   const [textForChatInput, setTextForChatInput] = useState<string | null>(null);
 
   // Add editor ref
@@ -58,8 +59,9 @@ export default function EditorPage() {
     });
   }, []); // Empty dependency array means this runs once on mount
 
+  const [title, setTitle] = useState<string>('');
   const [content, setContent] = useState(initialContent);
-
+  const [chatOpen, setChatOpen] = useState(false);
   const [compiling, setCompiling] = useState(false);
   const [pdfData, setPdfData] = useState<string | null>(null);
   const [editSuggestions, setEditSuggestions] = useState<EditSuggestion[]>([]);
@@ -270,6 +272,53 @@ export default function EditorPage() {
     );
   };
 
+  const handleTextFormat = (format: 'bold' | 'italic' | 'underline') => {
+    const editor = editorRef.current;
+    const monaco = monacoInstance;
+    if (!editor || !monaco) return;
+
+    const selection = editor.getSelection();
+    if (!selection || selection.isEmpty()) return;
+
+    const model = editor.getModel();
+    if (!model) return;
+
+    const selectedText = model.getValueInRange(selection);
+
+    const formatMap = {
+      bold: { command: '\\textbf', length: 8 },
+      italic: { command: '\\textit', length: 8 },
+      underline: { command: '\\underline', length: 11 },
+    };
+
+    const { command, length } = formatMap[format];
+    let newText;
+    if (selectedText.startsWith(`${command}{`) && selectedText.endsWith('}')) {
+      newText = selectedText.slice(length, -1);
+    } else {
+      newText = `${command}{${selectedText}}`;
+    }
+
+    editor.executeEdits(format, [
+      {
+        range: selection,
+        text: newText,
+        forceMoveMarkers: true,
+      },
+    ]);
+
+    const newEndColumn = selection.startColumn + newText.length;
+    editor.setSelection(
+      new monaco.Selection(
+        selection.startLineNumber,
+        selection.startColumn,
+        selection.startLineNumber,
+        newEndColumn
+      )
+    );
+    editor.focus();
+  };
+
   // Update the decoration effect for a clear inline diff view
   useEffect(() => {
     // Ensure editor and monaco are ready
@@ -428,6 +477,7 @@ export default function EditorPage() {
         if (error) throw error;
 
         if (data) {
+          setTitle(data.title || '');
           setContent(data.content || '');
           setLastSaved(new Date());
         }
@@ -444,8 +494,7 @@ export default function EditorPage() {
     const currentSelectedText = textToCopy ?? selectedText;
 
     if (currentSelectedText.trim()) {
-      const messageForInput = `Attached from editor:\n\n${currentSelectedText}`;
-      setTextForChatInput(messageForInput);
+      setTextFromEditor(currentSelectedText);
       setShowButton(false);
     }
   }
@@ -573,7 +622,7 @@ export default function EditorPage() {
               <BreadcrumbSeparator />
 
               <BreadcrumbItem>
-                <BreadcrumbPage>Untitled Document</BreadcrumbPage>
+                <BreadcrumbPage>{title}</BreadcrumbPage>
               </BreadcrumbItem>
             </BreadcrumbList>
           </Breadcrumb>
@@ -587,13 +636,13 @@ export default function EditorPage() {
 
         <div className="mb-1 flex items-center justify-between">
           <ButtonGroup>
-            <ButtonGroupItem>
+            <ButtonGroupItem onClick={() => handleTextFormat('bold')}>
               <span className="text-sm font-bold">B</span>
             </ButtonGroupItem>
-            <ButtonGroupItem>
+            <ButtonGroupItem onClick={() => handleTextFormat('italic')}>
               <span className="text-sm italic">I</span>
             </ButtonGroupItem>
-            <ButtonGroupItem>
+            <ButtonGroupItem onClick={() => handleTextFormat('underline')}>
               <span className="text-sm underline">U</span>
             </ButtonGroupItem>
           </ButtonGroup>
@@ -690,6 +739,43 @@ export default function EditorPage() {
                 </kbd>
               </Button>
             )}
+
+            {/* Suggestion Actions */}
+            <div className="absolute top-1 right-3 z-50 space-y-2">
+              {editSuggestions
+                .filter((s) => s.status === 'pending')
+                .map((suggestion) => (
+                  <div
+                    key={suggestion.id}
+                    className="flex flex-col gap-2 rounded-lg border border-blue-100 bg-white p-3 shadow-lg"
+                  >
+                    <div className="text-sm text-blue-600">
+                      Lines {suggestion.startLine}-
+                      {suggestion.startLine + suggestion.originalLineCount - 1}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => handleAcceptEdit(suggestion.id)}
+                        className="flex-1 border border-green-200 text-green-600 hover:bg-green-50"
+                      >
+                        <Check size={14} className="mr-1" />
+                        Accept
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => handleRejectEdit(suggestion.id)}
+                        className="flex-1 border border-red-200 text-red-600 hover:bg-red-50"
+                      >
+                        <X size={14} className="mr-1" />
+                        Reject
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+            </div>
           </div>
 
           <div className="h-full flex-3 overflow-auto">
@@ -700,48 +786,13 @@ export default function EditorPage() {
 
       {/* Add Chat component */}
       <Chat
+        isOpen={chatOpen}
+        setIsOpen={setChatOpen}
         onEditSuggestion={handleEditSuggestion}
         fileContent={content}
-        textForInput={textForChatInput}
-        onInputSet={() => setTextForChatInput(null)}
+        textFromEditor={textFromEditor}
+        setTextFromEditor={setTextFromEditor}
       />
-
-      {/* Suggestion Actions */}
-      <div className="fixed top-24 right-6 z-50 space-y-2">
-        {editSuggestions
-          .filter((s) => s.status === 'pending')
-          .map((suggestion) => (
-            <div
-              key={suggestion.id}
-              className="flex flex-col gap-2 rounded-lg border border-blue-100 bg-white p-3 shadow-lg"
-            >
-              <div className="text-sm text-blue-600">
-                Lines {suggestion.startLine}-
-                {suggestion.startLine + suggestion.originalLineCount - 1}
-              </div>
-              <div className="flex items-center gap-2">
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => handleAcceptEdit(suggestion.id)}
-                  className="flex-1 border border-green-200 text-green-600 hover:bg-green-50"
-                >
-                  <Check size={14} className="mr-1" />
-                  Accept
-                </Button>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => handleRejectEdit(suggestion.id)}
-                  className="flex-1 border border-red-200 text-red-600 hover:bg-red-50"
-                >
-                  <X size={14} className="mr-1" />
-                  Reject
-                </Button>
-              </div>
-            </div>
-          ))}
-      </div>
     </div>
   );
 }

@@ -564,7 +564,7 @@ export default function EditorPage() {
     <div className="min-h-screen bg-slate-100">
       <div className="mx-auto h-[calc(100vh-4rem)] px-2 py-2">
         <div className="relative flex h-6 justify-end gap-1 py-1">
-          <Breadcrumb className="absolute top-0 left-1/2 -translate-x-1/2">
+          <Breadcrumb className="absolute top-1 left-1/2 -translate-x-1/2">
             <BreadcrumbList>
               <BreadcrumbItem>
                 <BreadcrumbLink href="/dashboard">Documents</BreadcrumbLink>

@@ -270,6 +270,53 @@ export default function EditorPage() {
     );
   };
 
+  const handleTextFormat = (format: 'bold' | 'italic' | 'underline') => {
+    const editor = editorRef.current;
+    const monaco = monacoInstance;
+    if (!editor || !monaco) return;
+
+    const selection = editor.getSelection();
+    if (!selection || selection.isEmpty()) return;
+
+    const model = editor.getModel();
+    if (!model) return;
+
+    const selectedText = model.getValueInRange(selection);
+
+    const formatMap = {
+      bold: { command: '\\textbf', length: 8 },
+      italic: { command: '\\textit', length: 8 },
+      underline: { command: '\\underline', length: 11 },
+    };
+
+    const { command, length } = formatMap[format];
+    let newText;
+    if (selectedText.startsWith(`${command}{`) && selectedText.endsWith('}')) {
+      newText = selectedText.slice(length, -1);
+    } else {
+      newText = `${command}{${selectedText}}`;
+    }
+
+    editor.executeEdits(format, [
+      {
+        range: selection,
+        text: newText,
+        forceMoveMarkers: true,
+      },
+    ]);
+
+    const newEndColumn = selection.startColumn + newText.length;
+    editor.setSelection(
+      new monaco.Selection(
+        selection.startLineNumber,
+        selection.startColumn,
+        selection.startLineNumber,
+        newEndColumn
+      )
+    );
+    editor.focus();
+  };
+
   // Update the decoration effect for a clear inline diff view
   useEffect(() => {
     // Ensure editor and monaco are ready
@@ -587,13 +634,13 @@ export default function EditorPage() {
 
         <div className="mb-1 flex items-center justify-between">
           <ButtonGroup>
-            <ButtonGroupItem>
+            <ButtonGroupItem onClick={() => handleTextFormat('bold')}>
               <span className="text-sm font-bold">B</span>
             </ButtonGroupItem>
-            <ButtonGroupItem>
+            <ButtonGroupItem onClick={() => handleTextFormat('italic')}>
               <span className="text-sm italic">I</span>
             </ButtonGroupItem>
-            <ButtonGroupItem>
+            <ButtonGroupItem onClick={() => handleTextFormat('underline')}>
               <span className="text-sm underline">U</span>
             </ButtonGroupItem>
           </ButtonGroup>

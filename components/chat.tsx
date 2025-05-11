@@ -318,7 +318,7 @@ export function Chat({
                       originalHandleSubmit(e);
                     }
                   }}
-                  className="scrollbar-thin scrollbar-thumb-neutral-300 scrollbar-track-transparent h-[70px] resize-none border-none shadow-none focus-visible:ring-0"
+                  className="scrollbar-thin scrollbar-thumb-neutral-300 scrollbar-track-transparent h-[70px] resize-none border-none px-1 shadow-none focus-visible:ring-0"
                 />
                 <Button
                   type="submit"

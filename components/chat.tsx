@@ -14,19 +14,23 @@ import { Textarea } from './ui/textarea';
 interface ChatProps {
   onEditSuggestion: (edit: EditSuggestion) => void;
   fileContent: string;
-  textForInput: string | null;
-  onInputSet: () => void;
+  textFromEditor: string | null;
+  setTextFromEditor: (text: string | null) => void;
+  isOpen: boolean;
+  setIsOpen: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 export function Chat({
+  isOpen,
+  setIsOpen,
   onEditSuggestion,
   fileContent,
-  textForInput,
-  onInputSet,
+  textFromEditor,
+  setTextFromEditor,
 }: ChatProps) {
-  const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const [userInput, setUserInput] = useState<string>('');
 
   const parseEditSuggestions = (content: string): string => {
     const editRegex = /```latex-diff\n([\s\S]*?)\n```/g;
@@ -104,11 +108,10 @@ export function Chat({
             originalLineCount: actualOriginalLineCount,
             status: 'pending',
           };
-          console.log('Parsed Suggestion (Recalculated):', suggestion);
           onEditSuggestion(suggestion);
         }
       } else {
-        console.warn('Could not parse diff header:', lines[0]);
+        console.error('Could not parse diff header:', lines[0]);
       }
 
       cleanContent = cleanContent.replace(match[0], '');
@@ -118,8 +121,6 @@ export function Chat({
 
   const {
     messages,
-    input,
-    handleInputChange,
     handleSubmit: originalHandleSubmit,
     isLoading,
     setMessages,
@@ -140,9 +141,11 @@ export function Chat({
   });
 
   useEffect(() => {
-    if (textForInput) {
-      setInput(textForInput);
+    setInput(`Attached from editor: ${textFromEditor} ` + userInput);
+  }, [textFromEditor, userInput, setInput]);
 
+  useEffect(() => {
+    if (textFromEditor) {
       if (!isOpen) {
         setIsOpen(true);
       }
@@ -154,10 +157,8 @@ export function Chat({
       setTimeout(() => {
         inputRef.current?.focus();
       }, 100);
-
-      onInputSet();
     }
-  }, [textForInput, setInput, onInputSet, isOpen, isMinimized]);
+  }, [textFromEditor, setInput, isOpen, isMinimized, setIsOpen]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -177,7 +178,7 @@ export function Chat({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  }, [setIsOpen]);
 
   if (!isOpen) {
     return (
@@ -257,7 +258,12 @@ export function Chat({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
           >
-            <div className="scrollbar-thin scrollbar-thumb-neutral-300 scrollbar-track-transparent h-[440px] overflow-auto p-4">
+            <div
+              className={cn(
+                'scrollbar-thin scrollbar-thumb-neutral-300 scrollbar-track-transparent h-[440px] overflow-auto p-4',
+                textFromEditor && 'pb-24'
+              )}
+            >
               {messages.length === 0 && !isLoading && (
                 <div className="flex h-full flex-col items-center justify-center space-y-4 text-center">
                   <div>
@@ -302,23 +308,49 @@ export function Chat({
               )}
             </div>
 
-            <div className="px-2">
+            <div className="relative px-2">
+              {textFromEditor && (
+                <div className="absolute top-0 left-1/2 w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-full rounded-t-md border border-b-0 border-slate-300 bg-slate-50 px-2 py-1 text-xs shadow-xs">
+                  <Button
+                    onClick={() => setTextFromEditor(null)}
+                    size="icon"
+                    variant="ghost"
+                    className="absolute top-0 right-0 size-5 text-slate-500 hover:text-slate-700"
+                    aria-label="Close"
+                  >
+                    <X className="size-3" />
+                  </Button>
+                  <p className="text-slate-500">Attached From Editor</p>
+                  <code className="scrollbar-thin scrollbar-thumb-neutral-300 scrollbar-track-transparent block max-h-20 overflow-x-hidden overflow-y-scroll whitespace-pre">
+                    {textFromEditor}
+                  </code>
+                </div>
+              )}
+
               <form
-                onSubmit={originalHandleSubmit}
+                onSubmit={(e) => {
+                  originalHandleSubmit(e);
+                  setTextFromEditor(null);
+                  setUserInput('');
+                }}
                 className="relative flex w-full flex-col items-end rounded-md border p-1"
               >
                 <Textarea
                   ref={inputRef}
-                  value={input}
+                  value={userInput}
                   placeholder="Prompt to edit your document..."
-                  onChange={handleInputChange}
+                  onChange={(e) => {
+                    setUserInput(e.target.value);
+                  }}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' && !e.shiftKey) {
                       e.preventDefault();
                       originalHandleSubmit(e);
+                      setTextFromEditor(null);
+                      setUserInput('');
                     }
                   }}
-                  className="scrollbar-thin scrollbar-thumb-neutral-300 scrollbar-track-transparent h-[70px] resize-none border-none px-1 shadow-none focus-visible:ring-0"
+                  className="scrollbar-thin scrollbar-thumb-neutral-300 scrollbar-track-transparent relative h-[70px] resize-none border-none px-1 shadow-none focus-visible:ring-0"
                 />
                 <Button
                   type="submit"

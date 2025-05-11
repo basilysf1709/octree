@@ -41,6 +41,20 @@ export default function Dashboard() {
   const [createDialog, setCreateDialog] = useState(false);
 
   useEffect(() => {
+    const fetchSubscriptionStatus = async () => {
+      try {
+        const response = await fetch('/api/check-subscription');
+
+        const data = await response.json();
+        console.log('Subscription status:', data);
+      } catch (error) {
+        console.error('Error checking subscription:', error);
+      }
+    };
+    fetchSubscriptionStatus();
+  }, []);
+
+  useEffect(() => {
     const fetchUserAndDocuments = async () => {
       const {
         data: { session },

@@ -3,13 +3,27 @@ import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { OctreeLogo } from '@/components/icons/octree-logo';
 import { useState, useEffect } from 'react';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Play, CheckCircle } from 'lucide-react';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { motion } from 'framer-motion';
+import Markdown from 'react-markdown';
+
+interface SubscriptionPlan {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  currency: string;
+  interval: string;
+  features: string;
+}
 
 export default function Home() {
   const [isLoading, setIsLoading] = useState(false);
   const [isSignedIn, setIsSignedIn] = useState(false);
+  const [subscriptionPlans, setSubscriptionPlans] = useState<
+    SubscriptionPlan[]
+  >([]);
   const supabase = createClientComponentClient();
 
   // Check authentication status on mount
@@ -35,6 +49,21 @@ export default function Home() {
     };
   }, [supabase.auth]);
 
+  // Fetch subscription plans on mount
+  useEffect(() => {
+    const fetchPlans = async () => {
+      try {
+        const response = await fetch('/api/subscription-plans');
+        const plans = await response.json();
+        setSubscriptionPlans(plans);
+      } catch (error) {
+        console.error('Error fetching subscription plans:', error);
+      }
+    };
+
+    fetchPlans();
+  }, []);
+
   const handleSignOut = async () => {
     setIsLoading(true);
     await supabase.auth.signOut();
@@ -42,7 +71,7 @@ export default function Home() {
     window.location.href = '/';
   };
 
-  const handleSubscribe = async () => {
+  const handleSubscribe = async (priceId: string) => {
     try {
       setIsLoading(true);
       const response = await fetch('/api/create-checkout-session', {
@@ -50,6 +79,7 @@ export default function Home() {
         headers: {
           'Content-Type': 'application/json',
         },
+        body: JSON.stringify({ priceId }),
       });
 
       const { url } = await response.json();
@@ -72,7 +102,9 @@ export default function Home() {
             <div className="flex items-center">
               <Link href="/" className="flex items-center space-x-2">
                 <OctreeLogo className="h-8 w-8 text-blue-600" />
-                <span className="bg-gradient-to-r from-blue-700 to-blue-500 bg-clip-text text-xl font-bold text-transparent">Octree</span>
+                <span className="bg-gradient-to-r from-blue-700 to-blue-500 bg-clip-text text-xl font-bold text-transparent">
+                  Octree
+                </span>
               </Link>
               <div className="ml-10 hidden items-center space-x-8 md:flex">
                 <Link
@@ -125,19 +157,19 @@ export default function Home() {
       {/* Hero Section - Improved with animations and academic styling */}
       <div className="relative overflow-hidden">
         {/* Abstract pattern background */}
-        <div 
+        <div
           className="absolute inset-0 z-0 opacity-20"
           style={{
             backgroundImage: `url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm29 22c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM32 63c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm57-13c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-9-21c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM60 91c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM35 41c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM12 60c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2z' fill='%231E3A8A' fill-opacity='0.25' fill-rule='evenodd'/%3E%3C/svg%3E")`,
             backgroundSize: '180px 180px',
           }}
         />
-        
+
         {/* Grid overlay */}
-        <div className="absolute inset-0 z-0 bg-grid-blue-600/[0.03]" />
-        
+        <div className="bg-grid-blue-600/[0.03] absolute inset-0 z-0" />
+
         <div className="relative container mx-auto px-4 pt-20 pb-16">
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
@@ -148,41 +180,39 @@ export default function Home() {
                 Now in public beta
               </span>
             </div>
-            
-            <h1 className="mb-6 font-serif text-6xl font-bold leading-tight tracking-tight text-blue-900 md:text-7xl">
-              Write <span className="bg-gradient-to-r from-blue-700 via-blue-600 to-blue-500 bg-clip-text text-transparent">LaTeX</span> Documents with Octree
+
+            <h1 className="mb-6 font-serif text-6xl leading-tight font-bold tracking-tight text-blue-900 md:text-7xl">
+              Write{' '}
+              <span className="bg-gradient-to-r from-blue-700 via-blue-600 to-blue-500 bg-clip-text text-transparent">
+                LaTeX
+              </span>{' '}
+              Documents with Octree
             </h1>
-            
-            <p className="mx-auto mb-10 max-w-2xl text-xl font-light leading-relaxed text-blue-700 md:text-2xl">
+
+            <p className="mx-auto mb-10 max-w-2xl text-xl leading-relaxed font-light text-blue-700 md:text-2xl">
               The intelligent LaTeX editor that makes academic writing feel
               natural and effortless
             </p>
-            
+
             <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
               <Link href="/auth">
-                <Button className="w-full rounded-full bg-blue-600 px-8 py-6 text-lg font-medium text-white shadow-lg transition-all hover:bg-blue-700 hover:shadow-xl sm:w-auto">
+                <Button className="w-full rounded-full bg-blue-600 px-6 py-6 text-lg font-medium text-white shadow-lg transition-all hover:bg-blue-700 hover:shadow-xl sm:w-auto">
                   Start Writing Free
                 </Button>
               </Link>
               <Link href="#demo">
                 <Button
                   variant="outline"
-                  className="w-full rounded-full border-2 border-blue-200 bg-white/80 px-8 py-6 text-lg font-medium text-blue-700 backdrop-blur-sm transition-all hover:bg-blue-50 sm:w-auto"
+                  className="w-full rounded-full border-2 border-blue-200 bg-white/80 py-6 text-lg font-medium text-blue-700 backdrop-blur-sm transition-all hover:bg-blue-50 has-[>svg]:px-6 sm:w-auto"
                 >
-                  <svg
-                    className="mr-2 h-5 w-5"
-                    fill="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path d="M8 6.82v10.36c0 .79.87 1.27 1.54.84l8.14-5.18c.62-.39.62-1.29 0-1.69L9.54 5.98C8.87 5.55 8 6.03 8 6.82z" />
-                  </svg>
+                  <Play className="h-5 w-5 fill-current" />
                   Watch Demo
                 </Button>
               </Link>
             </div>
-            
+
             {/* Video with improved presentation */}
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, y: 40 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.2 }}
@@ -190,14 +220,8 @@ export default function Home() {
             >
               <div className="relative rounded-xl bg-gradient-to-r from-blue-100 to-blue-50 p-1.5 shadow-2xl">
                 <div className="absolute -inset-1 rounded-xl bg-gradient-to-r from-blue-500 to-blue-300 opacity-20 blur-sm"></div>
-                <div className="relative rounded-lg overflow-hidden border border-blue-100 bg-white shadow-inner">
-                  <video 
-                    className="w-full"
-                    autoPlay 
-                    loop 
-                    muted 
-                    playsInline
-                  >
+                <div className="relative overflow-hidden rounded-lg border border-blue-100 bg-white shadow-inner">
+                  <video className="w-full" autoPlay loop muted playsInline>
                     <source src="/main.mp4" type="video/mp4" />
                     Your browser does not support the video tag.
                   </video>
@@ -207,49 +231,31 @@ export default function Home() {
 
             {/* Feature badges */}
             <div className="mt-12 flex flex-wrap items-center justify-center gap-4 text-xs font-medium text-blue-700 sm:gap-8 sm:text-sm">
-              <motion.div 
+              <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4, delay: 0.4 }}
                 className="flex items-center rounded-full bg-blue-50 px-4 py-2 shadow-sm"
               >
-                <svg
-                  className="mr-2 h-4 w-4 text-blue-500"
-                  fill="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path d="M9 12l2 2 4-4M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
+                <CheckCircle className="mr-2 h-4 w-4 text-blue-500" />
                 Free for students
               </motion.div>
-              <motion.div 
+              <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4, delay: 0.5 }}
                 className="flex items-center rounded-full bg-blue-50 px-4 py-2 shadow-sm"
               >
-                <svg
-                  className="mr-2 h-4 w-4 text-blue-500"
-                  fill="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path d="M9 12l2 2 4-4M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
+                <CheckCircle className="mr-2 h-4 w-4 text-blue-500" />
                 No credit card required
               </motion.div>
-              <motion.div 
+              <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4, delay: 0.6 }}
                 className="flex items-center rounded-full bg-blue-50 px-4 py-2 shadow-sm"
               >
-                <svg
-                  className="mr-2 h-4 w-4 text-blue-500"
-                  fill="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path d="M9 12l2 2 4-4M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
+                <CheckCircle className="mr-2 h-4 w-4 text-blue-500" />
                 Cancel anytime
               </motion.div>
             </div>
@@ -262,24 +268,32 @@ export default function Home() {
         <div className="container mx-auto px-4">
           <div className="mx-auto grid max-w-6xl grid-cols-2 gap-10 px-4 md:grid-cols-4">
             <div className="flex flex-col items-center text-center">
-              <div className="mb-2 font-serif text-4xl font-bold text-blue-800">Beta</div>
-              <div className="h-0.5 w-10 bg-blue-200 mb-2"></div>
-              <p className="text-blue-700 font-medium">Development Stage</p>
+              <div className="mb-2 font-serif text-4xl font-bold text-blue-800">
+                Beta
+              </div>
+              <div className="mb-2 h-0.5 w-10 bg-blue-200"></div>
+              <p className="font-medium text-blue-700">Development Stage</p>
             </div>
             <div className="flex flex-col items-center text-center">
-              <div className="mb-2 font-serif text-4xl font-bold text-blue-800">5+</div>
-              <div className="h-0.5 w-10 bg-blue-200 mb-2"></div>
-              <p className="text-blue-700 font-medium">LaTeX Templates</p>
+              <div className="mb-2 font-serif text-4xl font-bold text-blue-800">
+                5+
+              </div>
+              <div className="mb-2 h-0.5 w-10 bg-blue-200"></div>
+              <p className="font-medium text-blue-700">LaTeX Templates</p>
             </div>
             <div className="flex flex-col items-center text-center">
-              <div className="mb-2 font-serif text-4xl font-bold text-blue-800">AI</div>
-              <div className="h-0.5 w-10 bg-blue-200 mb-2"></div>
-              <p className="text-blue-700 font-medium">Powered Editor</p>
+              <div className="mb-2 font-serif text-4xl font-bold text-blue-800">
+                AI
+              </div>
+              <div className="mb-2 h-0.5 w-10 bg-blue-200"></div>
+              <p className="font-medium text-blue-700">Powered Editor</p>
             </div>
             <div className="flex flex-col items-center text-center">
-              <div className="mb-2 font-serif text-4xl font-bold text-blue-800">100%</div>
-              <div className="h-0.5 w-10 bg-blue-200 mb-2"></div>
-              <p className="text-blue-700 font-medium">Open Source</p>
+              <div className="mb-2 font-serif text-4xl font-bold text-blue-800">
+                100%
+              </div>
+              <div className="mb-2 h-0.5 w-10 bg-blue-200"></div>
+              <p className="font-medium text-blue-700">Open Source</p>
             </div>
           </div>
         </div>
@@ -290,10 +304,13 @@ export default function Home() {
         <div className="container mx-auto px-4">
           <div className="mx-auto max-w-6xl">
             <div className="mb-12 text-center">
-              <h2 className="font-serif text-5xl font-bold text-blue-900">Advanced Features</h2>
+              <h2 className="font-serif text-5xl font-bold text-blue-900">
+                Advanced Features
+              </h2>
               <div className="mx-auto mt-4 h-1 w-20 bg-blue-300"></div>
               <p className="mx-auto mt-6 max-w-2xl text-lg text-blue-700">
-                Discover why researchers and academics choose Octree for their LaTeX documents
+                Discover why researchers and academics choose Octree for their
+                LaTeX documents
               </p>
             </div>
 
@@ -307,7 +324,7 @@ export default function Home() {
                   viewport={{ once: true }}
                   className="rounded-xl border border-blue-100 bg-gradient-to-b from-white to-blue-50 p-6 shadow-md transition-all hover:shadow-lg"
                 >
-                  <div className="mb-4 rounded-full bg-blue-100 p-3 w-fit">
+                  <div className="mb-4 w-fit rounded-full bg-blue-100 p-3">
                     <div className="rounded-full bg-gradient-to-br from-blue-600 to-blue-500 p-2 text-white">
                       {feature.icon}
                     </div>
@@ -315,7 +332,7 @@ export default function Home() {
                   <h3 className="mb-3 font-serif text-xl font-bold text-blue-800">
                     {feature.title}
                   </h3>
-                  <p className="text-blue-700 leading-relaxed">
+                  <p className="leading-relaxed text-blue-700">
                     {feature.description}
                   </p>
                 </motion.div>
@@ -327,16 +344,18 @@ export default function Home() {
 
       {/* How It Works - Updated with academic styling */}
       <section className="relative bg-blue-50 py-20">
-        <div 
+        <div
           className="absolute inset-0 z-0 opacity-10"
           style={{
             backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%231E3A8A' fill-opacity='0.4'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
           }}
         />
-        <div className="container relative z-10 mx-auto px-4">
+        <div className="relative z-10 container mx-auto px-4">
           <div className="mx-auto max-w-6xl">
             <div className="mb-12 text-center">
-              <h2 className="font-serif text-5xl font-bold text-blue-900">How It Works</h2>
+              <h2 className="font-serif text-5xl font-bold text-blue-900">
+                How It Works
+              </h2>
               <div className="mx-auto mt-4 h-1 w-20 bg-blue-300"></div>
               <p className="mx-auto mt-6 max-w-2xl text-lg text-blue-700">
                 Four simple steps to transform your academic writing experience
@@ -355,9 +374,6 @@ export default function Home() {
                 >
                   <div className="relative mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-white text-2xl font-bold text-blue-700 shadow-md">
                     {index + 1}
-                    {index < steps.length - 1 && (
-                      <div className="absolute left-16 top-8 hidden h-0.5 w-full -translate-y-1/2 bg-blue-200 md:block"></div>
-                    )}
                   </div>
                   <h3 className="mb-2 font-serif text-xl font-bold text-blue-800">
                     {step.title}
@@ -375,14 +391,16 @@ export default function Home() {
         <div className="container mx-auto px-4">
           <div className="mx-auto max-w-6xl">
             <div className="mb-12 text-center">
-              <h2 className="font-serif text-5xl font-bold text-blue-900">Pricing Plans</h2>
+              <h2 className="font-serif text-5xl font-bold text-blue-900">
+                Pricing
+              </h2>
               <div className="mx-auto mt-4 h-1 w-20 bg-blue-300"></div>
               <p className="mx-auto mt-6 max-w-2xl text-lg text-blue-700">
                 Simple, transparent pricing for all your LaTeX editing needs
               </p>
             </div>
 
-            <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
+            <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
               {/* Free Plan */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
@@ -391,143 +409,88 @@ export default function Home() {
                 viewport={{ once: true }}
                 className="relative overflow-hidden rounded-xl border border-blue-100 bg-white p-8 shadow-lg transition-all hover:shadow-xl"
               >
-                <div className="absolute -right-10 -top-10 h-20 w-20 rounded-full bg-blue-50"></div>
+                <div className="absolute -top-10 -right-10 h-20 w-20 rounded-full bg-blue-50"></div>
                 <div className="mb-6">
-                  <h3 className="mb-2 font-serif text-2xl font-bold text-blue-900">Free</h3>
+                  <h3 className="mb-2 font-serif text-2xl font-bold text-blue-900">
+                    Free
+                  </h3>
                   <div className="h-0.5 w-12 bg-blue-200"></div>
                 </div>
                 <div className="mb-6">
-                  <span className="font-serif text-5xl font-bold text-blue-800">$0</span>
-                  <span className="text-blue-700">/month</span>
+                  <span className="font-serif text-5xl font-bold text-blue-800">
+                    $0
+                  </span>
+                  <span className="text-blue-700"> / month</span>
                 </div>
-                <ul className="mb-8 space-y-3 text-blue-700">
-                  <li className="flex items-start">
-                    <svg className="mr-2 h-5 w-5 text-blue-500 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                    </svg>
-                    <span>Up to 3 documents</span>
-                  </li>
-                  <li className="flex items-start">
-                    <svg className="mr-2 h-5 w-5 text-blue-500 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                    </svg>
-                    <span>Basic AI assistance</span>
-                  </li>
-                  <li className="flex items-start">
-                    <svg className="mr-2 h-5 w-5 text-blue-500 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                    </svg>
-                    <span>PDF Export</span>
-                  </li>
+                <ul className="mb-8 list-disc space-y-3 pl-4 text-blue-700">
+                  <li>Up to 3 documents</li>
+                  <li>Basic AI assistance</li>
+                  <li>PDF Export</li>
                 </ul>
                 <Button className="w-full rounded-lg bg-blue-600 py-3 font-medium text-white hover:bg-blue-700">
                   Get Started
                 </Button>
               </motion.div>
 
-              {/* Pro Plan */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4, delay: 0.1 }}
-                viewport={{ once: true }}
-                className="relative overflow-hidden rounded-xl border-2 border-blue-200 bg-white p-8 shadow-xl transition-all hover:shadow-2xl"
-              >
-                <div className="absolute -right-8 -top-8 h-20 w-20 rounded-full bg-blue-100"></div>
-                <div className="absolute -left-4 -bottom-4 h-16 w-16 rounded-full bg-blue-50"></div>
-                <div className="mb-2 rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-800 w-fit">
-                  MOST POPULAR
-                </div>
-                <div className="mb-6">
-                  <h3 className="mb-2 font-serif text-2xl font-bold text-blue-900">Pro</h3>
-                  <div className="h-0.5 w-12 bg-blue-400"></div>
-                </div>
-                <div className="mb-6">
-                  <span className="font-serif text-5xl font-bold text-blue-800">$10</span>
-                  <span className="text-blue-700">/month</span>
-                </div>
-                <ul className="mb-8 space-y-3 text-blue-700">
-                  <li className="flex items-start">
-                    <svg className="mr-2 h-5 w-5 text-blue-500 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                    </svg>
-                    <span>Unlimited documents</span>
-                  </li>
-                  <li className="flex items-start">
-                    <svg className="mr-2 h-5 w-5 text-blue-500 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                    </svg>
-                    <span>Advanced AI assistance</span>
-                  </li>
-                  <li className="flex items-start">
-                    <svg className="mr-2 h-5 w-5 text-blue-500 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                    </svg>
-                    <span>Real-time collaboration</span>
-                  </li>
-                  <li className="flex items-start">
-                    <svg className="mr-2 h-5 w-5 text-blue-500 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                    </svg>
-                    <span>Priority support</span>
-                  </li>
-                </ul>
-                <Button 
-                  onClick={handleSubscribe}
-                  disabled={isLoading}
-                  className="w-full rounded-lg bg-gradient-to-r from-blue-700 to-blue-500 py-3 font-medium text-white transition-all hover:from-blue-800 hover:to-blue-600"
+              {/* Paid Plans */}
+              {subscriptionPlans.map((plan, index) => (
+                <motion.div
+                  key={plan.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4, delay: index * 0.1 }}
+                  viewport={{ once: true }}
+                  className={`relative overflow-hidden rounded-xl ${
+                    index === 0
+                      ? 'border-2 border-blue-200'
+                      : 'border border-blue-100'
+                  } bg-white p-8 shadow-xl transition-all hover:shadow-2xl`}
                 >
-                  {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Subscribe Now'}
-                </Button>
-              </motion.div>
-
-              {/* Team Plan */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4, delay: 0.2 }}
-                viewport={{ once: true }}
-                className="relative overflow-hidden rounded-xl border border-blue-100 bg-white p-8 shadow-lg transition-all hover:shadow-xl"
-              >
-                <div className="absolute -left-10 -top-10 h-20 w-20 rounded-full bg-blue-50"></div>
-                <div className="mb-6">
-                  <h3 className="mb-2 font-serif text-2xl font-bold text-blue-900">Team</h3>
-                  <div className="h-0.5 w-12 bg-blue-200"></div>
-                </div>
-                <div className="mb-6">
-                  <span className="font-serif text-5xl font-bold text-blue-800">$30</span>
-                  <span className="text-blue-700">/month</span>
-                </div>
-                <ul className="mb-8 space-y-3 text-blue-700">
-                  <li className="flex items-start">
-                    <svg className="mr-2 h-5 w-5 text-blue-500 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                    </svg>
-                    <span>Up to 15 team members</span>
-                  </li>
-                  <li className="flex items-start">
-                    <svg className="mr-2 h-5 w-5 text-blue-500 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                    </svg>
-                    <span>All Pro features</span>
-                  </li>
-                  <li className="flex items-start">
-                    <svg className="mr-2 h-5 w-5 text-blue-500 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                    </svg>
-                    <span>Team permissions</span>
-                  </li>
-                  <li className="flex items-start">
-                    <svg className="mr-2 h-5 w-5 text-blue-500 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                    </svg>
-                    <span>Dedicated support</span>
-                  </li>
-                </ul>
-                <Button className="w-full rounded-lg bg-blue-600 py-3 font-medium text-white hover:bg-blue-700">
-                  Contact Sales
-                </Button>
-              </motion.div>
+                  {index === 0 && (
+                    <div className="absolute -top-8 -right-8 h-20 w-20 rounded-full bg-blue-100"></div>
+                  )}
+                  {index === 0 && (
+                    <div className="absolute -bottom-4 -left-4 h-16 w-16 rounded-full bg-blue-50"></div>
+                  )}
+                  {index === 0 && (
+                    <div className="mb-2 w-fit rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-800">
+                      MOST POPULAR
+                    </div>
+                  )}
+                  <div className="mb-6">
+                    <h3 className="mb-2 font-serif text-2xl font-bold text-blue-900">
+                      {plan.name}
+                    </h3>
+                    <div
+                      className={`h-0.5 w-12 ${index === 0 ? 'bg-blue-400' : 'bg-blue-200'}`}
+                    ></div>
+                  </div>
+                  <div className="mb-6">
+                    <span className="font-serif text-5xl font-bold text-blue-800">
+                      ${plan.price}
+                    </span>
+                    <span className="text-blue-700"> / {plan.interval}</span>
+                  </div>
+                  <div className="mb-6 text-blue-700 [&>ul]:list-disc [&>ul]:pl-4 [&>ul>li]:mb-1">
+                    <Markdown>{plan.features}</Markdown>
+                  </div>
+                  <Button
+                    onClick={() => handleSubscribe(plan.id)}
+                    disabled={isLoading}
+                    className={`w-full rounded-lg ${
+                      index === 0
+                        ? 'bg-gradient-to-r from-blue-700 to-blue-500 hover:from-blue-800 hover:to-blue-600'
+                        : 'bg-blue-600 hover:bg-blue-700'
+                    } py-3 font-medium text-white transition-all`}
+                  >
+                    {isLoading ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      'Subscribe Now'
+                    )}
+                  </Button>
+                </motion.div>
+              ))}
             </div>
           </div>
         </div>
@@ -543,11 +506,12 @@ export default function Home() {
               transition={{ duration: 0.6 }}
               viewport={{ once: true }}
             >
-              <h2 className="mb-6 font-serif text-4xl font-bold leading-tight tracking-tight text-white md:text-5xl">
+              <h2 className="mb-6 font-serif text-4xl leading-tight font-bold tracking-tight text-white md:text-5xl">
                 Ready to elevate your academic writing?
               </h2>
               <p className="mb-8 text-lg text-blue-100">
-                Join thousands of researchers who&apos;ve simplified their LaTeX workflow
+                Join thousands of researchers who&apos;ve simplified their LaTeX
+                workflow
               </p>
               <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
                 <Link href="/auth">
@@ -579,8 +543,8 @@ export default function Home() {
                 <span className="text-2xl font-bold text-white">Octree</span>
               </Link>
               <p className="mb-6 max-w-md text-blue-200">
-                The intelligent LaTeX editor for researchers, academics, and students.
-                Simplify complex document creation with AI assistance.
+                The intelligent LaTeX editor for researchers, academics, and
+                students. Simplify complex document creation with AI assistance.
               </p>
               <div className="flex space-x-4">
                 {socialLinks.map((link, index) => (
@@ -621,13 +585,22 @@ export default function Home() {
               © 2025 Octree. All rights reserved.
             </p>
             <div className="flex space-x-6">
-              <Link href="/privacy" className="text-sm text-blue-300 hover:text-white">
+              <Link
+                href="/privacy"
+                className="text-sm text-blue-300 hover:text-white"
+              >
                 Privacy Policy
               </Link>
-              <Link href="/terms" className="text-sm text-blue-300 hover:text-white">
+              <Link
+                href="/terms"
+                className="text-sm text-blue-300 hover:text-white"
+              >
                 Terms of Service
               </Link>
-              <Link href="/cookies" className="text-sm text-blue-300 hover:text-white">
+              <Link
+                href="/cookies"
+                className="text-sm text-blue-300 hover:text-white"
+              >
                 Cookie Policy
               </Link>
             </div>

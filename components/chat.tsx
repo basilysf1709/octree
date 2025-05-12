@@ -158,7 +158,7 @@ export function Chat({
         inputRef.current?.focus();
       }, 100);
     }
-  }, [textFromEditor, setInput, isOpen, isMinimized, setIsOpen]);
+  }, [textFromEditor]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {

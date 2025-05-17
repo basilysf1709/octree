@@ -73,6 +73,94 @@ export default function EditorPage() {
   const [decorationIds, setDecorationIds] = useState<string[]>([]);
   const [exportingPDF, setExportingPDF] = useState(false);
 
+  // Keep track of whether we've attempted initial compilation
+  const initialCompileRef = useRef(false);
+
+  // Load document on initial render and compile once after loading
+  useEffect(() => {
+    const fetchAndCompile = async () => {
+      if (!documentId) return;
+
+      try {
+        console.log('[EditorPage] Fetching document:', documentId);
+        
+        const { data, error } = await supabase
+          .from('documents')
+          .select('content, title')
+          .eq('id', documentId)
+          .single();
+
+        if (error) throw error;
+
+        if (data) {
+          console.log('[EditorPage] Document loaded successfully');
+          setTitle(data.title || '');
+          setContent(data.content || '');
+          setLastSaved(new Date());
+          
+          // Schedule compilation after state updates have been applied
+          setTimeout(() => {
+            if (!initialCompileRef.current && !compiling) {
+              console.log('[EditorPage] Triggering initial compilation');
+              initialCompileRef.current = true;
+              handleCompile();
+            }
+          }, 500);
+        }
+      } catch (error) {
+        console.error('Error fetching document:', error);
+      }
+    };
+
+    fetchAndCompile();
+  }, [documentId, supabase]);
+
+  // Simplified handleCompile function
+  const handleCompile = async () => {
+    if (compiling) {
+      console.log('[EditorPage] Already compiling, skipping request');
+      return;
+    }
+    
+    console.log('[EditorPage] Starting compilation');
+    setCompiling(true);
+    
+    try {
+      // Save the document first
+      await saveDocument();
+      
+      // Then compile
+      console.log('[EditorPage] Sending compilation request');
+      const response = await fetch('/api/compilePDF', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content }),
+      });
+      
+      console.log('[EditorPage] Compilation response status:', response.status);
+      
+      if (!response.ok) {
+        throw new Error(`Compilation failed with status ${response.status}`);
+      }
+      
+      const data = await response.json();
+      console.log('[EditorPage] Compilation response received:', data ? 'has data' : 'empty');
+      
+      if (data.pdf) {
+        console.log('[EditorPage] Setting PDF data, length:', data.pdf.length);
+        setPdfData(data.pdf);
+      } else {
+        console.error('[EditorPage] No PDF data in response');
+        throw new Error('No PDF data received');
+      }
+    } catch (error) {
+      console.error('[EditorPage] Compilation error:', error);
+    } finally {
+      console.log('[EditorPage] Compilation completed');
+      setCompiling(false);
+    }
+  };
+
   // New function to save document
   const saveDocument = async (): Promise<boolean> => {
     if (!documentId) return false;
@@ -97,42 +185,6 @@ export default function EditorPage() {
       return false;
     } finally {
       setIsSaving(false);
-    }
-  };
-
-  // Update compile handler to show loading immediately
-  const handleCompile = async () => {
-    // Start loading indicator immediately
-    setCompiling(true);
-
-    try {
-      // Save document in the background (don't await)
-      const savePromise = saveDocument();
-
-      // Start compilation request without waiting for save
-      const response = await fetch('/api/compilePDF', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content }),
-      });
-
-      // Wait for save to complete in the background
-      await savePromise;
-
-      if (!response.ok) throw new Error('Compilation failed');
-
-      // Process response
-      const data = await response.json();
-
-      if (data.pdf) {
-        setPdfData(data.pdf);
-      } else {
-        throw new Error('No PDF data received');
-      }
-    } catch (error) {
-      console.error('Compilation error:', error);
-    } finally {
-      setCompiling(false);
     }
   };
 
@@ -461,33 +513,6 @@ export default function EditorPage() {
       }
     };
   }, []); // Empty dependency array for unmount cleanup
-
-  // Load document on initial render
-  useEffect(() => {
-    const fetchDocument = async () => {
-      if (!documentId) return;
-
-      try {
-        const { data, error } = await supabase
-          .from('documents')
-          .select('content, title')
-          .eq('id', documentId)
-          .single();
-
-        if (error) throw error;
-
-        if (data) {
-          setTitle(data.title || '');
-          setContent(data.content || '');
-          setLastSaved(new Date());
-        }
-      } catch (error) {
-        console.error('Error fetching document:', error);
-      }
-    };
-
-    fetchDocument();
-  }, [documentId, supabase]);
 
   // Modify handleCopy to set the new state
   function handleCopy(textToCopy?: string) {

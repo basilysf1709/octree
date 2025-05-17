@@ -558,15 +558,38 @@ export default function EditorPage() {
     200
   ); // debounce delay in ms
 
-  // Update onMount handler to store editor ref AND add Cmd+B shortcut
+  // Update onMount handler to include better keyboard shortcut handling
   const handleEditorDidMount = (
     editor: Monaco.editor.IStandaloneCodeEditor,
     monaco: typeof Monaco
   ) => {
+    console.log('[EditorPage] Editor mounted');
     editorRef.current = editor;
     setEditor(editor);
     setMonacoInstance(monaco);
 
+    // Add our own key event listener to the editor's DOM node
+    // This will run before Monaco's handlers and allows us to prevent default behavior
+    const editorDomNode = editor.getDomNode();
+    if (editorDomNode) {
+      editorDomNode.addEventListener('keydown', (e) => {
+        // Check for Cmd+S or Ctrl+S
+        if ((e.metaKey || e.ctrlKey) && e.key === 's') {
+          console.log('[EditorPage] Intercepted Cmd+S event');
+          e.preventDefault(); // This prevents browser's save dialog
+          e.stopPropagation(); // Stop the event from propagating
+          
+          // Execute save and compile
+          saveDocument().then(saved => {
+            if (saved) handleCompile();
+          });
+          
+          return false;
+        }
+      });
+    }
+
+    // Configure suggestion actions
     // Add suggestion actions (Accept/Reject in context menu)
     editor.addAction({
       id: 'accept-suggestion',
@@ -589,25 +612,16 @@ export default function EditorPage() {
       },
     });
 
-    // Listener for selection change (updates state for the button)
+    // Add selection change listener for floating button
     editor.onDidChangeCursorSelection((e) => {
-      if (e.selection.isEmpty()) {
-        setShowButton(false);
-        setSelectedText('');
-      } else {
-        debouncedCursorSelection(editor);
-      }
+      debouncedCursorSelection(editor);
     });
 
-    // Add scroll event listener to hide button when editor is scrolled
-    editor.onDidScrollChange(() => {
-      setShowButton(false);
-    });
-
-    // Cmd+B shortcut - calls handleCopy which now sets textForChatInput
+    // Original Cmd+B command for text selection remains
     editor.addCommand(
       monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyB,
       () => {
+        console.log('[EditorPage] Cmd+B command triggered.');
         const currentEditor = editorRef.current;
         if (!currentEditor) {
           console.error('[EditorPage] Cmd+B Error: editorRef is not set.');

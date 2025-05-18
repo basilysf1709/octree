@@ -94,8 +94,9 @@ export default function EditorPage() {
 
         if (data) {
           console.log('[EditorPage] Document loaded successfully');
+          const documentContent = data.content || '';
           setTitle(data.title || '');
-          setContent(data.content || '');
+          setContent(documentContent);
           setLastSaved(new Date());
           
           // Schedule compilation after state updates have been applied
@@ -103,7 +104,7 @@ export default function EditorPage() {
             if (!initialCompileRef.current && !compiling) {
               console.log('[EditorPage] Triggering initial compilation');
               initialCompileRef.current = true;
-              handleCompile();
+              handleCompile(documentContent);
             }
           }, 500);
         }
@@ -116,25 +117,28 @@ export default function EditorPage() {
   }, [documentId, supabase]);
 
   // Simplified handleCompile function
-  const handleCompile = async () => {
+  const handleCompile = async (contentToCompile?: string) => {
     if (compiling) {
       console.log('[EditorPage] Already compiling, skipping request');
       return;
     }
+    
+    // Use provided content or fall back to state
+    const contentToUse = contentToCompile !== undefined ? contentToCompile : content;
     
     console.log('[EditorPage] Starting compilation');
     setCompiling(true);
     
     try {
       // Save the document first
-      await saveDocument();
+      await saveDocument(contentToUse);
       
       // Then compile
       console.log('[EditorPage] Sending compilation request');
       const response = await fetch('/api/compilePDF', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content }),
+        body: JSON.stringify({ content: contentToUse }),
       });
       
       console.log('[EditorPage] Compilation response status:', response.status);
@@ -162,8 +166,11 @@ export default function EditorPage() {
   };
 
   // New function to save document
-  const saveDocument = async (): Promise<boolean> => {
+  const saveDocument = async (contentToSave?: string): Promise<boolean> => {
     if (!documentId) return false;
+    
+    // Use provided content or fall back to state
+    const contentToUse = contentToSave !== undefined ? contentToSave : content;
 
     try {
       setIsSaving(true);
@@ -171,13 +178,18 @@ export default function EditorPage() {
       const { error } = await supabase
         .from('documents')
         .update({
-          content: content,
+          content: contentToUse,
           updated_at: new Date().toISOString(),
         })
         .eq('id', documentId);
 
       if (error) throw error;
 
+      // Update state if we used a different content
+      if (contentToSave !== undefined && contentToSave !== content) {
+        setContent(contentToSave);
+      }
+      
       setLastSaved(new Date());
       return true;
     } catch (error) {
@@ -194,13 +206,16 @@ export default function EditorPage() {
     setExportingPDF(true);
 
     try {
+      // Get the latest content
+      const currentContent = editor?.getValue() || content;
+      
       // Save document in the background
-      const savePromise = saveDocument();
+      const savePromise = saveDocument(currentContent);
 
       const response = await fetch('/api/compilePDF', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content }),
+        body: JSON.stringify({ content: currentContent }),
       });
 
       // Wait for save to complete in background
@@ -579,9 +594,12 @@ export default function EditorPage() {
           e.preventDefault(); // This prevents browser's save dialog
           e.stopPropagation(); // Stop the event from propagating
           
-          // Execute save and compile
-          saveDocument().then(saved => {
-            if (saved) handleCompile();
+          // Get the current content directly from the editor
+          const currentContent = editor.getValue();
+          
+          // Execute save and compile with current content
+          saveDocument(currentContent).then(saved => {
+            if (saved) handleCompile(currentContent);
           });
           
           return false;
@@ -691,7 +709,7 @@ export default function EditorPage() {
               <Button
                 variant="ghost"
                 size="xs"
-                onClick={handleCompile}
+                onClick={() => handleCompile()}
                 disabled={compiling}
               >
                 {compiling ? (

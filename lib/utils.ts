@@ -8,7 +8,7 @@ export function cn(...inputs: ClassValue[]) {
 export const getBaseUrl = () => {
   return process.env.ENVIRONMENT === 'dev'
     ? 'http://localhost:3000'
-    : 'https://useoctree.com';
+    : 'https://app.useoctree.com';
 };
 
 export const initialContent = `\\documentclass{article}

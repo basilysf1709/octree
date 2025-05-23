@@ -15,8 +15,8 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/auth', request.url));
   }
 
-  // If user is signed in and trying to access auth page, redirect to dashboard
-  if (session && request.nextUrl.pathname.startsWith('/auth')) {
+  // If user is signed in and trying to access auth page or root, redirect to dashboard
+  if (session && (request.nextUrl.pathname === '/' || request.nextUrl.pathname.startsWith('/auth'))) {
     return NextResponse.redirect(new URL('/dashboard', request.url));
   }
 
@@ -24,5 +24,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/dashboard/:path*', '/auth/:path*', '/auth'],
+  matcher: ['/', '/dashboard/:path*', '/auth/:path*', '/auth'],
 };

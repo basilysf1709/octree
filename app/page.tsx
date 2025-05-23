@@ -68,7 +68,7 @@ export default function Home() {
     setIsLoading(true);
     await supabase.auth.signOut();
     setIsLoading(false);
-    window.location.href = '/';
+    window.location.href = 'https://www.useoctree.com';
   };
 
   const handleSubscribe = async (priceId: string) => {

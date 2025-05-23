@@ -37,7 +37,7 @@ export default function AuthPage() {
     return () => {
       subscription.unsubscribe();
     };
-  }, [supabase, router]);
+  }, [supabase]);
 
   return (
     <div className="min-h-screen bg-blue-50">

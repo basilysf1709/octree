@@ -45,7 +45,7 @@ export default function AuthPage() {
       <nav className="border-b border-blue-100 bg-white">
         <div className="container mx-auto px-4">
           <div className="flex h-16 items-center">
-            <Link href="/" className="flex items-center space-x-2">
+            <Link href="/dashboard" className="flex items-center space-x-2">
               <OctreeLogo className="h-8 w-8 text-blue-600" />
               <span className="text-xl font-bold text-blue-900">Octree</span>
             </Link>

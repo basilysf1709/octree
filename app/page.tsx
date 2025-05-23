@@ -538,7 +538,7 @@ export default function Home() {
         <div className="container mx-auto px-4">
           <div className="mb-12 grid grid-cols-2 gap-12 md:grid-cols-5">
             <div className="col-span-2">
-              <Link href="/" className="mb-6 flex items-center space-x-2">
+              <Link href="/dashboard" className="mb-6 flex items-center space-x-2">
                 <OctreeLogo className="h-10 w-10 text-white" />
                 <span className="text-2xl font-bold text-white">Octree</span>
               </Link>

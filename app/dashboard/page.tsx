@@ -91,7 +91,7 @@ export default function Dashboard() {
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
-    router.push('/dashboard');
+    window.location.href = 'https://www.useoctree.com';
   };
 
   const handleCreateClick = () => {

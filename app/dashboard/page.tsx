@@ -1,6 +1,5 @@
 'use client';
 
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
@@ -16,6 +15,7 @@ import { OctreeLogo } from '@/components/icons/octree-logo';
 import { Trash2 } from 'lucide-react';
 import { DeleteDialog } from '@/components/ui/delete-dialog';
 import { CreateDocumentDialog } from '@/components/ui/create-document-dialog';
+import { createClient } from '@/utils/supabase/client';
 
 interface Document {
   id: string;
@@ -24,7 +24,7 @@ interface Document {
 }
 
 export default function Dashboard() {
-  const supabase = createClientComponentClient();
+  const supabase = createClient();
   const router = useRouter();
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
@@ -41,31 +41,18 @@ export default function Dashboard() {
   const [createDialog, setCreateDialog] = useState(false);
 
   useEffect(() => {
-    const fetchSubscriptionStatus = async () => {
-      try {
-        const response = await fetch('/api/check-subscription');
-
-        const data = await response.json();
-        console.log('Subscription status:', data);
-      } catch (error) {
-        console.error('Error checking subscription:', error);
-      }
-    };
-    fetchSubscriptionStatus();
-  }, []);
-
-  useEffect(() => {
     const fetchUserAndDocuments = async () => {
       const {
         data: { session },
       } = await supabase.auth.getSession();
 
+      console.log('session', session);
+
       if (!session) {
-        router.push('/auth');
+        router.push('/login');
         return;
       }
 
-      // Get user name
       const { data: profile } = await supabase
         .from('profiles')
         .select('display_name')
@@ -85,13 +72,11 @@ export default function Dashboard() {
       }
       setLoading(false);
     };
-
     fetchUserAndDocuments();
   }, [router, supabase]);
 
   const handleSignOut = async () => {
-    await supabase.auth.signOut();
-    window.location.href = 'https://www.useoctree.com';
+    console.log('Signing out');
   };
 
   const handleCreateClick = () => {
@@ -104,25 +89,16 @@ export default function Dashboard() {
         data: { session },
       } = await supabase.auth.getSession();
 
-      const { data, error } = await supabase
-        .from('documents')
-        .insert([
-          {
-            title,
-            content:
-              '\\documentclass{article}\n\\begin{document}\n\nHello LaTeX!\n\n\\end{document}',
-            owner_id: session?.user.id,
-          },
-        ])
-        .select()
-        .single();
+      const { data, error } = await supabase.from('documents').insert([
+        {
+          title,
+          content:
+            '\\documentclass{article}\n\\begin{document}\n\nHello LaTeX!\n\n\\end{document}',
+          owner_id: session?.user.id,
+        },
+      ]);
 
-      if (error) throw error;
-
-      if (data) {
-        setCreateDialog(false);
-        router.push(`/editor/${data.id}`);
-      }
+      console.log('error', error);
     } catch (error) {
       console.error('Error creating document:', error);
     }

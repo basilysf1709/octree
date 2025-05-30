@@ -4,7 +4,6 @@ import Link from 'next/link';
 import { OctreeLogo } from '@/components/icons/octree-logo';
 import { useState, useEffect } from 'react';
 import { Loader2, Play, CheckCircle } from 'lucide-react';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { motion } from 'framer-motion';
 import Markdown from 'react-markdown';
 
@@ -24,30 +23,6 @@ export default function Home() {
   const [subscriptionPlans, setSubscriptionPlans] = useState<
     SubscriptionPlan[]
   >([]);
-  const supabase = createClientComponentClient();
-
-  // Check authentication status on mount
-  useEffect(() => {
-    const checkAuth = async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      setIsSignedIn(!!session);
-    };
-
-    checkAuth();
-
-    // Set up listener for auth changes
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setIsSignedIn(!!session);
-    });
-
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, [supabase.auth]);
 
   // Fetch subscription plans on mount
   useEffect(() => {
@@ -65,10 +40,7 @@ export default function Home() {
   }, []);
 
   const handleSignOut = async () => {
-    setIsLoading(true);
-    await supabase.auth.signOut();
-    setIsLoading(false);
-    window.location.href = 'https://www.useoctree.com';
+    console.log('Signing out');
   };
 
   const handleSubscribe = async (priceId: string) => {
@@ -538,7 +510,10 @@ export default function Home() {
         <div className="container mx-auto px-4">
           <div className="mb-12 grid grid-cols-2 gap-12 md:grid-cols-5">
             <div className="col-span-2">
-              <Link href="/dashboard" className="mb-6 flex items-center space-x-2">
+              <Link
+                href="/dashboard"
+                className="mb-6 flex items-center space-x-2"
+              >
                 <OctreeLogo className="h-10 w-10 text-white" />
                 <span className="text-2xl font-bold text-white">Octree</span>
               </Link>

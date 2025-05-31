@@ -77,7 +77,7 @@ export default function Dashboard() {
         data: { session },
       } = await supabase.auth.getSession();
 
-      const { data, error } = await supabase.from('documents').insert([
+      await supabase.from('documents').insert([
         {
           title,
           content:

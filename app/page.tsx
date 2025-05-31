@@ -77,14 +77,25 @@ export default function Dashboard() {
         data: { session },
       } = await supabase.auth.getSession();
 
-      await supabase.from('documents').insert([
-        {
-          title,
-          content:
-            '\\documentclass{article}\n\\begin{document}\n\nHello LaTeX!\n\n\\end{document}',
-          owner_id: session?.user.id,
-        },
-      ]);
+      const { data, error } = await supabase
+        .from('documents')
+        .insert([
+          {
+            title,
+            content:
+              '\\documentclass{article}\n\\begin{document}\n\nHello LaTeX!\n\n\\end{document}',
+            owner_id: session?.user.id,
+          },
+        ])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      if (data) {
+        setCreateDialog(false);
+        router.push(`/editor/${data.id}`);
+      }
     } catch (error) {
       console.error('Error creating document:', error);
     }

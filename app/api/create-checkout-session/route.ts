@@ -20,7 +20,7 @@ export async function POST(request: Request) {
           quantity: 1,
         },
       ],
-      success_url: `${baseUrl}/dashboard?success=true`,
+      success_url: `${baseUrl}/?success=true`,
       cancel_url: `${baseUrl}`,
     });
 

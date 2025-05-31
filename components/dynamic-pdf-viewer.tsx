@@ -37,7 +37,6 @@ function DynamicPDFViewer({ pdfData, isLoading = false }: PDFViewerProps) {
       1,
       Math.min(numPages || 1, pageNumber + offset)
     );
-    console.log(`Changing page from ${pageNumber} to ${newPageNumber}`);
     setPageNumber(newPageNumber);
     setPageLoading(true);
   }

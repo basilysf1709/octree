@@ -12,7 +12,7 @@ pdfjs.GlobalWorkerOptions.workerSrc = new URL(
 ).toString();
 
 // Dynamically import the PDF components with no SSR
-const DynamicPDFViewer = dynamic(() => import('./DynamicPDFViewer'), { 
+const DynamicPDFViewer = dynamic(() => import('@/components/dynamic-pdf-viewer'), { 
   ssr: false,
   loading: () => (
     <div className="flex h-full items-center justify-center">

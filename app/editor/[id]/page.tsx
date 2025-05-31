@@ -13,8 +13,7 @@ import { Chat } from '@/components/chat';
 import { EditSuggestion } from '@/types/edit';
 import { Check, X, Loader2 } from 'lucide-react';
 import type * as Monaco from 'monaco-editor';
-import PDFViewer from '@/components/PDFViewer';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import PDFViewer from '@/components/pdf-viewer';
 import { useParams } from 'next/navigation';
 import { ButtonGroup, ButtonGroupItem } from '@/components/ui/button-group';
 import {
@@ -27,10 +26,11 @@ import {
 } from '@/components/ui/breadcrumb';
 import { initialContent } from '@/lib/utils';
 import { useDebouncedCallback } from 'use-debounce';
+import { createClient } from '@/lib/supabase/client';
 
 export default function EditorPage() {
   // Add Supabase client and params
-  const supabase = createClientComponentClient();
+  const supabase = createClient();
   const params = useParams();
   const documentId = params.id as string;
 
@@ -41,7 +41,6 @@ export default function EditorPage() {
   const [showButton, setShowButton] = useState(false);
   const [selectedText, setSelectedText] = useState('');
   const [textFromEditor, setTextFromEditor] = useState<string | null>(null);
-  const [textForChatInput, setTextForChatInput] = useState<string | null>(null);
 
   // Add editor ref
   const editorRef = useRef<Monaco.editor.IStandaloneCodeEditor | null>(null);
@@ -82,8 +81,6 @@ export default function EditorPage() {
       if (!documentId) return;
 
       try {
-        console.log('[EditorPage] Fetching document:', documentId);
-        
         const { data, error } = await supabase
           .from('documents')
           .select('content, title')
@@ -93,16 +90,14 @@ export default function EditorPage() {
         if (error) throw error;
 
         if (data) {
-          console.log('[EditorPage] Document loaded successfully');
           const documentContent = data.content || '';
           setTitle(data.title || '');
           setContent(documentContent);
           setLastSaved(new Date());
-          
+
           // Schedule compilation after state updates have been applied
           setTimeout(() => {
             if (!initialCompileRef.current && !compiling) {
-              console.log('[EditorPage] Triggering initial compilation');
               initialCompileRef.current = true;
               handleCompile(documentContent);
             }
@@ -119,39 +114,33 @@ export default function EditorPage() {
   // Simplified handleCompile function
   const handleCompile = async (contentToCompile?: string) => {
     if (compiling) {
-      console.log('[EditorPage] Already compiling, skipping request');
       return;
     }
-    
+
     // Use provided content or fall back to state
-    const contentToUse = contentToCompile !== undefined ? contentToCompile : content;
-    
-    console.log('[EditorPage] Starting compilation');
+    const contentToUse =
+      contentToCompile !== undefined ? contentToCompile : content;
+
     setCompiling(true);
-    
+
     try {
       // Save the document first
       await saveDocument(contentToUse);
-      
+
       // Then compile
-      console.log('[EditorPage] Sending compilation request');
-      const response = await fetch('/api/compilePDF', {
+      const response = await fetch('/api/compile-pdf', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ content: contentToUse }),
       });
-      
-      console.log('[EditorPage] Compilation response status:', response.status);
-      
+
       if (!response.ok) {
         throw new Error(`Compilation failed with status ${response.status}`);
       }
-      
+
       const data = await response.json();
-      console.log('[EditorPage] Compilation response received:', data ? 'has data' : 'empty');
-      
+
       if (data.pdf) {
-        console.log('[EditorPage] Setting PDF data, length:', data.pdf.length);
         setPdfData(data.pdf);
       } else {
         console.error('[EditorPage] No PDF data in response');
@@ -160,7 +149,6 @@ export default function EditorPage() {
     } catch (error) {
       console.error('[EditorPage] Compilation error:', error);
     } finally {
-      console.log('[EditorPage] Compilation completed');
       setCompiling(false);
     }
   };
@@ -168,7 +156,7 @@ export default function EditorPage() {
   // New function to save document
   const saveDocument = async (contentToSave?: string): Promise<boolean> => {
     if (!documentId) return false;
-    
+
     // Use provided content or fall back to state
     const contentToUse = contentToSave !== undefined ? contentToSave : content;
 
@@ -189,7 +177,7 @@ export default function EditorPage() {
       if (contentToSave !== undefined && contentToSave !== content) {
         setContent(contentToSave);
       }
-      
+
       setLastSaved(new Date());
       return true;
     } catch (error) {
@@ -208,11 +196,11 @@ export default function EditorPage() {
     try {
       // Get the latest content
       const currentContent = editor?.getValue() || content;
-      
+
       // Save document in the background
       const savePromise = saveDocument(currentContent);
 
-      const response = await fetch('/api/compilePDF', {
+      const response = await fetch('/api/compile-pdf', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ content: currentContent }),
@@ -578,7 +566,6 @@ export default function EditorPage() {
     editor: Monaco.editor.IStandaloneCodeEditor,
     monaco: typeof Monaco
   ) => {
-    console.log('[EditorPage] Editor mounted');
     editorRef.current = editor;
     setEditor(editor);
     setMonacoInstance(monaco);
@@ -590,18 +577,17 @@ export default function EditorPage() {
       editorDomNode.addEventListener('keydown', (e) => {
         // Check for Cmd+S or Ctrl+S
         if ((e.metaKey || e.ctrlKey) && e.key === 's') {
-          console.log('[EditorPage] Intercepted Cmd+S event');
           e.preventDefault(); // This prevents browser's save dialog
           e.stopPropagation(); // Stop the event from propagating
-          
+
           // Get the current content directly from the editor
           const currentContent = editor.getValue();
-          
+
           // Execute save and compile with current content
-          saveDocument(currentContent).then(saved => {
+          saveDocument(currentContent).then((saved) => {
             if (saved) handleCompile(currentContent);
           });
-          
+
           return false;
         }
       });
@@ -639,7 +625,6 @@ export default function EditorPage() {
     editor.addCommand(
       monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyB,
       () => {
-        console.log('[EditorPage] Cmd+B command triggered.');
         const currentEditor = editorRef.current;
         if (!currentEditor) {
           console.error('[EditorPage] Cmd+B Error: editorRef is not set.');
@@ -673,7 +658,7 @@ export default function EditorPage() {
           <Breadcrumb className="absolute top-1 left-1/2 -translate-x-1/2">
             <BreadcrumbList>
               <BreadcrumbItem>
-                <BreadcrumbLink href="/dashboard">Documents</BreadcrumbLink>
+                <BreadcrumbLink href="/">Documents</BreadcrumbLink>
               </BreadcrumbItem>
 
               <BreadcrumbSeparator />

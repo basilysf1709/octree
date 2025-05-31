@@ -59,10 +59,6 @@ export function Chat({
           : 0;
         referenceNewStartLine = parseInt(headerMatch[3], 10);
         referenceNewCount = headerMatch[4] ? parseInt(headerMatch[4], 10) : 0;
-        console.log('Reference Start Line:', referenceStartLine);
-        console.log('Reference Original Count:', referenceOriginalCount);
-        console.log('Reference New Start Line:', referenceNewStartLine);
-        console.log('Reference New Count:', referenceNewCount);
 
         let actualOriginalLineCount = 0;
         let firstChangeIndex = -1;

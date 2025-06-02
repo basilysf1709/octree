@@ -137,7 +137,7 @@ export function Chat({
   });
 
   useEffect(() => {
-    setInput(`Attached from editor: ${textFromEditor} ` + userInput);
+    setInput(textFromEditor ? `Attached from editor: ${textFromEditor} ` + userInput : userInput);
   }, [textFromEditor, userInput, setInput]);
 
   useEffect(() => {

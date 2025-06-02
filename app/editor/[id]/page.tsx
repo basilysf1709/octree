@@ -27,6 +27,7 @@ import {
 import { initialContent } from '@/lib/utils';
 import { useDebouncedCallback } from 'use-debounce';
 import { createClient } from '@/lib/supabase/client';
+import { DiffViewer } from '@/components/ui/diff-viewer';
 
 export default function EditorPage() {
   // Add Supabase client and params
@@ -782,25 +783,39 @@ export default function EditorPage() {
               </Button>
             )}
 
-            {/* Suggestion Actions */}
-            <div className="absolute top-1 right-3 z-50 space-y-2">
+            {/* Enhanced Suggestion Actions with Diff View */}
+            <div className="absolute top-1 right-3 z-50 space-y-2 max-w-[400px]">
               {editSuggestions
                 .filter((s) => s.status === 'pending')
                 .map((suggestion) => (
                   <div
                     key={suggestion.id}
-                    className="flex flex-col gap-2 rounded-lg border border-blue-100 bg-white p-3 shadow-lg"
+                    className="flex flex-col gap-3 rounded-lg border border-blue-200 bg-white p-4 shadow-xl backdrop-blur-sm"
                   >
-                    <div className="text-sm text-blue-600">
-                      Lines {suggestion.startLine}-
-                      {suggestion.startLine + suggestion.originalLineCount - 1}
+                    <div className="flex items-center justify-between">
+                      <div className="text-sm font-medium text-blue-700">
+                        Lines {suggestion.startLine}
+                        {suggestion.originalLineCount > 1 && 
+                          `-${suggestion.startLine + suggestion.originalLineCount - 1}`
+                        }
+                      </div>
+                      <div className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
+                        AI Suggestion
+                      </div>
                     </div>
+                    
+                    <DiffViewer 
+                      original={suggestion.original}
+                      suggested={suggestion.suggested}
+                      className="max-w-full"
+                    />
+
                     <div className="flex items-center gap-2">
                       <Button
                         size="sm"
                         variant="ghost"
                         onClick={() => handleAcceptEdit(suggestion.id)}
-                        className="flex-1 border border-green-200 text-green-600 hover:bg-green-50"
+                        className="flex-1 border border-green-200 text-green-700 hover:bg-green-50 hover:border-green-300"
                       >
                         <Check size={14} className="mr-1" />
                         Accept
@@ -809,7 +824,7 @@ export default function EditorPage() {
                         size="sm"
                         variant="ghost"
                         onClick={() => handleRejectEdit(suggestion.id)}
-                        className="flex-1 border border-red-200 text-red-600 hover:bg-red-50"
+                        className="flex-1 border border-red-200 text-red-700 hover:bg-red-50 hover:border-red-300"
                       >
                         <X size={14} className="mr-1" />
                         Reject

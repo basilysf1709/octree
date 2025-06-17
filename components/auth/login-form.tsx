@@ -111,7 +111,7 @@ export function LoginForm({
                 />
               </div>
               <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? 'Logging in...' : 'Login'}
+                Login
               </Button>
             </div>
           </form>
@@ -125,7 +125,7 @@ export function LoginForm({
                 disabled={isLoading}
               >
                 <GoogleLogo />
-                {isLoading ? 'Logging in...' : 'Continue with Google'}
+                Continue with Google
               </Button>
             </div>
           </form>

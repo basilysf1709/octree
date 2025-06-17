@@ -18,7 +18,7 @@ export default function Navbar({ userName }: NavbarProps) {
             </Link>
           </div>
           <div className="flex items-center space-x-6">
-            <span className="text-blue-600">Welcome, {userName}</span>
+            <span className="font-medium text-neutral-900">{userName}</span>
             <LogoutButton />
           </div>
         </div>

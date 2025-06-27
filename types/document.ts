@@ -1,9 +1,3 @@
-export type Document = {
-  id: string;
-  title: string;
-  updated_at: string;
-};
+import { Tables } from '@/database.types';
 
-export type DocumentsTableProps = {
-  onDelete: (docId: string, title: string) => void;
-};
+export type Document = Tables<'documents'>;

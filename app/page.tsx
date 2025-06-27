@@ -74,13 +74,17 @@ export default function Dashboard() {
         data: { session },
       } = await supabase.auth.getSession();
 
+      if (!session?.user.id) {
+        throw new Error('User not authenticated');
+      }
+
       const { data, error } = await supabase
         .from('documents')
         .insert([
           {
             title,
             content: defaultLatexContent,
-            owner_id: session?.user.id,
+            owner_id: session.user.id,
           },
         ])
         .select()
@@ -110,6 +114,7 @@ export default function Dashboard() {
 
     try {
       setIsDeleting(true);
+
       const { error } = await supabase
         .from('documents')
         .delete()
@@ -134,10 +139,10 @@ export default function Dashboard() {
       <main className="container mx-auto px-4 py-8">
         <div className="mb-8 flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-semibold text-neutral-900">
+            <h1 className="text-lg font-semibold text-neutral-900">
               Documents
             </h1>
-            <p className="text-neutral-600">
+            <p className="text-sm text-neutral-500">
               Manage and edit your LaTeX documents
             </p>
           </div>

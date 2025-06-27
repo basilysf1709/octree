@@ -12,7 +12,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Document, DocumentsTableProps } from '@/types/document';
+import { Document } from '@/types/document';
+
+type DocumentsTableProps = {
+  onDelete: (docId: string, title: string) => void;
+};
 
 export const columns = ({
   onDelete,

@@ -1,6 +1,12 @@
 import Link from 'next/link';
 import { OctreeLogo } from '@/components/icons/octree-logo';
 import { LogoutButton } from '@/components/auth/logout-button';
+import { DM_Sans } from 'next/font/google';
+
+const dmSans = DM_Sans({
+  subsets: ['latin'],
+  weight: ['700'],
+});
 
 type NavbarProps = {
   userName: string | null;
@@ -14,7 +20,11 @@ export default function Navbar({ userName }: NavbarProps) {
           <div className="flex items-center">
             <Link href="/" className="flex items-center space-x-2">
               <OctreeLogo className="h-8 w-8 text-blue-600" />
-              <span className="text-xl font-bold text-blue-900">Octree</span>
+              <span
+                className={`text-xl font-bold tracking-tight text-blue-900 ${dmSans.className}`}
+              >
+                Octree
+              </span>
             </Link>
           </div>
           <div className="flex items-center space-x-6">

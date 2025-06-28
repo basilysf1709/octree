@@ -1,10 +1,10 @@
-/* eslint-disable */
 import { NextResponse } from 'next/server';
 import { exec } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 import { promisify } from 'util';
 import { v4 as uuidv4 } from 'uuid';
+import { createClient } from '@/lib/supabase/server';
 
 const execAsync = promisify(exec);
 
@@ -72,9 +72,12 @@ export async function POST(request: Request) {
       // Create a unique ID for this compilation
       const compilationId = uuidv4();
 
-      // Create temp directory in /tmp to work with Docker
-      const tempDir = path.join('/tmp', compilationId);
+      // Create temp directory at project root to work with Docker
+      const tempDir = path.join(process.cwd(), 'tmp', compilationId);
       fs.mkdirSync(tempDir, { recursive: true });
+
+      // Download files from supabase
+      // const supabase = await createClient();
 
       // Write the LaTeX content to a file
       const texFilePath = path.join(tempDir, 'main.tex');

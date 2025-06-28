@@ -24,7 +24,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
-import { initialContent } from '@/lib/utils';
+import { cn, initialContent } from '@/lib/utils';
 import { useDebouncedCallback } from 'use-debounce';
 import { createClient } from '@/lib/supabase/client';
 import { DiffViewer } from '@/components/ui/diff-viewer';
@@ -704,7 +704,17 @@ export default function EditorPage() {
                     Compiling
                   </>
                 ) : (
-                  'Compile'
+                  <>
+                    Compile
+                    <span
+                      data-slot="dropdown-menu-shortcut"
+                      className={cn(
+                        'text-muted-foreground ml-auto text-xs tracking-widest'
+                      )}
+                    >
+                      ⌘S
+                    </span>
+                  </>
                 )}
               </Button>
               <Button
@@ -784,7 +794,7 @@ export default function EditorPage() {
             )}
 
             {/* Enhanced Suggestion Actions with Diff View */}
-            <div className="absolute top-1 right-3 z-50 space-y-2 max-w-[400px]">
+            <div className="absolute top-1 right-3 z-50 max-w-[400px] space-y-2">
               {editSuggestions
                 .filter((s) => s.status === 'pending')
                 .map((suggestion) => (
@@ -795,16 +805,15 @@ export default function EditorPage() {
                     <div className="flex items-center justify-between">
                       <div className="text-sm font-medium text-blue-700">
                         Lines {suggestion.startLine}
-                        {suggestion.originalLineCount > 1 && 
-                          `-${suggestion.startLine + suggestion.originalLineCount - 1}`
-                        }
+                        {suggestion.originalLineCount > 1 &&
+                          `-${suggestion.startLine + suggestion.originalLineCount - 1}`}
                       </div>
-                      <div className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
+                      <div className="rounded bg-gray-100 px-2 py-1 text-xs text-gray-500">
                         AI Suggestion
                       </div>
                     </div>
-                    
-                    <DiffViewer 
+
+                    <DiffViewer
                       original={suggestion.original}
                       suggested={suggestion.suggested}
                       className="max-w-full"
@@ -815,7 +824,7 @@ export default function EditorPage() {
                         size="sm"
                         variant="ghost"
                         onClick={() => handleAcceptEdit(suggestion.id)}
-                        className="flex-1 border border-green-200 text-green-700 hover:bg-green-50 hover:border-green-300"
+                        className="flex-1 border border-green-200 text-green-700 hover:border-green-300 hover:bg-green-50"
                       >
                         <Check size={14} className="mr-1" />
                         Accept
@@ -824,7 +833,7 @@ export default function EditorPage() {
                         size="sm"
                         variant="ghost"
                         onClick={() => handleRejectEdit(suggestion.id)}
-                        className="flex-1 border border-red-200 text-red-700 hover:bg-red-50 hover:border-red-300"
+                        className="flex-1 border border-red-200 text-red-700 hover:border-red-300 hover:bg-red-50"
                       >
                         <X size={14} className="mr-1" />
                         Reject

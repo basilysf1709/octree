@@ -12,7 +12,7 @@ import { cn } from '@/lib/utils';
 import { Textarea } from './ui/textarea';
 
 interface ChatProps {
-  onEditSuggestion: (edit: EditSuggestion) => void;
+  onEditSuggestion: (edit: EditSuggestion | string | (string | EditSuggestion)[]) => void;
   fileContent: string;
   textFromEditor: string | null;
   setTextFromEditor: (text: string | null) => void;
@@ -32,10 +32,11 @@ export function Chat({
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const [userInput, setUserInput] = useState<string>('');
 
-  const parseEditSuggestions = (content: string): string => {
+  const parseEditSuggestions = (content: string): (string | EditSuggestion)[] => {
     const editRegex = /```latex-diff\n([\s\S]*?)\n```/g;
     let match;
     let cleanContent = content;
+    const suggestions: EditSuggestion[] = [];
 
     while ((match = editRegex.exec(content)) !== null) {
       const diffBlockContent = match[1];
@@ -78,12 +79,6 @@ export function Chat({
             if (firstChangeIndex === -1) {
               firstChangeIndex = i - 1;
             }
-          } else if (line.startsWith(' ')) {
-            // Context line - important for finding the *real* start line
-            // If we haven't found a change yet, this context line pushes the start further
-            // No action needed here for count, but helps visualize firstChangeIndex logic
-          } else if (line.trim() !== '') {
-            console.warn("Diff line doesn't start with space, +, or -:", line);
           }
         }
 
@@ -104,7 +99,7 @@ export function Chat({
             originalLineCount: actualOriginalLineCount,
             status: 'pending',
           };
-          onEditSuggestion(suggestion);
+          suggestions.push(suggestion);
         }
       } else {
         console.error('Could not parse diff header:', lines[0]);
@@ -112,7 +107,12 @@ export function Chat({
 
       cleanContent = cleanContent.replace(match[0], '');
     }
-    return cleanContent.trim();
+    // Only show the first suggestion now, return the rest for queueing
+    if (suggestions.length > 0) {
+      // Always pass all suggestions as an array
+      return suggestions.map(s => JSON.stringify(s));
+    }
+    return [];
   };
 
   const {
@@ -127,12 +127,15 @@ export function Chat({
       fileContent: fileContent,
     },
     onFinish(message) {
-      const cleanedContent = parseEditSuggestions(message.content);
+      const allSuggestions = parseEditSuggestions(message.content);
       setMessages((prev) =>
         prev.map((m) =>
-          m.id === message.id ? { ...m, content: cleanedContent } : m
+          m.id === message.id ? { ...m, content: '' } : m
         )
       );
+      if (allSuggestions.length > 0) {
+        onEditSuggestion(allSuggestions);
+      }
     },
   });
 

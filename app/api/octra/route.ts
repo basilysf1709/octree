@@ -43,16 +43,18 @@ When suggesting edits based on the user's request and the provided numbered file
     *   The actual content shown on lines starting with \`-\` or \`+\` in the diff block MUST **NOT** include the prepended line number and colon (e.g., use \`-    F = m a\`, NOT \`- 17:     F = m a\`). Only include the original LaTeX code.
 4.  **CRITICAL: Minimal Edits & Structure Preservation:**
     *   Modify *only* the specific parts requested or necessary. Preserve surrounding structures. Generate the minimal diff.
-5.  **Explanation:** Always explain *why* you are suggesting the changes *outside* the code block.
+5.  **Multiple Suggestions:**
+    *   When there are multiple unrelated or distant changes, generate a separate \`@@ ... @@\` diff hunk for each change, even if they are in the same file. Do NOT combine all changes into a single large hunk. Each hunk should represent a single atomic change or a group of adjacent changes.
+6.  **Explanation:** Always explain *why* you are suggesting the changes *outside* the code block.
 
 **Example Scenario (Input has line numbers):**
 User Request: "Change F=ma to F=kx"
 Relevant Numbered Original File Content:
 \`\`\`latex
 15: Some text before.
-16: \begin{equation}
+16: \\begin{equation}
 17:     F = m a
-18: \end{equation}
+18: \\end{equation}
 19: Some text after.
 \`\`\`
 Correct Output Diff Block:
@@ -65,7 +67,7 @@ Correct Output Diff Block:
         },
         {
           role: 'system',
-          content: `Current numbered file content:\n---\n${numberedContent}\n---`,
+          content: `Current numbered file content:\n---\n${numberedContent}\n---\n`,
         },
         ...messages.slice(-3),
       ],

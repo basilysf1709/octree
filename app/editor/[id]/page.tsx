@@ -65,6 +65,7 @@ export default function EditorPage() {
   const [compiling, setCompiling] = useState(false);
   const [pdfData, setPdfData] = useState<string | null>(null);
   const [editSuggestions, setEditSuggestions] = useState<EditSuggestion[]>([]);
+  const suggestionQueueRef = useRef<EditSuggestion[]>([]);
   const [editor, setEditor] =
     useState<Monaco.editor.IStandaloneCodeEditor | null>(null);
   const [monacoInstance, setMonacoInstance] = useState<typeof Monaco | null>(
@@ -257,8 +258,24 @@ export default function EditorPage() {
     }
   };
 
-  const handleEditSuggestion = (suggestion: EditSuggestion) => {
-    setEditSuggestions((prev) => [...prev, suggestion]);
+  const handleEditSuggestion = (suggestion: EditSuggestion | string) => {
+    // Accept both object and stringified suggestion
+    let parsedSuggestion: EditSuggestion;
+    if (typeof suggestion === 'string') {
+      parsedSuggestion = JSON.parse(suggestion) as EditSuggestion;
+    } else {
+      parsedSuggestion = suggestion;
+    }
+    setEditSuggestions([parsedSuggestion]);
+  };
+
+  const handleNextSuggestion = () => {
+    if (suggestionQueueRef.current.length > 0) {
+      const next = suggestionQueueRef.current.shift();
+      if (next) setEditSuggestions([next]);
+    } else {
+      setEditSuggestions([]);
+    }
   };
 
   const handleAcceptEdit = (suggestionId: string) => {
@@ -310,6 +327,7 @@ export default function EditorPage() {
           s.id === suggestionId ? { ...s, status: 'accepted' } : s
         )
       );
+      setTimeout(handleNextSuggestion, 0);
     } catch (error) {
       console.error('Error applying edit:', error);
       setEditSuggestions((prev) =>
@@ -326,6 +344,7 @@ export default function EditorPage() {
         s.id === suggestionId ? { ...s, status: 'rejected' } : s
       )
     );
+    setTimeout(handleNextSuggestion, 0);
   };
 
   const handleTextFormat = (format: 'bold' | 'italic' | 'underline') => {
@@ -854,7 +873,18 @@ export default function EditorPage() {
       <Chat
         isOpen={chatOpen}
         setIsOpen={setChatOpen}
-        onEditSuggestion={handleEditSuggestion}
+        onEditSuggestion={(suggestionArray) => {
+          // Always expect an array of stringified suggestions
+          if (Array.isArray(suggestionArray)) {
+            const [first, ...rest] = suggestionArray;
+            handleEditSuggestion(first);
+            suggestionQueueRef.current = rest.map(s => typeof s === 'string' ? JSON.parse(s) : s);
+          } else {
+            // Fallback for legacy single suggestion
+            handleEditSuggestion(suggestionArray);
+            suggestionQueueRef.current = [];
+          }
+        }}
         fileContent={content}
         textFromEditor={textFromEditor}
         setTextFromEditor={setTextFromEditor}

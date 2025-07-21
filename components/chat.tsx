@@ -128,11 +128,7 @@ export function Chat({
     },
     onFinish(message) {
       const allSuggestions = parseEditSuggestions(message.content);
-      setMessages((prev) =>
-        prev.map((m) =>
-          m.id === message.id ? { ...m, content: '' } : m
-        )
-      );
+      // Do not clear the message content so the AI response remains visible
       if (allSuggestions.length > 0) {
         onEditSuggestion(allSuggestions);
       }

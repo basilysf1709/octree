@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { OctreeLogo } from '@/components/icons/octree-logo';
-import { LogoutButton } from '@/components/auth/logout-button';
+import { UserProfileDropdown } from '@/components/user/user-profile-dropdown';
 import { DM_Sans } from 'next/font/google';
 import { cn } from '@/lib/utils';
 
@@ -32,8 +32,7 @@ export default function Navbar({ userName }: NavbarProps) {
             </Link>
           </div>
           <div className="flex items-center space-x-6">
-            <span className="font-medium text-neutral-900">{userName}</span>
-            <LogoutButton />
+            <UserProfileDropdown userName={userName} />
           </div>
         </div>
       </div>

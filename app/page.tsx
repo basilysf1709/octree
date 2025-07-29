@@ -133,11 +133,9 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="min-h-screen">
-      <Navbar userName={userName} />
-
-      <main className="container mx-auto px-4 py-8">
-        <div className="mb-8 flex items-center justify-between">
+    <div className="flex flex-col h-full">
+      <div className="flex-shrink-0 p-6 border-b">
+        <div className="flex items-center justify-between">
           <div>
             <h1 className="text-lg font-semibold text-neutral-900">
               Documents
@@ -152,12 +150,14 @@ export default function Dashboard() {
             New Document
           </Button>
         </div>
+      </div>
 
+      <div className="flex-1 p-6 overflow-auto">
         <DataTable
           columns={columns({ onDelete: handleDeleteClick })}
           data={documents}
         />
-      </main>
+      </div>
 
       <Dialog
         open={deleteDialog.isOpen}

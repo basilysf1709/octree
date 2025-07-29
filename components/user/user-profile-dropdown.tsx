@@ -71,7 +71,7 @@ export function UserProfileDropdown({ userName }: UserProfileDropdownProps) {
             Billing History
           </DropdownMenuItem>
           
-          <DropdownMenuSeparator />
+          {/* <DropdownMenuSeparator />
           
           <DropdownMenuItem 
             onClick={handleCancelSubscription}
@@ -81,7 +81,7 @@ export function UserProfileDropdown({ userName }: UserProfileDropdownProps) {
             Cancel Subscription
           </DropdownMenuItem>
           
-          <DropdownMenuSeparator />
+          <DropdownMenuSeparator /> */}
           
           <DropdownMenuItem onClick={handleLogout}>
             <LogOut className="mr-2 h-4 w-4" />

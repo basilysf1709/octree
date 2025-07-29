@@ -124,10 +124,20 @@ export function SubscriptionStatus({ className }: SubscriptionStatusProps) {
             You don't have an active subscription
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <Button asChild>
-            <a href="/pricing">Upgrade to Pro</a>
-          </Button>
+        <CardContent className="space-y-4">
+          <div className="text-sm text-neutral-600">
+            Upgrade to unlock all features and remove limitations.
+          </div>
+          <div className="flex gap-2">
+            <Button asChild>
+              <a href="https://buy.stripe.com/6oUdR9fyd8Sd6Cifd46oo00" target="_blank" rel="noopener noreferrer">
+                Subscribe Now
+              </a>
+            </Button>
+            <Button variant="outline" asChild>
+              <a href="/pricing">View Plans</a>
+            </Button>
+          </div>
         </CardContent>
       </Card>
     );

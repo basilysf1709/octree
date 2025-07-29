@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { createClient } from '@/lib/supabase/server';
 
-const stripe = new Stripe(process.env.STRIPE_TEST_SECRET_KEY!, {
+const stripe = new Stripe(process.env.STRIPE_PROD_SECRET_KEY!, {
   apiVersion: '2025-02-24.acacia',
 });
 
@@ -22,9 +22,58 @@ export async function GET() {
       );
     }
 
-    // Get the user's subscription from Stripe
+    // Try multiple methods to find the customer
+    let customer = null;
+    
+    // Method 1: Try to find by email
+    try {
+      const customersByEmail = await stripe.customers.list({
+        email: user.email,
+        limit: 1,
+      });
+      
+      if (customersByEmail.data.length > 0) {
+        customer = customersByEmail.data[0];
+        console.log('Found customer by email:', customer.id);
+      }
+    } catch (error) {
+      console.log('No customer found by email:', user.email);
+    }
+
+    // Method 2: If no customer by email, try to find by user ID in metadata
+    if (!customer) {
+      try {
+        const customersByMetadata = await stripe.customers.list({
+          limit: 100, // We'll need to search through customers
+        });
+        
+        customer = customersByMetadata.data.find(c => 
+          c.metadata?.user_id === user.id || 
+          c.metadata?.supabase_user_id === user.id
+        );
+        
+        if (customer) {
+          console.log('Found customer by metadata:', customer.id);
+        }
+      } catch (error) {
+        console.log('Error searching customers by metadata:', error);
+      }
+    }
+
+    // Method 3: If still no customer, check if user has a customer_id stored
+    if (!customer) {
+      // You might want to store customer_id in your database
+      // For now, we'll return no subscription
+      console.log('No customer found for user:', user.email);
+      return NextResponse.json({
+        hasSubscription: false,
+        subscription: null,
+      });
+    }
+
+    // Get the user's subscription from Stripe using customer ID
     const subscriptions = await stripe.subscriptions.list({
-      customer: user.email, // Using email as customer identifier
+      customer: customer.id,
       status: 'all',
       limit: 1,
     });

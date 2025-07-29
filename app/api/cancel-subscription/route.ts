@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { createClient } from '@/lib/supabase/server';
 
-const stripe = new Stripe(process.env.STRIPE_TEST_SECRET_KEY!, {
+const stripe = new Stripe(process.env.STRIPE_PROD_SECRET_KEY!, {
   apiVersion: '2025-02-24.acacia',
 });
 
@@ -22,9 +22,55 @@ export async function POST(request: Request) {
       );
     }
 
-    // Get the user's subscription from Stripe
+    // Try multiple methods to find the customer
+    let customer = null;
+    
+    // Method 1: Try to find by email
+    try {
+      const customersByEmail = await stripe.customers.list({
+        email: user.email,
+        limit: 1,
+      });
+      
+      if (customersByEmail.data.length > 0) {
+        customer = customersByEmail.data[0];
+        console.log('Found customer by email:', customer.id);
+      }
+    } catch (error) {
+      console.log('No customer found by email:', user.email);
+    }
+
+    // Method 2: If no customer by email, try to find by user ID in metadata
+    if (!customer) {
+      try {
+        const customersByMetadata = await stripe.customers.list({
+          limit: 100, // We'll need to search through customers
+        });
+        
+        customer = customersByMetadata.data.find(c => 
+          c.metadata?.user_id === user.id || 
+          c.metadata?.supabase_user_id === user.id
+        );
+        
+        if (customer) {
+          console.log('Found customer by metadata:', customer.id);
+        }
+      } catch (error) {
+        console.log('Error searching customers by metadata:', error);
+      }
+    }
+
+    // Method 3: If still no customer, return error
+    if (!customer) {
+      return NextResponse.json(
+        { error: 'No customer found for this user' },
+        { status: 404 }
+      );
+    }
+
+    // Get the user's subscription from Stripe using customer ID
     const subscriptions = await stripe.subscriptions.list({
-      customer: user.email, // Using email as customer identifier
+      customer: customer.id,
       status: 'active',
       limit: 1,
     });

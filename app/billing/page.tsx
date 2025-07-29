@@ -1,70 +1,147 @@
-import { redirect } from 'next/navigation';
-import { createClient } from '@/lib/supabase/server';
+'use client';
+
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { createClient } from '@/lib/supabase/client';
 import Navbar from '@/components/navbar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Download, FileText, Calendar } from 'lucide-react';
+import { Download, FileText, Calendar, CreditCard, Loader2 } from 'lucide-react';
 
-export default async function BillingPage() {
-  const supabase = await createClient();
+interface BillingSummary {
+  totalPaid: number;
+  invoiceCount: number;
+  nextBilling: number | null;
+}
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+interface Invoice {
+  id: string;
+  date: number;
+  amount: number;
+  status: string;
+  description: string;
+  currency: string;
+}
 
-  if (!user) {
-    redirect('/auth/login');
-  }
+interface PaymentMethod {
+  id: string;
+  type: string;
+  card: {
+    brand: string;
+    last4: string;
+    expMonth: number;
+    expYear: number;
+  } | null;
+}
 
-  // Mock billing data - in a real app, this would come from Stripe
-  const billingHistory = [
-    {
-      id: 'inv_001',
-      date: '2024-01-15',
-      amount: 2000,
-      status: 'paid',
-      description: 'Pro Plan - January 2024',
-    },
-    {
-      id: 'inv_002',
-      date: '2024-02-15',
-      amount: 2000,
-      status: 'paid',
-      description: 'Pro Plan - February 2024',
-    },
-    {
-      id: 'inv_003',
-      date: '2024-03-15',
-      amount: 2000,
-      status: 'paid',
-      description: 'Pro Plan - March 2024',
-    },
-  ];
+export default function BillingPage() {
+  const [user, setUser] = useState<any>(null);
+  const [billingData, setBillingData] = useState<{
+    billingSummary: BillingSummary;
+    invoices: Invoice[];
+    paymentMethods: PaymentMethod[];
+  } | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
+  useEffect(() => {
+    const fetchUserAndBillingData = async () => {
+      try {
+        const supabase = createClient();
+        const { data: { session } } = await supabase.auth.getSession();
+
+        if (!session) {
+          router.push('/auth/login');
+          return;
+        }
+
+        setUser(session.user);
+
+        // Fetch billing data
+        const response = await fetch('/api/billing');
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || 'Failed to fetch billing data');
+        }
+
+        setBillingData(data);
+      } catch (error) {
+        setError(error instanceof Error ? error.message : 'An error occurred');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchUserAndBillingData();
+  }, [router]);
+
+  const formatDate = (timestamp: number) => {
+    return new Date(timestamp * 1000).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
     });
   };
 
-  const formatAmount = (amount: number) => {
+  const formatAmount = (amount: number, currency: string = 'usd') => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
-      currency: 'USD',
+      currency: currency.toUpperCase(),
     }).format(amount / 100);
   };
 
+  const getCardBrandIcon = (brand: string) => {
+    switch (brand.toLowerCase()) {
+      case 'visa':
+        return 'V';
+      case 'mastercard':
+        return 'M';
+      case 'amex':
+        return 'A';
+      case 'discover':
+        return 'D';
+      default:
+        return '•';
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen">
+        <Navbar userName={user?.user_metadata?.name ?? user?.email} />
+        <main className="container mx-auto px-4 py-8">
+          <div className="flex items-center justify-center h-64">
+            <Loader2 className="h-8 w-8 animate-spin" />
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen">
+        <Navbar userName={user?.user_metadata?.name ?? user?.email} />
+        <main className="container mx-auto px-4 py-8">
+          <div className="text-center">
+            <p className="text-red-600">Error: {error}</p>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen">
-      <Navbar userName={user.user_metadata.name ?? user.email} />
+      <Navbar userName={user?.user_metadata?.name ?? user?.email} />
 
       <main className="container mx-auto px-4 py-8">
         <div className="mb-8">
           <h1 className="text-2xl font-bold text-neutral-900">Billing History</h1>
           <p className="text-sm text-neutral-500">
-            View and download your past invoices
+            View your billing activity and payment methods
           </p>
         </div>
 
@@ -84,15 +161,24 @@ export default async function BillingPage() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                   <p className="text-sm font-medium text-neutral-700">Total Paid</p>
-                  <p className="text-2xl font-bold text-neutral-900">$60.00</p>
+                  <p className="text-2xl font-bold text-neutral-900">
+                    {formatAmount(billingData?.billingSummary.totalPaid || 0)}
+                  </p>
                 </div>
                 <div>
                   <p className="text-sm font-medium text-neutral-700">Invoices</p>
-                  <p className="text-2xl font-bold text-neutral-900">3</p>
+                  <p className="text-2xl font-bold text-neutral-900">
+                    {billingData?.billingSummary.invoiceCount || 0}
+                  </p>
                 </div>
                 <div>
                   <p className="text-sm font-medium text-neutral-700">Next Billing</p>
-                  <p className="text-2xl font-bold text-neutral-900">April 15, 2024</p>
+                  <p className="text-2xl font-bold text-neutral-900">
+                    {billingData?.billingSummary.nextBilling 
+                      ? formatDate(billingData.billingSummary.nextBilling)
+                      : 'No active subscription'
+                    }
+                  </p>
                 </div>
               </div>
             </CardContent>
@@ -106,68 +192,93 @@ export default async function BillingPage() {
                 Invoice History
               </CardTitle>
               <CardDescription>
-                Download your past invoices
+                Your recent invoices
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                {billingHistory.map((invoice) => (
-                  <div
-                    key={invoice.id}
-                    className="flex items-center justify-between p-4 border rounded-lg"
-                  >
-                    <div className="flex items-center gap-4">
-                      <div className="flex flex-col">
+              {billingData?.invoices && billingData.invoices.length > 0 ? (
+                <div className="space-y-4">
+                  {billingData.invoices.map((invoice) => (
+                    <div
+                      key={invoice.id}
+                      className="flex items-center justify-between p-4 border rounded-lg"
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className="flex flex-col">
+                          <p className="font-medium text-neutral-900">
+                            {invoice.description}
+                          </p>
+                          <p className="text-sm text-neutral-500">
+                            {formatDate(invoice.date)}
+                          </p>
+                          <p className="text-xs text-neutral-400">
+                            Status: {invoice.status}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-4">
                         <p className="font-medium text-neutral-900">
-                          {invoice.description}
-                        </p>
-                        <p className="text-sm text-neutral-500">
-                          {formatDate(invoice.date)}
+                          {formatAmount(invoice.amount, invoice.currency)}
                         </p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-4">
-                      <p className="font-medium text-neutral-900">
-                        {formatAmount(invoice.amount)}
-                      </p>
-                      <Button variant="outline" size="sm">
-                        <Download className="h-4 w-4 mr-2" />
-                        Download
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-neutral-500">
+                  No invoices found
+                </div>
+              )}
             </CardContent>
           </Card>
 
           {/* Payment Methods */}
           <Card>
             <CardHeader>
-              <CardTitle>Payment Methods</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <CreditCard className="h-5 w-5" />
+                Payment Methods
+              </CardTitle>
               <CardDescription>
-                Manage your payment methods
+                Your saved payment methods
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="flex items-center justify-between p-4 border rounded-lg">
-                <div className="flex items-center gap-4">
-                  <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                    <span className="text-blue-600 font-medium">V</span>
-                  </div>
-                  <div>
-                    <p className="font-medium text-neutral-900">
-                      Visa ending in 4242
-                    </p>
-                    <p className="text-sm text-neutral-500">
-                      Expires 12/25
-                    </p>
-                  </div>
+              {billingData?.paymentMethods && billingData.paymentMethods.length > 0 ? (
+                <div className="space-y-4">
+                  {billingData.paymentMethods.map((pm) => (
+                    <div
+                      key={pm.id}
+                      className="flex items-center justify-between p-4 border rounded-lg"
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                          <span className="text-blue-600 font-medium">
+                            {pm.card ? getCardBrandIcon(pm.card.brand) : '•'}
+                          </span>
+                        </div>
+                        <div>
+                          <p className="font-medium text-neutral-900">
+                            {pm.card ? `${pm.card.brand} ending in ${pm.card.last4}` : 'Payment method'}
+                          </p>
+                          {pm.card && (
+                            <p className="text-sm text-neutral-500">
+                              Expires {pm.card.expMonth}/{pm.card.expYear}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      <Button variant="outline" size="sm">
+                        Update
+                      </Button>
+                    </div>
+                  ))}
                 </div>
-                <Button variant="outline" size="sm">
-                  Update
-                </Button>
-              </div>
+              ) : (
+                <div className="text-center py-8 text-neutral-500">
+                  No payment methods found
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>

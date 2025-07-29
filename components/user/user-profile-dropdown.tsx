@@ -61,10 +61,10 @@ export function UserProfileDropdown({ userName }: UserProfileDropdownProps) {
             Settings
           </DropdownMenuItem>
           
-          <DropdownMenuItem onClick={() => router.push('/pricing')}>
+          {/* <DropdownMenuItem onClick={() => router.push('/pricing')}>
             <CreditCard className="mr-2 h-4 w-4" />
             Manage Subscription
-          </DropdownMenuItem>
+          </DropdownMenuItem> */}
           
           <DropdownMenuItem onClick={() => router.push('/billing')}>
             <Receipt className="mr-2 h-4 w-4" />

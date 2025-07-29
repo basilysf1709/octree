@@ -18,17 +18,17 @@ export default async function SettingsPage() {
   }
 
   return (
-    <div className="min-h-screen">
-      <Navbar userName={user.user_metadata.name ?? user.email} />
-
-      <main className="container mx-auto px-4 py-8">
-        <div className="mb-8">
+    <div className="flex flex-col h-full">
+      <div className="flex-shrink-0 p-6 border-b">
+        <div>
           <h1 className="text-2xl font-bold text-neutral-900">Settings</h1>
           <p className="text-sm text-neutral-500">
             Manage your account and preferences
           </p>
         </div>
+      </div>
 
+      <div className="flex-1 p-6 overflow-auto">
         <div className="grid gap-6 md:grid-cols-2">
           {/* Account Settings */}
           <Card>
@@ -115,7 +115,7 @@ export default async function SettingsPage() {
             </CardContent>
           </Card>
         </div>
-      </main>
+      </div>
     </div>
   );
 } 

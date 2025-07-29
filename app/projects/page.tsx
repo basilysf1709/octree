@@ -27,11 +27,9 @@ export default async function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen">
-      <Navbar userName={null} />
-
-      <main className="container mx-auto px-4 py-8">
-        <div className="mb-8 flex items-center justify-between">
+    <div className="flex flex-col h-full">
+      <div className="flex-shrink-0 p-6 border-b">
+        <div className="flex items-center justify-between">
           <div>
             <h1 className="text-lg font-semibold text-neutral-900">Projects</h1>
             <p className="text-sm text-neutral-500">
@@ -41,9 +39,11 @@ export default async function Dashboard() {
 
           <CreateProjectDialog />
         </div>
+      </div>
 
+      <div className="flex-1 p-6 overflow-auto">
         <ProjectsTable data={data} />
-      </main>
+      </div>
     </div>
   );
 }

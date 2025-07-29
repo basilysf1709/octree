@@ -10,7 +10,7 @@ import {
   registerLatexCompletions,
 } from '@/lib/editor-config';
 import { Chat } from '@/components/chat';
-import { EditSuggestion } from '@/types/edit';
+import type { EditSuggestion } from '@/types/edit';
 import { Check, X, Loader2 } from 'lucide-react';
 import type * as Monaco from 'monaco-editor';
 import PDFViewer from '@/components/pdf-viewer';
@@ -81,22 +81,18 @@ export default function EditorPage() {
   useEffect(() => {
     const fetchAndCompile = async () => {
       if (!documentId) return;
-
       try {
         const { data, error } = await supabase
           .from('documents')
           .select('content, title')
           .eq('id', documentId)
           .single();
-
         if (error) throw error;
-
         if (data) {
           const documentContent = data.content || '';
           setTitle(data.title || '');
           setContent(documentContent);
           setLastSaved(new Date());
-
           // Schedule compilation after state updates have been applied
           setTimeout(() => {
             if (!initialCompileRef.current && !compiling) {
@@ -109,7 +105,6 @@ export default function EditorPage() {
         console.error('Error fetching document:', error);
       }
     };
-
     fetchAndCompile();
   }, [documentId, supabase]);
 
@@ -118,30 +113,23 @@ export default function EditorPage() {
     if (compiling) {
       return;
     }
-
     // Use provided content or fall back to state
     const contentToUse =
       contentToCompile !== undefined ? contentToCompile : content;
-
     setCompiling(true);
-
     try {
       // Save the document first
       await saveDocument(contentToUse);
-
       // Then compile
       const response = await fetch('/api/compile-pdf', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ content: contentToUse }),
       });
-
       if (!response.ok) {
         throw new Error(`Compilation failed with status ${response.status}`);
       }
-
       const data = await response.json();
-
       if (data.pdf) {
         setPdfData(data.pdf);
       } else {
@@ -158,13 +146,10 @@ export default function EditorPage() {
   // New function to save document
   const saveDocument = async (contentToSave?: string): Promise<boolean> => {
     if (!documentId) return false;
-
     // Use provided content or fall back to state
     const contentToUse = contentToSave !== undefined ? contentToSave : content;
-
     try {
       setIsSaving(true);
-
       const { error } = await supabase
         .from('documents')
         .update({
@@ -172,14 +157,11 @@ export default function EditorPage() {
           updated_at: new Date().toISOString(),
         })
         .eq('id', documentId);
-
       if (error) throw error;
-
       // Update state if we used a different content
       if (contentToSave !== undefined && contentToSave !== content) {
         setContent(contentToSave);
       }
-
       setLastSaved(new Date());
       return true;
     } catch (error) {
@@ -194,28 +176,21 @@ export default function EditorPage() {
   const handleExportPDF = async () => {
     // Start loading indicator immediately
     setExportingPDF(true);
-
     try {
       // Get the latest content
       const currentContent = editor?.getValue() || content;
-
       // Save document in the background
       const savePromise = saveDocument(currentContent);
-
       const response = await fetch('/api/compile-pdf', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ content: currentContent }),
       });
-
       // Wait for save to complete in background
       await savePromise;
-
       if (!response.ok) throw new Error('PDF compilation failed');
-
       // Log raw response for debugging
       const rawText = await response.text();
-
       // Parse manually to avoid potential issues
       let data;
       try {
@@ -224,7 +199,6 @@ export default function EditorPage() {
         console.error('Failed to parse JSON:', e);
         throw new Error('Failed to parse server response');
       }
-
       // Continue with PDF processing...
       if (data.pdf) {
         // Convert Base64 back to binary
@@ -233,18 +207,15 @@ export default function EditorPage() {
         for (let i = 0; i < binaryString.length; i++) {
           bytes[i] = binaryString.charCodeAt(i);
         }
-
         // Create downloadable blob
         const blob = new Blob([bytes], { type: 'application/pdf' });
         const url = URL.createObjectURL(blob);
-
         // Download
         const a = document.createElement('a');
         a.href = url;
         a.download = 'document.pdf';
         document.body.appendChild(a);
         a.click();
-
         // Clean up
         URL.revokeObjectURL(url);
         document.body.removeChild(a);
@@ -281,15 +252,14 @@ export default function EditorPage() {
   const handleAcceptEdit = (suggestionId: string) => {
     const suggestion = editSuggestions.find((s) => s.id === suggestionId);
     if (!suggestion || suggestion.status !== 'pending') return;
+
     // Get editor from ref
     const editor = editorRef.current;
     const monaco = monacoInstance;
-
     if (!editor || !monaco) {
       console.error('Editor or Monaco instance not available.');
       return;
     }
-
     const model = editor.getModel();
     if (!model) {
       console.error('Editor model not available.');
@@ -359,14 +329,13 @@ export default function EditorPage() {
     if (!model) return;
 
     const selectedText = model.getValueInRange(selection);
-
     const formatMap = {
       bold: { command: '\\textbf', length: 8 },
       italic: { command: '\\textit', length: 8 },
       underline: { command: '\\underline', length: 11 },
     };
+    const { command, length } = formatMap[format]; // Fixed undeclared variable error
 
-    const { command, length } = formatMap[format];
     let newText;
     if (selectedText.startsWith(`${command}{`) && selectedText.endsWith('}')) {
       newText = selectedText.slice(length, -1);
@@ -401,7 +370,6 @@ export default function EditorPage() {
     if (!editor || !monacoInstance) {
       return;
     }
-
     const model = editor.getModel();
     if (!model) {
       return;
@@ -523,7 +491,6 @@ export default function EditorPage() {
     );
     // Update the state to store the IDs of the *currently applied* decorations
     setDecorationIds(newDecorationIds);
-
     // Dependencies: Re-run when suggestions change, or editor/monaco become available.
   }, [editSuggestions, editor, monacoInstance]); // Removed decorationIds from deps
 
@@ -540,7 +507,6 @@ export default function EditorPage() {
   // Modify handleCopy to set the new state
   function handleCopy(textToCopy?: string) {
     const currentSelectedText = textToCopy ?? selectedText;
-
     if (currentSelectedText.trim()) {
       setTextFromEditor(currentSelectedText);
       setShowButton(false);
@@ -552,7 +518,6 @@ export default function EditorPage() {
       const selection = editor.getSelection();
       const model = editor.getModel();
       const text = model?.getValueInRange(selection!);
-
       if (text && selection && !selection?.isEmpty()) {
         const range = {
           startLineNumber: selection.startLineNumber,
@@ -564,7 +529,6 @@ export default function EditorPage() {
           lineNumber: range.startLineNumber,
           column: range.startColumn,
         });
-
         if (startCoords) {
           setButtonPos({
             top: startCoords.top - 30,
@@ -599,15 +563,12 @@ export default function EditorPage() {
         if ((e.metaKey || e.ctrlKey) && e.key === 's') {
           e.preventDefault(); // This prevents browser's save dialog
           e.stopPropagation(); // Stop the event from propagating
-
           // Get the current content directly from the editor
           const currentContent = editor.getValue();
-
           // Execute save and compile with current content
           saveDocument(currentContent).then((saved) => {
             if (saved) handleCompile(currentContent);
           });
-
           return false;
         }
       });
@@ -622,7 +583,6 @@ export default function EditorPage() {
       run: (ed) => {
         const position = ed.getPosition();
         if (!position) return;
-
         const decorations = ed.getLineDecorations(position.lineNumber);
         const suggestion = decorations?.find(
           (d) => d.options.after && 'attachedData' in d.options.after
@@ -650,19 +610,15 @@ export default function EditorPage() {
           console.error('[EditorPage] Cmd+B Error: editorRef is not set.');
           return;
         }
-
         const selection = currentEditor.getSelection();
         if (!selection || selection.isEmpty()) {
           return;
         }
-
         const model = currentEditor.getModel();
         if (!model) {
           return;
         }
-
         const directlySelectedText = model.getValueInRange(selection);
-
         if (directlySelectedText && directlySelectedText.trim()) {
           handleCopy(directlySelectedText);
         }
@@ -672,30 +628,27 @@ export default function EditorPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-100">
-      <div className="mx-auto h-[calc(100vh-4rem)] px-2 py-2">
-        <div className="relative flex h-6 justify-end gap-1 py-1">
+    <div className="flex h-full flex-col bg-slate-100">
+      {/* Top bar: Breadcrumb, Save Status, Format Buttons, Compile/Export */}
+      <div className="flex-shrink-0 px-4 py-2">
+        <div className="relative flex justify-end gap-1 py-1">
           <Breadcrumb className="absolute top-1 left-1/2 -translate-x-1/2">
             <BreadcrumbList>
               <BreadcrumbItem>
                 <BreadcrumbLink href="/">Documents</BreadcrumbLink>
               </BreadcrumbItem>
-
               <BreadcrumbSeparator />
-
               <BreadcrumbItem>
                 <BreadcrumbPage>{title}</BreadcrumbPage>
               </BreadcrumbItem>
             </BreadcrumbList>
           </Breadcrumb>
-
           {lastSaved && (
             <span className="flex items-center gap-1 text-xs text-slate-500">
               Last saved: {lastSaved.toLocaleTimeString()}
             </span>
           )}
         </div>
-
         <div className="mb-1 flex items-center justify-between">
           <ButtonGroup>
             <ButtonGroupItem onClick={() => handleTextFormat('bold')}>
@@ -708,7 +661,6 @@ export default function EditorPage() {
               <span className="text-sm underline">U</span>
             </ButtonGroupItem>
           </ButtonGroup>
-
           <div className="flex items-center gap-2">
             <div className="bg-background flex w-fit items-center gap-1 rounded-md border border-slate-300 p-1 shadow-xs">
               <Button
@@ -754,118 +706,114 @@ export default function EditorPage() {
             </div>
           </div>
         </div>
+      </div>
 
-        <div className="flex h-full gap-1">
-          <div className="relative h-full flex-4 overflow-hidden rounded-md bg-white shadow-sm">
-            <Editor
-              height="100%"
-              defaultLanguage="latex"
-              value={content}
-              onChange={(value) => setContent(value || '')}
-              theme="vs-light"
-              options={{
-                scrollbar: {
-                  vertical: 'auto',
-                  horizontal: 'auto',
-                  verticalScrollbarSize: 8,
-                  horizontalScrollbarSize: 8,
-                  scrollByPage: false,
-                  ignoreHorizontalScrollbarInContentHeight: false,
-                },
-                minimap: { enabled: false },
-                fontSize: 13,
-                wordWrap: 'on',
-                lineNumbers: 'on',
-                renderWhitespace: 'all',
-                scrollBeyondLastLine: false,
-                quickSuggestions: true,
-                suggestOnTriggerCharacters: true,
-                wordBasedSuggestions: 'allDocuments',
-                tabCompletion: 'on',
-                suggest: {
-                  snippetsPreventQuickSuggestions: false,
-                },
-                padding: {
-                  top: 10,
-                  bottom: 10,
-                },
+      {/* Main content area: Editor and PDF Viewer */}
+      <div className="flex flex-grow gap-4 px-4 pb-4">
+        <div className="relative h-full flex-4 overflow-hidden rounded-md bg-white shadow-sm">
+          <Editor
+            height="100%"
+            defaultLanguage="latex"
+            value={content}
+            onChange={(value) => setContent(value || '')}
+            theme="vs-light"
+            options={{
+              scrollbar: {
+                vertical: 'auto',
+                horizontal: 'auto',
+                verticalScrollbarSize: 8,
+                horizontalScrollbarSize: 8,
+                scrollByPage: false,
+                ignoreHorizontalScrollbarInContentHeight: false,
+              },
+              minimap: { enabled: false },
+              fontSize: 13,
+              wordWrap: 'on',
+              lineNumbers: 'on',
+              renderWhitespace: 'all',
+              scrollBeyondLastLine: false,
+              quickSuggestions: true,
+              suggestOnTriggerCharacters: true,
+              wordBasedSuggestions: 'allDocuments',
+              tabCompletion: 'on',
+              suggest: {
+                snippetsPreventQuickSuggestions: false,
+              },
+              padding: {
+                top: 10,
+                bottom: 10,
+              },
+            }}
+            onMount={handleEditorDidMount}
+          />
+          {/* Floating Button - still uses handleCopy without args, relying on state */}
+          {showButton && (
+            <Button
+              variant="outline"
+              size="xs"
+              onClick={() => handleCopy()} // Button click uses state via default arg
+              className="absolute z-10 py-3 font-medium"
+              style={{
+                top: buttonPos.top,
+                left: buttonPos.left,
               }}
-              onMount={handleEditorDidMount}
-            />
-
-            {/* Floating Button - still uses handleCopy without args, relying on state */}
-            {showButton && (
-              <Button
-                variant="outline"
-                size="xs"
-                onClick={() => handleCopy()} // Button click uses state via default arg
-                className="absolute z-10 py-3 font-medium"
-                style={{
-                  top: buttonPos.top,
-                  left: buttonPos.left,
-                }}
-              >
-                Edit
-                <kbd className="text-muted-foreground ml-auto pt-0.5 font-mono text-xs tracking-widest">
-                  ⌘B
-                </kbd>
-              </Button>
-            )}
-
-            {/* Enhanced Suggestion Actions with Diff View */}
-            <div className="absolute top-1 right-3 z-50 max-w-[400px] space-y-2">
-              {editSuggestions
-                .filter((s) => s.status === 'pending')
-                .map((suggestion) => (
-                  <div
-                    key={suggestion.id}
-                    className="flex flex-col gap-3 rounded-lg border border-blue-200 bg-white p-4 shadow-xl backdrop-blur-sm"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="text-sm font-medium text-blue-700">
-                        Lines {suggestion.startLine}
-                        {suggestion.originalLineCount > 1 &&
-                          `-${suggestion.startLine + suggestion.originalLineCount - 1}`}
-                      </div>
-                      <div className="rounded bg-gray-100 px-2 py-1 text-xs text-gray-500">
-                        AI Suggestion
-                      </div>
+            >
+              Edit
+              <kbd className="text-muted-foreground ml-auto pt-0.5 font-mono text-xs tracking-widest">
+                ⌘B
+              </kbd>
+            </Button>
+          )}
+          {/* Enhanced Suggestion Actions with Diff View */}
+          <div className="absolute top-1 right-3 z-50 max-w-[400px] space-y-2">
+            {editSuggestions
+              .filter((s) => s.status === 'pending')
+              .map((suggestion) => (
+                <div
+                  key={suggestion.id}
+                  className="flex flex-col gap-3 rounded-lg border border-blue-200 bg-white p-4 shadow-xl backdrop-blur-sm"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="text-sm font-medium text-blue-700">
+                      Lines {suggestion.startLine}
+                      {suggestion.originalLineCount > 1 &&
+                        `-${suggestion.startLine + suggestion.originalLineCount - 1}`}
                     </div>
-
-                    <DiffViewer
-                      original={suggestion.original}
-                      suggested={suggestion.suggested}
-                      className="max-w-full"
-                    />
-
-                    <div className="flex items-center gap-2">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => handleAcceptEdit(suggestion.id)}
-                        className="flex-1 border border-green-200 text-green-700 hover:border-green-300 hover:bg-green-50"
-                      >
-                        <Check size={14} className="mr-1" />
-                        Accept
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => handleRejectEdit(suggestion.id)}
-                        className="flex-1 border border-red-200 text-red-700 hover:border-red-300 hover:bg-red-50"
-                      >
-                        <X size={14} className="mr-1" />
-                        Reject
-                      </Button>
+                    <div className="rounded bg-gray-100 px-2 py-1 text-xs text-gray-500">
+                      AI Suggestion
                     </div>
                   </div>
-                ))}
-            </div>
+                  <DiffViewer
+                    original={suggestion.original}
+                    suggested={suggestion.suggested}
+                    className="max-w-full"
+                  />
+                  <div className="flex items-center gap-2">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => handleAcceptEdit(suggestion.id)}
+                      className="flex-1 border border-green-200 text-green-700 hover:border-green-300 hover:bg-green-50"
+                    >
+                      <Check size={14} className="mr-1" />
+                      Accept
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => handleRejectEdit(suggestion.id)}
+                      className="flex-1 border border-red-200 text-red-700 hover:border-red-300 hover:bg-red-50"
+                    >
+                      <X size={14} className="mr-1" />
+                      Reject
+                    </Button>
+                  </div>
+                </div>
+              ))}
           </div>
-
-          <div className="h-full flex-3 overflow-auto">
-            <PDFViewer pdfData={pdfData} isLoading={compiling} />
-          </div>
+        </div>
+        <div className="h-full flex-3 overflow-auto">
+          <PDFViewer pdfData={pdfData} isLoading={compiling} />
         </div>
       </div>
 
@@ -878,7 +826,9 @@ export default function EditorPage() {
           if (Array.isArray(suggestionArray)) {
             const [first, ...rest] = suggestionArray;
             handleEditSuggestion(first);
-            suggestionQueueRef.current = rest.map(s => typeof s === 'string' ? JSON.parse(s) : s);
+            suggestionQueueRef.current = rest.map((s) =>
+              typeof s === 'string' ? JSON.parse(s) : s
+            );
           } else {
             // Fallback for legacy single suggestion
             handleEditSuggestion(suggestionArray);

@@ -1,0 +1,120 @@
+This is pdfTeX, Version 3.141592653-2.6-1.40.28 (TeX Live 2025) (preloaded format=pdflatex 2025.7.27)  28 JUL 2025 23:58
+entering extended mode
+ restricted \write18 enabled.
+ %&-line parsing enabled.
+**/data/main.tex
+(/data/main.tex
+LaTeX2e <2025-06-01> patch level 1
+L3 programming layer <2025-07-19>
+(/usr/local/texlive/2025/texmf-dist/tex/latex/base/article.cls
+Document Class: article 2025/01/22 v1.4n Standard LaTeX document class
+(/usr/local/texlive/2025/texmf-dist/tex/latex/base/size10.clo
+File: size10.clo 2025/01/22 v1.4n Standard LaTeX file (size option)
+)
+\c@part=\count275
+\c@section=\count276
+\c@subsection=\count277
+\c@subsubsection=\count278
+\c@paragraph=\count279
+\c@subparagraph=\count280
+\c@figure=\count281
+\c@table=\count282
+\abovecaptionskip=\skip49
+\belowcaptionskip=\skip50
+\bibindent=\dimen148
+)
+(/usr/local/texlive/2025/texmf-dist/tex/latex/lipsum/lipsum.sty
+(/usr/local/texlive/2025/texmf-dist/tex/latex/l3packages/l3keys2e/l3keys2e.sty
+(/usr/local/texlive/2025/texmf-dist/tex/latex/l3kernel/expl3.sty
+Package: expl3 2025-07-19 L3 programming layer (loader) 
+
+(/usr/local/texlive/2025/texmf-dist/tex/latex/l3backend/l3backend-pdftex.def
+File: l3backend-pdftex.def 2025-06-09 L3 backend support: PDF output (pdfTeX)
+\l__color_backend_stack_int=\count283
+))
+Package: l3keys2e 2024-08-16 LaTeX2e option processing using LaTeX3 keys
+)
+Package: lipsum 2021-09-20 v2.7 150 paragraphs of Lorem Ipsum dummy text
+\g__lipsum_par_int=\count284
+\l__lipsum_a_int=\count285
+\l__lipsum_b_int=\count286
+(/usr/local/texlive/2025/texmf-dist/tex/latex/lipsum/lipsum.ltd.tex))
+
+! LaTeX Error: Missing \begin{document}.
+
+See the LaTeX manual or LaTeX Companion for explanation.
+Type  H <return>  for immediate help.
+ ...                                              
+                                                  
+l.8 \maketitle
+              
+You're in trouble here.  Try typing  <return>  to proceed.
+If that doesn't work, type  X <return>  to quit.
+
+LaTeX Font Info:    External font `cmex10' loaded for size
+(Font)              <12> on input line 8.
+LaTeX Font Info:    External font `cmex10' loaded for size
+(Font)              <8> on input line 8.
+LaTeX Font Info:    External font `cmex10' loaded for size
+(Font)              <6> on input line 8.
+
+! LaTeX Error: Missing \begin{document}.
+
+See the LaTeX manual or LaTeX Companion for explanation.
+Type  H <return>  for immediate help.
+ ...                                              
+                                                  
+l.9 \begin{abstract}
+                    
+You're in trouble here.  Try typing  <return>  to proceed.
+If that doesn't work, type  X <return>  to quit.
+
+
+
+[1
+
+{/usr/local/texlive/2025/texmf-var/fonts/map/pdftex/updmap/pdftex.map}
+\@writefile{toc}{\contentsline {section}{\numberline {1}Introduction}{1}{}\prot
+ected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {2}Literature Review}{1}{}
+\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.1}Key Theories}{1}{}
+\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {3}Methodology}{1}{}\prote
+cted@file@percent }
+]
+\bibdata{references}
+No file main.bbl.
+
+
+[2
+\@writefile{toc}{\contentsline {section}{\numberline {4}Results}{2}{}\protected
+@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {5}Conclusion}{2}{}\protec
+ted@file@percent }
+]
+\gdef \@abspage@last{2}
+! I can't find file `main.aux'.
+\enddocument ...keatletter \@@input \jobname .aux 
+                                                  \fi \UseOneTimeHook {enddo...
+l.36 \end{document}
+                   
+(Press Enter to retry, or Control-D to exit)
+Please type another input file name
+! Emergency stop.
+\enddocument ...keatletter \@@input \jobname .aux 
+                                                  \fi \UseOneTimeHook {enddo...
+l.36 \end{document}
+                   
+*** (job aborted, file error in nonstop mode)
+
+ 
+Here is how much of TeX's memory you used:
+ 868 strings out of 467816
+ 18338 string characters out of 5432258
+ 515586 words of memory out of 5000000
+ 29552 multiletter control sequences out of 15000+600000
+ 631379 words of font info for 55 fonts, out of 8000000 for 9000
+ 1141 hyphenation exceptions out of 8191
+ 73i,6n,77p,234b,203s stack positions out of 10000i,1000n,20000p,200000b,200000s
+!  ==> Fatal error occurred, no output PDF file produced!

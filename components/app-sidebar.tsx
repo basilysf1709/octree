@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
+import { OctreeLogo } from '@/components/icons/octree-logo';
 import {
   Sidebar,
   SidebarContent,
@@ -26,6 +27,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarHeader,
 } from '@/components/ui/sidebar';
 
 interface Project {
@@ -167,6 +169,16 @@ export function AppSidebar() {
   return (
     <Sidebar>
       <SidebarContent>
+        <SidebarHeader className="border-b border-gray-200 pb-4 mb-4">
+          <div className="flex items-center gap-3">
+            <OctreeLogo className="h-8 w-8" />
+            <div>
+              <h1 className="text-lg font-semibold text-gray-900">Octree</h1>
+              <p className="text-xs text-gray-500">LaTeX Editor</p>
+            </div>
+          </div>
+        </SidebarHeader>
+
         <SidebarGroup>
           <SidebarGroupLabel>Navigation</SidebarGroupLabel>
           <SidebarGroupContent>

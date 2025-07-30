@@ -4,7 +4,6 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { createClient } from '@/lib/supabase/client';
-import Navbar from '@/components/navbar';
 import { DataTable } from '@/components/documents/data-table';
 import { columns } from '@/components/documents/columns';
 import { Loader2, PlusIcon } from 'lucide-react';
@@ -133,9 +132,7 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="min-h-screen">
-      <Navbar userName={userName} />
-
+    <>
       <main className="container mx-auto px-4 py-8">
         <div className="mb-8 flex items-center justify-between">
           <div>
@@ -206,6 +203,6 @@ export default function Dashboard() {
         onClose={() => setCreateDialog(false)}
         onConfirm={createNewDocument}
       />
-    </div>
+    </>
   );
 }

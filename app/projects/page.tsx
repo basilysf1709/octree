@@ -1,5 +1,4 @@
 import { redirect } from 'next/navigation';
-import Navbar from '@/components/navbar';
 import { DataTable } from '@/components/projects/data-table';
 import { columns } from '@/components/projects/columns';
 import { createClient } from '@/lib/supabase/server';
@@ -27,10 +26,7 @@ export default async function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen">
-      <Navbar userName={null} />
-
-      <main className="container mx-auto px-4 py-8">
+    <main className="container mx-auto px-4 py-8">
         <div className="mb-8 flex items-center justify-between">
           <div>
             <h1 className="text-lg font-semibold text-neutral-900">Projects</h1>
@@ -44,6 +40,5 @@ export default async function Dashboard() {
 
         <ProjectsTable data={data} />
       </main>
-    </div>
   );
 }

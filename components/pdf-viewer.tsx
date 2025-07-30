@@ -1,10 +1,12 @@
 'use client';
 
+import '@/lib/promise-polyfill';
 import { Loader2 } from 'lucide-react';
 import { pdfjs } from 'react-pdf';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
 import dynamic from 'next/dynamic';
+import PDFErrorBoundary from './pdf-error-boundary';
 
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
   'pdfjs-dist/build/pdf.worker.min.mjs',
@@ -22,4 +24,17 @@ const DynamicPDFViewer = dynamic(() => import('@/components/dynamic-pdf-viewer')
   )
 });
 
-export default DynamicPDFViewer;
+interface PDFViewerWrapperProps {
+  pdfData?: string | null;
+  isLoading?: boolean;
+}
+
+function PDFViewerWrapper({ pdfData, isLoading }: PDFViewerWrapperProps) {
+  return (
+    <PDFErrorBoundary>
+      <DynamicPDFViewer pdfData={pdfData} isLoading={isLoading} />
+    </PDFErrorBoundary>
+  );
+}
+
+export default PDFViewerWrapper;

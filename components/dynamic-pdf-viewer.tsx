@@ -1,5 +1,6 @@
 'use client';
 
+import '@/lib/promise-polyfill';
 import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import React, { useState } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';

@@ -4,7 +4,6 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import Navbar from '@/components/navbar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Download, FileText, Calendar, CreditCard, Loader2 } from 'lucide-react';
@@ -110,35 +109,26 @@ export default function BillingPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen">
-        <Navbar userName={user?.user_metadata?.name ?? user?.email} />
-        <main className="container mx-auto px-4 py-8">
-          <div className="flex items-center justify-center h-64">
-            <Loader2 className="h-8 w-8 animate-spin" />
-          </div>
-        </main>
-      </div>
+      <main className="container mx-auto px-4 py-8">
+        <div className="flex items-center justify-center h-64">
+          <Loader2 className="h-8 w-8 animate-spin" />
+        </div>
+      </main>
     );
   }
 
   if (error) {
     return (
-      <div className="min-h-screen">
-        <Navbar userName={user?.user_metadata?.name ?? user?.email} />
-        <main className="container mx-auto px-4 py-8">
-          <div className="text-center">
-            <p className="text-red-600">Error: {error}</p>
-          </div>
-        </main>
-      </div>
+      <main className="container mx-auto px-4 py-8">
+        <div className="text-center">
+          <p className="text-red-600">Error: {error}</p>
+        </div>
+      </main>
     );
   }
 
   return (
-    <div className="min-h-screen">
-      <Navbar userName={user?.user_metadata?.name ?? user?.email} />
-
-      <main className="container mx-auto px-4 py-8">
+    <main className="container mx-auto px-4 py-8">
         <div className="mb-8">
           <h1 className="text-2xl font-bold text-neutral-900">Billing History</h1>
           <p className="text-sm text-neutral-500">
@@ -284,6 +274,5 @@ export default function BillingPage() {
           </Card>
         </div>
       </main>
-    </div>
   );
 } 

@@ -2,7 +2,7 @@
 
 import { ColumnDef } from '@tanstack/react-table';
 import dayjs from 'dayjs';
-import { MoreHorizontal, Trash2 } from 'lucide-react';
+import { MoreHorizontal, Trash2, Folder } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -24,7 +24,31 @@ export const columns = ({
   {
     accessorKey: 'title',
     header: 'Title',
-    size: 1000,
+    size: 600,
+  },
+  {
+    accessorKey: 'project',
+    header: 'Project',
+    size: 200,
+    cell: ({ row }) => {
+      const document = row.original;
+      
+      if (document.projects) {
+        return (
+          <div className="flex items-center gap-2">
+            <Folder className="h-4 w-4 text-blue-500" />
+            <span className="text-neutral-900">{document.projects.title}</span>
+          </div>
+        );
+      }
+      
+      return (
+        <div className="flex items-center gap-2">
+          <Folder className="h-4 w-4 text-neutral-400" />
+          <span className="text-neutral-500">No Project</span>
+        </div>
+      );
+    },
   },
   {
     accessorKey: 'updated_at',

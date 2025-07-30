@@ -53,7 +53,13 @@ export default function Dashboard() {
 
       const { data, error } = await supabase
         .from('documents')
-        .select('*')
+        .select(`
+          *,
+          projects!documents_project_id_fkey (
+            id,
+            title
+          )
+        `)
         .order('updated_at', { ascending: false });
 
       if (!error && data) {

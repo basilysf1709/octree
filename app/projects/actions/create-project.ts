@@ -55,26 +55,57 @@ export async function createProject(prevState: State, formData: FormData) {
       throw new Error('Failed to create project');
     }
 
+    // Create a default LaTeX document for the project
+    const defaultContent = `\\documentclass{article}
+\\usepackage[utf8]{inputenc}
+\\usepackage{amsmath}
+\\usepackage{graphicx}
+
+\\title{${title}}
+\\author{Your Name}
+\\date{\\today}
+
+\\begin{document}
+
+\\maketitle
+
+\\section{Introduction}
+This is the main document for your project: ${title}.
+
+\\section{Getting Started}
+You can start writing your LaTeX content here.
+
+\\end{document}`;
+
+    const { data: documentData, error: documentError } = await supabase
+      .from('documents')
+      .insert({
+        title: title,
+        content: defaultContent,
+        owner_id: user.id,
+        project_id: data.id,
+        filename: 'main.tex',
+        document_type: 'article',
+      })
+      .select()
+      .single();
+
+    if (documentError) {
+      console.error('Error creating document:', documentError);
+      throw new Error('Failed to create document');
+    }
+
+    // Create a file record for the main.tex file
     const { error: fileError } = await supabase.from('files').insert({
       project_id: data.id,
       name: 'main.tex',
+      type: 'text/plain',
+      size: defaultContent.length,
     });
 
     if (fileError) {
-      throw new Error(`Failed to insert file record: ${fileError.message}`);
-    }
-
-    const latexSource = `\\documentclass{article}\\begin{document}Hello, world!\\end{document}`;
-
-    const { error: uploadError } = await supabase.storage
-      .from('octree')
-      .upload(
-        `projects/${data.id}/main.tex`,
-        new Blob([latexSource], { type: 'text/plain' })
-      );
-
-    if (uploadError) {
-      throw new Error(`Failed to upload main.tex: ${uploadError.message}`);
+      console.error('Error creating file record:', fileError);
+      // Don't throw here as the document was created successfully
     }
 
     revalidatePath('/projects');

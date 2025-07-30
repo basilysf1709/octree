@@ -38,6 +38,8 @@ export function DeleteProjectDialog({
   useEffect(() => {
     if (state.success) {
       setOpen(false);
+      // Dispatch custom event to notify sidebar to refresh
+      window.dispatchEvent(new CustomEvent('project-deleted'));
     }
   }, [state.success]);
 

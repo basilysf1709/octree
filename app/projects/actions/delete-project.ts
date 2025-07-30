@@ -63,6 +63,17 @@ export async function deleteProject(prevState: State, formData: FormData) {
       throw new Error('Failed to delete project files');
     }
 
+    // Delete related documents (due to foreign key constraint)
+    const { error: documentsError } = await supabase
+      .from('documents')
+      .delete()
+      .eq('project_id', projectId);
+
+    if (documentsError) {
+      console.error('Error deleting project documents:', documentsError);
+      throw new Error('Failed to delete project documents');
+    }
+
     // Delete the project
     const { error: deleteError } = await supabase
       .from('projects')

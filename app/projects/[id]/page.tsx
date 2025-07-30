@@ -28,6 +28,7 @@ import { cn, initialContent } from '@/lib/utils';
 import { useDebouncedCallback } from 'use-debounce';
 import { createClient } from '@/lib/supabase/client';
 import { DiffViewer } from '@/components/ui/diff-viewer';
+import { FileManager } from '@/components/projects/file-manager';
 
 export default function ProjectEditorPage() {
   // Add Supabase client and params
@@ -81,11 +82,54 @@ export default function ProjectEditorPage() {
   // Keep track of whether we've attempted initial compilation
   const initialCompileRef = useRef(false);
 
+  // Function to insert content into the editor
+  const insertContent = (newContent: string) => {
+    if (editorRef.current) {
+      const editor = editorRef.current;
+      const model = editor.getModel();
+      if (model) {
+        const position = editor.getPosition();
+        if (position) {
+          editor.executeEdits('insert-file-content', [
+            {
+              range: new monacoInstance!.Range(
+                position.lineNumber,
+                position.column,
+                position.lineNumber,
+                position.column
+              ),
+              text: newContent,
+              forceMoveMarkers: true,
+            },
+          ]);
+        }
+      }
+    }
+  };
+
+  // Listen for file upload events
+  useEffect(() => {
+    const handleFileUpload = (event: CustomEvent) => {
+      const { content } = event.detail;
+      if (content) {
+        insertContent(content);
+      }
+    };
+
+    window.addEventListener('file-uploaded', handleFileUpload as EventListener);
+    
+    return () => {
+      window.removeEventListener('file-uploaded', handleFileUpload as EventListener);
+    };
+  }, []);
+
   // Load project and main.tex file on initial render and compile once after loading
   useEffect(() => {
     const fetchProjectAndFile = async () => {
       if (!projectId) return;
       try {
+        console.log('Fetching project and file for project ID:', projectId);
+        
         // First, get the project details
         const { data: projectData, error: projectError } = await supabase
           .from('projects')
@@ -98,19 +142,48 @@ export default function ProjectEditorPage() {
           setTitle(projectData.title || '');
         }
 
-        // Then, get the main.tex file content from storage
-        const { data: fileData, error: fileError } = await supabase.storage
-          .from('octree')
-          .download(`projects/${projectId}/main.tex`);
+        // Try to get the document record from the database (primary source)
+        const { data: documentData, error: documentError } = await supabase
+          .from('documents')
+          .select('id, content, title')
+          .eq('project_id', projectId)
+          .eq('filename', 'main.tex')
+          .single();
 
-        if (fileError) {
-          console.error('Error fetching main.tex:', fileError);
-          // If file doesn't exist, use initial content
-          setContent(initialContent);
+        console.log('Document data:', { 
+          documentId: documentData?.id, 
+          documentTitle: documentData?.title,
+          hasContent: !!documentData?.content,
+          documentError: documentError?.message 
+        });
+
+        // If document exists in database, use it as primary source
+        if (!documentError && documentData) {
+          console.log('Using document from database as primary source');
+          setContent(documentData.content || initialContent);
+          if (documentData.title && !projectData?.title) {
+            setTitle(documentData.title);
+          }
         } else {
-          // Convert blob to text
-          const text = await fileData.text();
-          setContent(text);
+          // Fallback to storage if document doesn't exist in database
+          console.log('Document not found in database, trying storage...');
+          const { data: fileData, error: fileError } = await supabase.storage
+            .from('octree')
+            .download(`projects/${projectId}/main.tex`);
+
+          console.log('Storage file check:', { 
+            hasFileData: !!fileData, 
+            fileError: fileError?.message 
+          });
+
+          if (!fileError && fileData) {
+            console.log('Using content from storage as fallback');
+            const text = await fileData.text();
+            setContent(text);
+          } else {
+            console.log('No content found in database or storage, using initial content');
+            setContent(initialContent);
+          }
         }
 
         setLastSaved(new Date());
@@ -228,6 +301,17 @@ export default function ProjectEditorPage() {
     try {
       setIsSaving(true);
       
+      // Check if user is authenticated
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (authError || !user) {
+        console.error('Authentication error:', authError);
+        throw new Error('User not authenticated');
+      }
+      
+      console.log('User authenticated:', user.id);
+      console.log('Project ID:', projectId);
+      console.log('Content length:', contentToUse.length);
+      
       // Upload to storage
       const { error: uploadError } = await supabase.storage
         .from('octree')
@@ -237,7 +321,80 @@ export default function ProjectEditorPage() {
           { upsert: true }
         );
 
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        console.error('Storage upload error:', uploadError);
+        console.error('Upload error message:', uploadError.message);
+        throw uploadError;
+      }
+      
+      console.log('Storage upload successful');
+      
+      // Check if document record exists
+      const { data: existingDoc, error: checkError } = await supabase
+        .from('documents')
+        .select('id')
+        .eq('project_id', projectId)
+        .eq('filename', 'main.tex')
+        .single();
+
+      console.log('Document check result:', { existingDoc, checkError });
+
+      if (checkError && checkError.code !== 'PGRST116') {
+        // PGRST116 is "not found" error, which is expected if document doesn't exist
+        console.error('Error checking document record:', checkError);
+      }
+
+      if (existingDoc) {
+        // Update existing document record
+        console.log('Updating existing document:', existingDoc.id);
+        const { error: updateError } = await supabase
+          .from('documents')
+          .update({
+            content: contentToUse,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', existingDoc.id);
+
+        if (updateError) {
+          console.error('Error updating document record:', updateError);
+          console.error('Update error details:', {
+            code: updateError.code,
+            message: updateError.message,
+            details: updateError.details,
+            hint: updateError.hint
+          });
+        } else {
+          console.log('Document update successful for document ID:', existingDoc.id);
+        }
+      } else {
+        // Create new document record
+        console.log('Creating new document for project:', projectId);
+        const { data: newDoc, error: insertError } = await supabase
+          .from('documents')
+          .insert({
+            project_id: projectId,
+            title: title || 'Untitled Document',
+            content: contentToUse,
+            filename: 'main.tex',
+            document_type: 'article',
+            owner_id: user.id,
+          } as any)
+          .select()
+          .single();
+
+        if (insertError) {
+          console.error('Error creating document record:', insertError);
+          // Log more details about the error
+          console.error('Error details:', {
+            code: insertError.code,
+            message: insertError.message,
+            details: insertError.details,
+            hint: insertError.hint
+          });
+        } else {
+          console.log('Document creation successful, new document ID:', newDoc?.id);
+        }
+      }
       
       // Update state if we used a different content
       if (contentToSave !== undefined && contentToSave !== content) {
@@ -358,7 +515,7 @@ export default function ProjectEditorPage() {
           ? model.getLineMaxColumn(endLineNumber)
           : 1;
 
-      const rangeToReplace = new monaco.Range(
+      const rangeToReplace = new monacoInstance.Range(
         startLineNumber,
         1,
         endLineNumber,
@@ -937,6 +1094,18 @@ export default function ProjectEditorPage() {
         textFromEditor={textFromEditor}
         setTextFromEditor={setTextFromEditor}
       />
+
+      {/* File Manager Section */}
+      {/* <div className="border-t border-gray-200 bg-white">
+        <div className="p-6">
+          <FileManager 
+            projectId={projectId} 
+            onFilesChanged={() => {
+              // Sidebar will update via focus event
+            }}
+          />
+        </div>
+      </div> */}
     </div>
   );
 }

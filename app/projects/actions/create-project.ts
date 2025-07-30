@@ -55,14 +55,19 @@ export async function createProject(prevState: State, formData: FormData) {
       throw new Error('Failed to create project');
     }
 
+    console.log('Project created successfully with ID:', data.id);
+
     const { error: fileError } = await supabase.from('files').insert({
       project_id: data.id,
       name: 'main.tex',
     });
 
     if (fileError) {
+      console.error('Error creating file record:', fileError);
       throw new Error(`Failed to insert file record: ${fileError.message}`);
     }
+
+    console.log('File record created for project:', data.id);
 
     const latexSource = `\\documentclass{article}\\begin{document}Hello, world!\\end{document}`;
 
@@ -74,8 +79,28 @@ export async function createProject(prevState: State, formData: FormData) {
       );
 
     if (uploadError) {
+      console.error('Error uploading main.tex to storage:', uploadError);
       throw new Error(`Failed to upload main.tex: ${uploadError.message}`);
     }
+
+    console.log('main.tex uploaded to storage for project:', data.id);
+
+    // Create a document record associated with this project
+    const { error: documentError } = await supabase.from('documents').insert({
+      project_id: data.id,
+      title: title,
+      content: latexSource,
+      owner_id: user.id,
+      filename: 'main.tex',
+      document_type: 'article',
+    });
+
+    if (documentError) {
+      console.error('Error creating document record:', documentError);
+      throw new Error(`Failed to insert document record: ${documentError.message}`);
+    }
+
+    console.log('Document record created for project:', data.id);
 
     revalidatePath('/projects');
 

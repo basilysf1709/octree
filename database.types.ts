@@ -50,9 +50,11 @@ export type Database = {
           content: string;
           created_at: string | null;
           document_type: string | null;
+          filename: string | null;
           id: string;
           is_public: boolean | null;
           owner_id: string;
+          project_id: string | null;
           title: string;
           updated_at: string | null;
         };
@@ -61,9 +63,11 @@ export type Database = {
           content?: string;
           created_at?: string | null;
           document_type?: string | null;
+          filename?: string | null;
           id?: string;
           is_public?: boolean | null;
           owner_id: string;
+          project_id?: string | null;
           title: string;
           updated_at?: string | null;
         };
@@ -72,13 +76,30 @@ export type Database = {
           content?: string;
           created_at?: string | null;
           document_type?: string | null;
+          filename?: string | null;
           id?: string;
           is_public?: boolean | null;
           owner_id?: string;
+          project_id?: string | null;
           title?: string;
           updated_at?: string | null;
         };
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: 'documents_project_id_fkey';
+            columns: ['project_id'];
+            isOneToOne: false;
+            referencedRelation: 'projects';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'documents_owner_id_fkey';
+            columns: ['owner_id'];
+            isOneToOne: false;
+            referencedRelation: 'users';
+            referencedColumns: ['id'];
+          },
+        ];
       };
       files: {
         Row: {

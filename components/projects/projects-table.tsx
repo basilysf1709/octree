@@ -57,6 +57,8 @@ export function ProjectsTable({ data }: { data: Project[] }) {
   useEffect(() => {
     if (state.success) {
       closeDialog();
+      // Dispatch custom event to notify sidebar to refresh
+      window.dispatchEvent(new CustomEvent('project-deleted'));
     }
   }, [state]);
 

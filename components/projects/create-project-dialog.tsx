@@ -31,6 +31,8 @@ export function CreateProjectDialog() {
   useEffect(() => {
     if (state.success && state.projectId) {
       setOpen(false);
+      // Dispatch custom event to notify sidebar to refresh
+      window.dispatchEvent(new CustomEvent('project-created'));
       // Navigate to the project editor
       router.push(`/projects/${state.projectId}`);
     }

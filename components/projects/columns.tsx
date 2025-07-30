@@ -2,7 +2,7 @@
 
 import { ColumnDef } from '@tanstack/react-table';
 import dayjs from 'dayjs';
-import { MoreHorizontal, Trash2 } from 'lucide-react';
+import { MoreHorizontal, Trash2, Edit } from 'lucide-react';
 import { useState, useActionState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
@@ -23,6 +23,7 @@ import {
 } from '@/components/ui/dialog';
 import { Database } from '@/database.types';
 import { deleteProject } from '@/app/projects/actions/delete-project';
+import Link from 'next/link';
 
 type Project = Database['public']['Tables']['projects']['Row'];
 
@@ -35,6 +36,17 @@ export const columns = ({
     accessorKey: 'title',
     header: 'Title',
     size: 1000,
+    cell: ({ row }) => {
+      const project = row.original;
+      return (
+        <Link 
+          href={`/projects/${project.id}`}
+          className="hover:text-blue-600 transition-colors"
+        >
+          {project.title}
+        </Link>
+      );
+    },
   },
   {
     accessorKey: 'updated_at',
@@ -66,6 +78,13 @@ export const columns = ({
               }}
             >
               <DropdownMenuLabel>Actions</DropdownMenuLabel>
+              
+              <DropdownMenuItem asChild>
+                <Link href={`/projects/${project.id}`}>
+                  <Edit className="h-4 w-4" />
+                  Edit
+                </Link>
+              </DropdownMenuItem>
 
               <DropdownMenuSeparator />
               <DropdownMenuItem

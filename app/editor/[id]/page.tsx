@@ -43,6 +43,10 @@ export default function EditorPage() {
   const [selectedText, setSelectedText] = useState('');
   const [textFromEditor, setTextFromEditor] = useState<string | null>(null);
 
+  // Add title editing state
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [editingTitle, setEditingTitle] = useState('');
+
   // Add editor ref
   const editorRef = useRef<Monaco.editor.IStandaloneCodeEditor | null>(null);
 
@@ -107,6 +111,62 @@ export default function EditorPage() {
     };
     fetchAndCompile();
   }, [documentId, supabase]);
+
+  // Function to save title to database
+  const saveTitle = async (newTitle: string): Promise<boolean> => {
+    if (!documentId) return false;
+    try {
+      const { error } = await supabase
+        .from('documents')
+        .update({
+          title: newTitle,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', documentId);
+      if (error) throw error;
+      setTitle(newTitle);
+      setLastSaved(new Date());
+      return true;
+    } catch (error) {
+      console.error('Error saving title:', error);
+      return false;
+    }
+  };
+
+  // Function to handle title editing
+  const handleTitleEdit = () => {
+    setIsEditingTitle(true);
+    setEditingTitle(title);
+  };
+
+  // Function to save title changes
+  const handleTitleSave = async () => {
+    if (editingTitle.trim() && editingTitle !== title) {
+      const success = await saveTitle(editingTitle.trim());
+      if (!success) {
+        // Revert to original title if save failed
+        setEditingTitle(title);
+      }
+    }
+    setIsEditingTitle(false);
+  };
+
+  // Function to cancel title editing
+  const handleTitleCancel = () => {
+    setIsEditingTitle(false);
+    setEditingTitle(title);
+  };
+
+  // Handle Enter and Escape keys for title editing
+  const handleTitleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleTitleSave();
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      handleTitleCancel();
+    }
+  };
 
   // Simplified handleCompile function
   const handleCompile = async (contentToCompile?: string) => {
@@ -628,7 +688,7 @@ export default function EditorPage() {
   };
 
   return (
-    <div className="flex h-full flex-col bg-slate-100">
+    <div className="flex h-screen flex-col bg-slate-100">
       {/* Top bar: Breadcrumb, Save Status, Format Buttons, Compile/Export */}
       <div className="flex-shrink-0 px-4 py-2">
         <div className="relative flex justify-end gap-1 py-1">
@@ -639,7 +699,24 @@ export default function EditorPage() {
               </BreadcrumbItem>
               <BreadcrumbSeparator />
               <BreadcrumbItem>
-                <BreadcrumbPage>{title}</BreadcrumbPage>
+                {isEditingTitle ? (
+                  <input
+                    type="text"
+                    value={editingTitle}
+                    onChange={(e) => setEditingTitle(e.target.value)}
+                    onKeyDown={handleTitleKeyDown}
+                    onBlur={handleTitleSave}
+                    className="bg-transparent border-none outline-none text-sm font-medium text-slate-900 min-w-[200px] px-2 py-1 rounded border border-blue-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                    autoFocus
+                  />
+                ) : (
+                  <BreadcrumbPage 
+                    className="cursor-pointer hover:text-blue-600 transition-colors"
+                    onClick={handleTitleEdit}
+                  >
+                    {title}
+                  </BreadcrumbPage>
+                )}
               </BreadcrumbItem>
             </BreadcrumbList>
           </Breadcrumb>
@@ -665,7 +742,7 @@ export default function EditorPage() {
             <div className="bg-background flex w-fit items-center gap-1 rounded-md border border-slate-300 p-1 shadow-xs">
               <Button
                 variant="ghost"
-                size="xs"
+                size="sm"
                 onClick={() => handleCompile()}
                 disabled={compiling}
               >
@@ -690,7 +767,7 @@ export default function EditorPage() {
               </Button>
               <Button
                 variant="ghost"
-                size="xs"
+                size="sm"
                 onClick={handleExportPDF}
                 disabled={exportingPDF || isSaving}
               >
@@ -709,8 +786,8 @@ export default function EditorPage() {
       </div>
 
       {/* Main content area: Editor and PDF Viewer */}
-      <div className="flex flex-grow gap-4 px-4 pb-4">
-        <div className="relative h-full flex-4 overflow-hidden rounded-md bg-white shadow-sm">
+      <div className="flex flex-1 gap-4 px-4 pb-4 min-h-0">
+        <div className="relative flex-4 overflow-hidden rounded-md bg-white shadow-sm min-h-0">
           <Editor
             height="100%"
             defaultLanguage="latex"
@@ -750,7 +827,7 @@ export default function EditorPage() {
           {showButton && (
             <Button
               variant="outline"
-              size="xs"
+              size="sm"
               onClick={() => handleCopy()} // Button click uses state via default arg
               className="absolute z-10 py-3 font-medium"
               style={{
@@ -812,7 +889,7 @@ export default function EditorPage() {
               ))}
           </div>
         </div>
-        <div className="h-full flex-3 overflow-auto">
+        <div className="flex-3 overflow-hidden rounded-md bg-white shadow-sm min-h-0">
           <PDFViewer pdfData={pdfData} isLoading={compiling} />
         </div>
       </div>

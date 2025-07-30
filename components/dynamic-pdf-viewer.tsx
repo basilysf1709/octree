@@ -6,6 +6,19 @@ import { Document, Page, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
 
+// Polyfill for Promise.withResolvers if not available
+if (!Promise.withResolvers) {
+  (Promise as any).withResolvers = function <T>() {
+    let resolve: (value: T) => void;
+    let reject: (reason?: any) => void;
+    const promise = new Promise<T>((res, rej) => {
+      resolve = res;
+      reject = rej;
+    });
+    return { promise, resolve: resolve!, reject: reject! };
+  };
+}
+
 // Initialize the worker
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
   'pdfjs-dist/build/pdf.worker.min.mjs',
@@ -67,10 +80,11 @@ function DynamicPDFViewer({ pdfData, isLoading = false }: PDFViewerProps) {
 
   if (!pdfData) {
     return (
-      <p className="flex h-full items-center justify-center text-sm whitespace-pre text-slate-600">
-        Click <span className="font-semibold">Compile</span> to see the PDF
-        preview
-      </p>
+      <div className="flex h-full items-center justify-center text-sm text-slate-600">
+        <div className="text-center">
+          <p>Click <span className="font-semibold">Compile</span> to see the PDF preview</p>
+        </div>
+      </div>
     );
   }
 
@@ -80,7 +94,7 @@ function DynamicPDFViewer({ pdfData, isLoading = false }: PDFViewerProps) {
   return (
     <div className="relative flex h-full w-full flex-col">
       {/* Main PDF viewer area with scrolling */}
-      <div className="flex flex-1 justify-center overflow-auto">
+      <div className="flex flex-1 justify-center overflow-auto min-h-0">
         {pageLoading && (
           <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/50">
             <Loader2 className="h-5 w-5 animate-spin text-blue-500" />
@@ -91,9 +105,17 @@ function DynamicPDFViewer({ pdfData, isLoading = false }: PDFViewerProps) {
           file={pdfUrl}
           options={options}
           onLoadSuccess={onDocumentLoadSuccess}
+          onLoadError={(error) => {
+            console.error('PDF load error:', error);
+          }}
           loading={
             <div className="flex items-center justify-center p-4">
               <Loader2 className="mr-2 h-5 w-5 animate-spin text-blue-500" />
+            </div>
+          }
+          error={
+            <div className="flex items-center justify-center p-4 text-red-500">
+              <p>Error loading PDF</p>
             </div>
           }
         >

@@ -1,246 +1,942 @@
-import { redirect } from 'next/navigation';
-import { createClient } from '@/lib/supabase/server';
-import Navbar from '@/components/navbar';
+/* eslint-disable */
+'use client';
+
+import { useEffect, useState, useRef } from 'react';
+import Editor, { loader } from '@monaco-editor/react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Plus, Upload, FileText, Folder, Download, Trash2, Settings } from 'lucide-react';
-import dayjs from 'dayjs';
+import {
+  latexLanguageConfiguration,
+  latexTokenProvider,
+  registerLatexCompletions,
+} from '@/lib/editor-config';
+import { Chat } from '@/components/chat';
+import type { EditSuggestion } from '@/types/edit';
+import { Check, X, Loader2 } from 'lucide-react';
+import type * as Monaco from 'monaco-editor';
+import PDFViewer from '@/components/pdf-viewer';
+import { useParams } from 'next/navigation';
+import { ButtonGroup, ButtonGroupItem } from '@/components/ui/button-group';
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from '@/components/ui/breadcrumb';
+import { cn, initialContent } from '@/lib/utils';
+import { useDebouncedCallback } from 'use-debounce';
+import { createClient } from '@/lib/supabase/client';
+import { DiffViewer } from '@/components/ui/diff-viewer';
 
-interface Project {
-  id: string;
-  title: string;
-  created_at: string | null;
-  updated_at: string | null;
-  user_id: string;
-}
+export default function ProjectEditorPage() {
+  // Add Supabase client and params
+  const supabase = createClient();
+  const params = useParams();
+  const projectId = params.id as string;
 
-interface Document {
-  id: string;
-  title: string;
-  content: string;
-  created_at: string | null;
-  updated_at: string | null;
-  owner_id: string;
-  document_type: string | null;
-  is_public: boolean | null;
-  compile_settings: any;
-}
+  // Add project metadata state
+  const [isSaving, setIsSaving] = useState<boolean>(false);
+  const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const [buttonPos, setButtonPos] = useState({ top: 0, left: 0 });
+  const [showButton, setShowButton] = useState(false);
+  const [selectedText, setSelectedText] = useState('');
+  const [textFromEditor, setTextFromEditor] = useState<string | null>(null);
 
-interface ProjectFile {
-  id: string;
-  name: string;
-  type: string | null;
-  size: number | null;
-  uploaded_at: string | null;
-  project_id: string;
-}
+  // Add title editing state
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [editingTitle, setEditingTitle] = useState('');
 
-export default async function ProjectDetailPage({ params }: { params: { id: string } }) {
-  const supabase = await createClient();
+  // Add editor ref
+  const editorRef = useRef<Monaco.editor.IStandaloneCodeEditor | null>(null);
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // Move Monaco initialization into useEffect
+  useEffect(() => {
+    loader.init().then((monaco) => {
+      monaco.languages.register({ id: 'latex' });
+      monaco.languages.setLanguageConfiguration(
+        'latex',
+        latexLanguageConfiguration
+      );
+      monaco.languages.setMonarchTokensProvider('latex', latexTokenProvider);
+      registerLatexCompletions(monaco);
+    });
+  }, []); // Empty dependency array means this runs once on mount
 
-  if (!user) {
-    redirect('/auth/login');
+  const [title, setTitle] = useState<string>('');
+  const [content, setContent] = useState(initialContent);
+  const [chatOpen, setChatOpen] = useState(false);
+  const [compiling, setCompiling] = useState(false);
+  const [pdfData, setPdfData] = useState<string | null>(null);
+  const [editSuggestions, setEditSuggestions] = useState<EditSuggestion[]>([]);
+  const suggestionQueueRef = useRef<EditSuggestion[]>([]);
+  const [editor, setEditor] =
+    useState<Monaco.editor.IStandaloneCodeEditor | null>(null);
+  const [monacoInstance, setMonacoInstance] = useState<typeof Monaco | null>(
+    null
+  );
+  const [decorationIds, setDecorationIds] = useState<string[]>([]);
+  const [exportingPDF, setExportingPDF] = useState(false);
+
+  // Keep track of whether we've attempted initial compilation
+  const initialCompileRef = useRef(false);
+
+  // Load project and main.tex file on initial render and compile once after loading
+  useEffect(() => {
+    const fetchProjectAndFile = async () => {
+      if (!projectId) return;
+      try {
+        // First, get the project details
+        const { data: projectData, error: projectError } = await supabase
+          .from('projects')
+          .select('title')
+          .eq('id', projectId)
+          .single();
+        
+        if (projectError) throw projectError;
+        if (projectData) {
+          setTitle(projectData.title || '');
+        }
+
+        // Then, get the main.tex file content from storage
+        const { data: fileData, error: fileError } = await supabase.storage
+          .from('octree')
+          .download(`projects/${projectId}/main.tex`);
+
+        if (fileError) {
+          console.error('Error fetching main.tex:', fileError);
+          // If file doesn't exist, use initial content
+          setContent(initialContent);
+        } else {
+          // Convert blob to text
+          const text = await fileData.text();
+          setContent(text);
+        }
+
+        setLastSaved(new Date());
+        
+        // Schedule compilation after state updates have been applied
+        setTimeout(() => {
+          if (!initialCompileRef.current && !compiling) {
+            initialCompileRef.current = true;
+            handleCompile(content);
+          }
+        }, 500);
+      } catch (error) {
+        console.error('Error fetching project:', error);
+      }
+    };
+    fetchProjectAndFile();
+  }, [projectId, supabase]);
+
+  // Function to save project title to database
+  const saveTitle = async (newTitle: string): Promise<boolean> => {
+    if (!projectId) return false;
+    try {
+      const { error } = await supabase
+        .from('projects')
+        .update({
+          title: newTitle,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', projectId);
+      if (error) throw error;
+      setTitle(newTitle);
+      setLastSaved(new Date());
+      return true;
+    } catch (error) {
+      console.error('Error saving title:', error);
+      return false;
+    }
+  };
+
+  // Function to handle title editing
+  const handleTitleEdit = () => {
+    setIsEditingTitle(true);
+    setEditingTitle(title);
+  };
+
+  // Function to save title changes
+  const handleTitleSave = async () => {
+    if (editingTitle.trim() && editingTitle !== title) {
+      const success = await saveTitle(editingTitle.trim());
+      if (!success) {
+        // Revert to original title if save failed
+        setEditingTitle(title);
+      }
+    }
+    setIsEditingTitle(false);
+  };
+
+  // Function to cancel title editing
+  const handleTitleCancel = () => {
+    setIsEditingTitle(false);
+    setEditingTitle(title);
+  };
+
+  // Handle Enter and Escape keys for title editing
+  const handleTitleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleTitleSave();
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      handleTitleCancel();
+    }
+  };
+
+  // Simplified handleCompile function
+  const handleCompile = async (contentToCompile?: string) => {
+    if (compiling) {
+      return;
+    }
+    // Use provided content or fall back to state
+    const contentToUse =
+      contentToCompile !== undefined ? contentToCompile : content;
+    setCompiling(true);
+    try {
+      // Save the file first
+      await saveFile(contentToUse);
+      // Then compile
+      const response = await fetch('/api/compile-pdf', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: contentToUse }),
+      });
+      if (!response.ok) {
+        throw new Error(`Compilation failed with status ${response.status}`);
+      }
+      const data = await response.json();
+      if (data.pdf) {
+        setPdfData(data.pdf);
+      } else {
+        console.error('[ProjectEditorPage] No PDF data in response');
+        throw new Error('No PDF data received');
+      }
+    } catch (error) {
+      console.error('[ProjectEditorPage] Compilation error:', error);
+    } finally {
+      setCompiling(false);
+    }
+  };
+
+  // New function to save file to storage
+  const saveFile = async (contentToSave?: string): Promise<boolean> => {
+    if (!projectId) return false;
+    // Use provided content or fall back to state
+    const contentToUse = contentToSave !== undefined ? contentToSave : content;
+    try {
+      setIsSaving(true);
+      
+      // Upload to storage
+      const { error: uploadError } = await supabase.storage
+        .from('octree')
+        .upload(
+          `projects/${projectId}/main.tex`,
+          new Blob([contentToUse], { type: 'text/plain' }),
+          { upsert: true }
+        );
+
+      if (uploadError) throw uploadError;
+      
+      // Update state if we used a different content
+      if (contentToSave !== undefined && contentToSave !== content) {
+        setContent(contentToSave);
+      }
+      setLastSaved(new Date());
+      return true;
+    } catch (error) {
+      console.error('Error saving file:', error);
+      return false;
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Also update export handler
+  const handleExportPDF = async () => {
+    // Start loading indicator immediately
+    setExportingPDF(true);
+    try {
+      // Get the latest content
+      const currentContent = editor?.getValue() || content;
+      // Save file in the background
+      const savePromise = saveFile(currentContent);
+      const response = await fetch('/api/compile-pdf', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: currentContent }),
+      });
+      // Wait for save to complete in background
+      await savePromise;
+      if (!response.ok) throw new Error('PDF compilation failed');
+      // Log raw response for debugging
+      const rawText = await response.text();
+      // Parse manually to avoid potential issues
+      let data;
+      try {
+        data = JSON.parse(rawText);
+      } catch (e) {
+        console.error('Failed to parse JSON:', e);
+        throw new Error('Failed to parse server response');
+      }
+      // Continue with PDF processing...
+      if (data.pdf) {
+        // Convert Base64 back to binary
+        const binaryString = atob(data.pdf);
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
+        // Create downloadable blob
+        const blob = new Blob([bytes], { type: 'application/pdf' });
+        const url = URL.createObjectURL(blob);
+        // Download
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${title || 'document'}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        // Clean up
+        URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      } else {
+        throw new Error('No PDF data received from server');
+      }
+    } catch (error) {
+      console.error('PDF export error:', error);
+    } finally {
+      setExportingPDF(false);
+    }
+  };
+
+  const handleEditSuggestion = (suggestion: EditSuggestion | string) => {
+    // Accept both object and stringified suggestion
+    let parsedSuggestion: EditSuggestion;
+    if (typeof suggestion === 'string') {
+      parsedSuggestion = JSON.parse(suggestion) as EditSuggestion;
+    } else {
+      parsedSuggestion = suggestion;
+    }
+    setEditSuggestions([parsedSuggestion]);
+  };
+
+  const handleNextSuggestion = () => {
+    if (suggestionQueueRef.current.length > 0) {
+      const next = suggestionQueueRef.current.shift();
+      if (next) setEditSuggestions([next]);
+    } else {
+      setEditSuggestions([]);
+    }
+  };
+
+  const handleAcceptEdit = (suggestionId: string) => {
+    const suggestion = editSuggestions.find((s) => s.id === suggestionId);
+    if (!suggestion || suggestion.status !== 'pending') return;
+
+    // Get editor from ref
+    const editor = editorRef.current;
+    const monaco = monacoInstance;
+    if (!editor || !monaco) {
+      console.error('Editor or Monaco instance not available.');
+      return;
+    }
+    const model = editor.getModel();
+    if (!model) {
+      console.error('Editor model not available.');
+      return;
+    }
+
+    try {
+      const startLineNumber = suggestion.startLine;
+      const endLineNumber =
+        suggestion.originalLineCount > 0
+          ? startLineNumber + suggestion.originalLineCount - 1
+          : startLineNumber;
+      const endColumn =
+        suggestion.originalLineCount > 0
+          ? model.getLineMaxColumn(endLineNumber)
+          : 1;
+
+      const rangeToReplace = new monaco.Range(
+        startLineNumber,
+        1,
+        endLineNumber,
+        endColumn
+      );
+
+      editor.executeEdits('accept-ai-suggestion', [
+        {
+          range: rangeToReplace,
+          text: suggestion.suggested,
+          forceMoveMarkers: true,
+        },
+      ]);
+
+      setEditSuggestions((prev) =>
+        prev.map((s) =>
+          s.id === suggestionId ? { ...s, status: 'accepted' } : s
+        )
+      );
+      setTimeout(handleNextSuggestion, 0);
+    } catch (error) {
+      console.error('Error applying edit:', error);
+      setEditSuggestions((prev) =>
+        prev.map((s) =>
+          s.id === suggestionId ? { ...s, status: 'pending' } : s
+        )
+      );
+    }
+  };
+
+  const handleRejectEdit = (suggestionId: string) => {
+    setEditSuggestions((prev) =>
+      prev.map((s) =>
+        s.id === suggestionId ? { ...s, status: 'rejected' } : s
+      )
+    );
+    setTimeout(handleNextSuggestion, 0);
+  };
+
+  const handleTextFormat = (format: 'bold' | 'italic' | 'underline') => {
+    const editor = editorRef.current;
+    const monaco = monacoInstance;
+    if (!editor || !monaco) return;
+
+    const selection = editor.getSelection();
+    if (!selection || selection.isEmpty()) return;
+
+    const model = editor.getModel();
+    if (!model) return;
+
+    const selectedText = model.getValueInRange(selection);
+    const formatMap = {
+      bold: { command: '\\textbf', length: 8 },
+      italic: { command: '\\textit', length: 8 },
+      underline: { command: '\\underline', length: 11 },
+    };
+    const { command, length } = formatMap[format]; // Fixed undeclared variable error
+
+    let newText;
+    if (selectedText.startsWith(`${command}{`) && selectedText.endsWith('}')) {
+      newText = selectedText.slice(length, -1);
+    } else {
+      newText = `${command}{${selectedText}}`;
+    }
+
+    editor.executeEdits(format, [
+      {
+        range: selection,
+        text: newText,
+        forceMoveMarkers: true,
+      },
+    ]);
+
+    const newEndColumn = selection.startColumn + newText.length;
+    editor.setSelection(
+      new monaco.Selection(
+        selection.startLineNumber,
+        selection.startColumn,
+        selection.startLineNumber,
+        newEndColumn
+      )
+    );
+    editor.focus();
+  };
+
+  // Update the decoration effect for a clear inline diff view
+  useEffect(() => {
+    // Ensure editor and monaco are ready
+    const editor = editorRef.current; // Get current editor instance
+    if (!editor || !monacoInstance) {
+      return;
+    }
+    const model = editor.getModel();
+    if (!model) {
+      return;
+    }
+
+    const oldDecorationIds = decorationIds; // Get IDs of previous decorations
+    const newDecorations: Monaco.editor.IModelDeltaDecoration[] = [];
+
+    const pendingSuggestions = editSuggestions.filter(
+      (s) => s.status === 'pending'
+    );
+
+    pendingSuggestions.forEach((suggestion) => {
+      const startLineNumber = suggestion.startLine;
+      // Ensure endLineNumber is valid and >= startLineNumber
+      const endLineNumber = Math.max(
+        startLineNumber,
+        startLineNumber + suggestion.originalLineCount - 1
+      );
+
+      // Validate line numbers against the current model state
+      if (
+        startLineNumber <= 0 ||
+        endLineNumber <= 0 ||
+        startLineNumber > model.getLineCount() ||
+        endLineNumber > model.getLineCount()
+      ) {
+        console.warn(
+          `Suggestion ${suggestion.id} line numbers [${startLineNumber}-${endLineNumber}] are out of bounds for model line count ${model.getLineCount()}. Skipping decoration.`
+        );
+        return; // Skip this suggestion if lines are invalid
+      }
+
+      // Calculate end column precisely
+      const endColumn =
+        suggestion.originalLineCount > 0
+          ? model.getLineMaxColumn(endLineNumber) // End of the last original line
+          : 1; // Insertion point column 1
+
+      // Define the range for the original text (or insertion point)
+      const originalRange = new monacoInstance.Range(
+        startLineNumber,
+        1, // Start column is always 1
+        endLineNumber,
+        endColumn
+      );
+
+      // --- Decoration 1: Mark original text (if any) + Glyph ---
+      if (suggestion.originalLineCount > 0) {
+        // Apply red strikethrough to the original range
+        newDecorations.push({
+          range: originalRange,
+          options: {
+            className: 'octra-suggestion-deleted', // Red strikethrough style
+            glyphMarginClassName: 'octra-suggestion-glyph', // Blue margin indicator
+            glyphMarginHoverMessage: {
+              value: `Suggestion: Replace Lines ${startLineNumber}-${endLineNumber}`,
+            },
+            stickiness:
+              monacoInstance.editor.TrackedRangeStickiness
+                .NeverGrowsWhenTypingAtEdges,
+          },
+        });
+      } else {
+        // If it's a pure insertion, just add the glyph marker at the start line
+        newDecorations.push({
+          range: new monacoInstance.Range(
+            startLineNumber,
+            1,
+            startLineNumber,
+            1
+          ), // Point decoration
+          options: {
+            glyphMarginClassName: 'octra-suggestion-glyph',
+            glyphMarginHoverMessage: {
+              value: `Suggestion: Insert at Line ${startLineNumber}`,
+            },
+            stickiness:
+              monacoInstance.editor.TrackedRangeStickiness
+                .NeverGrowsWhenTypingAtEdges,
+          },
+        });
+      }
+
+      // --- Decoration 2: Show suggested text inline (if any) ---
+      if (suggestion.suggested && suggestion.suggested.trim().length > 0) {
+        // Use 'after' content widget placed at the end of the original range
+        // The range for the 'after' widget itself should be zero-length
+        const afterWidgetRange = new monacoInstance.Range(
+          endLineNumber,
+          endColumn,
+          endLineNumber,
+          endColumn
+        );
+
+        // Prepare suggested content, replacing newlines for inline view
+        const inlineSuggestedContent = ` ${suggestion.suggested.replace(/\n/g, ' ↵ ')}`;
+
+        newDecorations.push({
+          range: afterWidgetRange, // Position the widget *after* the original range
+          options: {
+            after: {
+              content: inlineSuggestedContent,
+              inlineClassName: 'octra-suggestion-added', // Bold green style
+            },
+            stickiness:
+              monacoInstance.editor.TrackedRangeStickiness
+                .NeverGrowsWhenTypingAtEdges,
+          },
+        });
+      }
+    });
+
+    // --- Apply Decorations ---
+    // This is crucial: deltaDecorations removes old IDs and applies new ones atomically
+    const newDecorationIds = editor.deltaDecorations(
+      oldDecorationIds,
+      newDecorations
+    );
+    // Update the state to store the IDs of the *currently applied* decorations
+    setDecorationIds(newDecorationIds);
+    // Dependencies: Re-run when suggestions change, or editor/monaco become available.
+  }, [editSuggestions, editor, monacoInstance]); // Removed decorationIds from deps
+
+  // Cleanup on unmount (adjust to remove any references to pdfUrl)
+  useEffect(() => {
+    return () => {
+      // Optional: Clear decorations when component unmounts
+      if (editorRef.current && decorationIds.length > 0) {
+        editorRef.current.deltaDecorations(decorationIds, []);
+      }
+    };
+  }, []); // Empty dependency array for unmount cleanup
+
+  // Modify handleCopy to set the new state
+  function handleCopy(textToCopy?: string) {
+    const currentSelectedText = textToCopy ?? selectedText;
+    if (currentSelectedText.trim()) {
+      setTextFromEditor(currentSelectedText);
+      setShowButton(false);
+    }
   }
 
-  // Fetch project details
-  const { data: project } = await supabase
-    .from('projects')
-    .select('*')
-    .eq('id', params.id)
-    .eq('user_id', user.id)
-    .single();
+  const debouncedCursorSelection = useDebouncedCallback(
+    (editor: Monaco.editor.IStandaloneCodeEditor) => {
+      const selection = editor.getSelection();
+      const model = editor.getModel();
+      const text = model?.getValueInRange(selection!);
+      if (text && selection && !selection?.isEmpty()) {
+        const range = {
+          startLineNumber: selection.startLineNumber,
+          startColumn: selection.startColumn,
+          endLineNumber: selection.endLineNumber,
+          endColumn: selection.endColumn,
+        };
+        const startCoords = editor.getScrolledVisiblePosition({
+          lineNumber: range.startLineNumber,
+          column: range.startColumn,
+        });
+        if (startCoords) {
+          setButtonPos({
+            top: startCoords.top - 30,
+            left: startCoords.left,
+          });
+          setSelectedText(text);
+          setShowButton(true);
+        }
+      } else {
+        setShowButton(false);
+        setSelectedText('');
+      }
+    },
+    200
+  ); // debounce delay in ms
 
-  if (!project) {
-    redirect('/projects');
-  }
+  // Update onMount handler to include better keyboard shortcut handling
+  const handleEditorDidMount = (
+    editor: Monaco.editor.IStandaloneCodeEditor,
+    monaco: typeof Monaco
+  ) => {
+    editorRef.current = editor;
+    setEditor(editor);
+    setMonacoInstance(monaco);
 
-  // Fetch documents for this project (all user documents for now)
-  const { data: documents } = await supabase
-    .from('documents')
-    .select('*')
-    .eq('owner_id', user.id)
-    .order('updated_at', { ascending: false });
+    // Add our own key event listener to the editor's DOM node
+    // This will run before Monaco's handlers and allows us to prevent default behavior
+    const editorDomNode = editor.getDomNode();
+    if (editorDomNode) {
+      editorDomNode.addEventListener('keydown', (e) => {
+        // Check for Cmd+S or Ctrl+S
+        if ((e.metaKey || e.ctrlKey) && e.key === 's') {
+          e.preventDefault(); // This prevents browser's save dialog
+          e.stopPropagation(); // Stop the event from propagating
+          // Get the current content directly from the editor
+          const currentContent = editor.getValue();
+          // Execute save and compile with current content
+          saveFile(currentContent).then((saved) => {
+            if (saved) handleCompile(currentContent);
+          });
+          return false;
+        }
+      });
+    }
 
-  // Fetch files for this project
-  const { data: files } = await supabase
-    .from('files')
-    .select('*')
-    .eq('project_id', params.id)
-    .order('uploaded_at', { ascending: false });
+    // Configure suggestion actions
+    // Add suggestion actions (Accept/Reject in context menu)
+    editor.addAction({
+      id: 'accept-suggestion',
+      label: 'Accept Suggestion',
+      contextMenuGroupId: 'suggestion',
+      run: (ed) => {
+        const position = ed.getPosition();
+        if (!position) return;
+        const decorations = ed.getLineDecorations(position.lineNumber);
+        const suggestion = decorations?.find(
+          (d) => d.options.after && 'attachedData' in d.options.after
+        );
+        if (
+          suggestion?.options.after &&
+          'attachedData' in suggestion.options.after
+        ) {
+          handleAcceptEdit(suggestion.options.after.attachedData as string);
+        }
+      },
+    });
 
-  const formatFileSize = (bytes: number | null) => {
-    if (!bytes || bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    // Add selection change listener for floating button
+    editor.onDidChangeCursorSelection((e) => {
+      debouncedCursorSelection(editor);
+    });
+
+    // Original Cmd+B command for text selection remains
+    editor.addCommand(
+      monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyB,
+      () => {
+        const currentEditor = editorRef.current;
+        if (!currentEditor) {
+          console.error('[ProjectEditorPage] Cmd+B Error: editorRef is not set.');
+          return;
+        }
+        const selection = currentEditor.getSelection();
+        if (!selection || selection.isEmpty()) {
+          return;
+        }
+        const model = currentEditor.getModel();
+        if (!model) {
+          return;
+        }
+        const directlySelectedText = model.getValueInRange(selection);
+        if (directlySelectedText && directlySelectedText.trim()) {
+          handleCopy(directlySelectedText);
+        }
+      },
+      'editorTextFocus'
+    );
   };
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="flex-shrink-0 p-6 border-b">
-        <div className="flex items-center gap-4 mb-4">
-          <Folder className="h-8 w-8 text-blue-600" />
-          <div>
-            <h1 className="text-2xl font-bold text-neutral-900">{project.title}</h1>
-            <p className="text-sm text-neutral-500">
-              Created {dayjs(project.created_at).format('MMM D, YYYY')} • 
-              Last updated {dayjs(project.updated_at).format('MMM D, YYYY h:mm A')}
-            </p>
+    <div className="flex h-screen flex-col bg-slate-100">
+      {/* Top bar: Breadcrumb, Save Status, Format Buttons, Compile/Export */}
+      <div className="flex-shrink-0 px-4 py-2">
+        <div className="relative flex justify-end gap-1 py-1">
+          <Breadcrumb className="absolute top-1 left-1/2 -translate-x-1/2">
+            <BreadcrumbList>
+              <BreadcrumbItem>
+                <BreadcrumbLink href="/projects">Projects</BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator />
+              <BreadcrumbItem>
+                {isEditingTitle ? (
+                  <input
+                    type="text"
+                    value={editingTitle}
+                    onChange={(e) => setEditingTitle(e.target.value)}
+                    onKeyDown={handleTitleKeyDown}
+                    onBlur={handleTitleSave}
+                    className="bg-transparent border-none outline-none text-sm font-medium text-slate-900 min-w-[200px] px-2 py-1 rounded border border-blue-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                    autoFocus
+                  />
+                ) : (
+                  <BreadcrumbPage 
+                    className="cursor-pointer hover:text-blue-600 transition-colors"
+                    onClick={handleTitleEdit}
+                  >
+                    {title}
+                  </BreadcrumbPage>
+                )}
+              </BreadcrumbItem>
+            </BreadcrumbList>
+          </Breadcrumb>
+          {lastSaved && (
+            <span className="flex items-center gap-1 text-xs text-slate-500">
+              Last saved: {lastSaved.toLocaleTimeString()}
+            </span>
+          )}
+        </div>
+        <div className="mb-1 flex items-center justify-between">
+          <ButtonGroup>
+            <ButtonGroupItem onClick={() => handleTextFormat('bold')}>
+              <span className="text-sm font-bold">B</span>
+            </ButtonGroupItem>
+            <ButtonGroupItem onClick={() => handleTextFormat('italic')}>
+              <span className="text-sm italic">I</span>
+            </ButtonGroupItem>
+            <ButtonGroupItem onClick={() => handleTextFormat('underline')}>
+              <span className="text-sm underline">U</span>
+            </ButtonGroupItem>
+          </ButtonGroup>
+          <div className="flex items-center gap-2">
+            <div className="bg-background flex w-fit items-center gap-1 rounded-md border border-slate-300 p-1 shadow-xs">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => handleCompile()}
+                disabled={compiling}
+              >
+                {compiling ? (
+                  <>
+                    <Loader2 className="animate-spin" />
+                    Compiling
+                  </>
+                ) : (
+                  <>
+                    Compile
+                    <span
+                      data-slot="dropdown-menu-shortcut"
+                      className={cn(
+                        'text-muted-foreground ml-auto text-xs tracking-widest'
+                      )}
+                    >
+                      ⌘S
+                    </span>
+                  </>
+                )}
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleExportPDF}
+                disabled={exportingPDF || isSaving}
+              >
+                {exportingPDF ? (
+                  <>
+                    <Loader2 className="animate-spin" />
+                    Exporting
+                  </>
+                ) : (
+                  'Export'
+                )}
+              </Button>
+            </div>
           </div>
         </div>
       </div>
 
-      <div className="flex-1 p-6 overflow-auto">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Documents Section */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="flex items-center gap-2">
-                    <FileText className="h-5 w-5" />
-                    Documents
-                  </CardTitle>
-                  <CardDescription>
-                    LaTeX documents in this project
-                  </CardDescription>
-                </div>
-                <Button size="sm">
-                  <Plus className="h-4 w-4 mr-2" />
-                  New Document
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {documents && documents.length > 0 ? (
-                <div className="space-y-2">
-                  {documents.map((doc) => (
-                    <div
-                      key={doc.id}
-                      className="flex items-center justify-between p-3 rounded-lg border hover:bg-gray-50 cursor-pointer"
-                    >
-                      <div className="flex items-center gap-3">
-                        <FileText className="h-4 w-4 text-blue-600" />
-                        <div>
-                          <div className="font-medium">{doc.title}</div>
-                          <div className="text-sm text-gray-500">
-                            Updated {dayjs(doc.updated_at).format('MMM D, YYYY h:mm A')}
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Button size="sm" variant="ghost">
-                          Edit
-                        </Button>
-                        <Button size="sm" variant="ghost">
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
+      {/* Main content area: Editor and PDF Viewer */}
+      <div className="flex flex-1 gap-4 px-4 pb-4 min-h-0">
+        <div className="relative flex-4 overflow-hidden rounded-md bg-white shadow-sm min-h-0">
+          <Editor
+            height="100%"
+            defaultLanguage="latex"
+            value={content}
+            onChange={(value) => setContent(value || '')}
+            theme="vs-light"
+            options={{
+              scrollbar: {
+                vertical: 'auto',
+                horizontal: 'auto',
+                verticalScrollbarSize: 8,
+                horizontalScrollbarSize: 8,
+                scrollByPage: false,
+                ignoreHorizontalScrollbarInContentHeight: false,
+              },
+              minimap: { enabled: false },
+              fontSize: 13,
+              wordWrap: 'on',
+              lineNumbers: 'on',
+              renderWhitespace: 'all',
+              scrollBeyondLastLine: false,
+              quickSuggestions: true,
+              suggestOnTriggerCharacters: true,
+              wordBasedSuggestions: 'allDocuments',
+              tabCompletion: 'on',
+              suggest: {
+                snippetsPreventQuickSuggestions: false,
+              },
+              padding: {
+                top: 10,
+                bottom: 10,
+              },
+            }}
+            onMount={handleEditorDidMount}
+          />
+          {/* Floating Button - still uses handleCopy without args, relying on state */}
+          {showButton && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleCopy()} // Button click uses state via default arg
+              className="absolute z-10 py-3 font-medium"
+              style={{
+                top: buttonPos.top,
+                left: buttonPos.left,
+              }}
+            >
+              Edit
+              <kbd className="text-muted-foreground ml-auto pt-0.5 font-mono text-xs tracking-widest">
+                ⌘B
+              </kbd>
+            </Button>
+          )}
+          {/* Enhanced Suggestion Actions with Diff View */}
+          <div className="absolute top-1 right-3 z-50 max-w-[400px] space-y-2">
+            {editSuggestions
+              .filter((s) => s.status === 'pending')
+              .map((suggestion) => (
+                <div
+                  key={suggestion.id}
+                  className="flex flex-col gap-3 rounded-lg border border-blue-200 bg-white p-4 shadow-xl backdrop-blur-sm"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="text-sm font-medium text-blue-700">
+                      Lines {suggestion.startLine}
+                      {suggestion.originalLineCount > 1 &&
+                        `-${suggestion.startLine + suggestion.originalLineCount - 1}`}
                     </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8 text-gray-500">
-                  <FileText className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                  <p>No documents yet</p>
-                  <p className="text-sm">Create your first LaTeX document</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Files Section */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="flex items-center gap-2">
-                    <Upload className="h-5 w-5" />
-                    Files
-                  </CardTitle>
-                  <CardDescription>
-                    Uploaded files and resources
-                  </CardDescription>
-                </div>
-                <Button size="sm">
-                  <Upload className="h-4 w-4 mr-2" />
-                  Upload File
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {files && files.length > 0 ? (
-                <div className="space-y-2">
-                  {files.map((file) => (
-                    <div
-                      key={file.id}
-                      className="flex items-center justify-between p-3 rounded-lg border hover:bg-gray-50"
-                    >
-                      <div className="flex items-center gap-3">
-                        <Upload className="h-4 w-4 text-green-600" />
-                        <div>
-                          <div className="font-medium">{file.name}</div>
-                          <div className="text-sm text-gray-500">
-                            {formatFileSize(file.size)} • 
-                            Uploaded {dayjs(file.uploaded_at).format('MMM D, YYYY')}
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Button size="sm" variant="ghost">
-                          <Download className="h-4 w-4" />
-                        </Button>
-                        <Button size="sm" variant="ghost">
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
+                    <div className="rounded bg-gray-100 px-2 py-1 text-xs text-gray-500">
+                      AI Suggestion
                     </div>
-                  ))}
+                  </div>
+                  <DiffViewer
+                    original={suggestion.original}
+                    suggested={suggestion.suggested}
+                    className="max-w-full"
+                  />
+                  <div className="flex items-center gap-2">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => handleAcceptEdit(suggestion.id)}
+                      className="flex-1 border border-green-200 text-green-700 hover:border-green-300 hover:bg-green-50"
+                    >
+                      <Check size={14} className="mr-1" />
+                      Accept
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => handleRejectEdit(suggestion.id)}
+                      className="flex-1 border border-red-200 text-red-700 hover:border-red-300 hover:bg-red-50"
+                    >
+                      <X size={14} className="mr-1" />
+                      Reject
+                    </Button>
+                  </div>
                 </div>
-              ) : (
-                <div className="text-center py-8 text-gray-500">
-                  <Upload className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                  <p>No files uploaded yet</p>
-                  <p className="text-sm">Upload images, PDFs, or other resources</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+              ))}
+          </div>
         </div>
-
-        {/* Project Actions */}
-        <div className="mt-8">
-          <Card>
-            <CardHeader>
-              <CardTitle>Project Actions</CardTitle>
-              <CardDescription>
-                Manage your project settings and collaborators
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex gap-4">
-                <Button variant="outline">
-                  <Settings className="h-4 w-4 mr-2" />
-                  Project Settings
-                </Button>
-                <Button variant="outline">
-                  <Upload className="h-4 w-4 mr-2" />
-                  Export Project
-                </Button>
-                <Button variant="outline">
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Delete Project
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+        <div className="flex-3 overflow-hidden rounded-md bg-white shadow-sm min-h-0">
+          <PDFViewer pdfData={pdfData} isLoading={compiling} />
         </div>
       </div>
+
+      {/* Add Chat component */}
+      <Chat
+        isOpen={chatOpen}
+        setIsOpen={setChatOpen}
+        onEditSuggestion={(suggestionArray) => {
+          // Always expect an array of stringified suggestions
+          if (Array.isArray(suggestionArray)) {
+            const [first, ...rest] = suggestionArray;
+            handleEditSuggestion(first);
+            suggestionQueueRef.current = rest.map((s) =>
+              typeof s === 'string' ? JSON.parse(s) : s
+            );
+          } else {
+            // Fallback for legacy single suggestion
+            handleEditSuggestion(suggestionArray);
+            suggestionQueueRef.current = [];
+          }
+        }}
+        fileContent={content}
+        textFromEditor={textFromEditor}
+        setTextFromEditor={setTextFromEditor}
+      />
     </div>
   );
-} 
+}

@@ -1,17 +1,22 @@
 'use client';
 
 import { Loader2 } from 'lucide-react';
-import { pdfjs } from 'react-pdf';
-import 'react-pdf/dist/Page/AnnotationLayer.css';
-import 'react-pdf/dist/Page/TextLayer.css';
 import dynamic from 'next/dynamic';
 
-pdfjs.GlobalWorkerOptions.workerSrc = new URL(
-  'pdfjs-dist/build/pdf.worker.min.mjs',
-  import.meta.url
-).toString();
+// Polyfill for Promise.withResolvers if not available
+if (!Promise.withResolvers) {
+  (Promise as any).withResolvers = function <T>() {
+    let resolve: (value: T) => void;
+    let reject: (reason?: any) => void;
+    const promise = new Promise<T>((res, rej) => {
+      resolve = res;
+      reject = rej;
+    });
+    return { promise, resolve: resolve!, reject: reject! };
+  };
+}
 
-// Dynamically import the PDF components with no SSR
+// Dynamically import the PDF components with no SSR and proper error handling
 const DynamicPDFViewer = dynamic(() => import('@/components/dynamic-pdf-viewer'), { 
   ssr: false,
   loading: () => (

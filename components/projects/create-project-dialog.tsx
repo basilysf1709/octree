@@ -16,9 +16,11 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { createProject, State } from '@/app/projects/actions/create-project';
+import { useRouter } from 'next/navigation';
 
 export function CreateProjectDialog() {
   const [open, setOpen] = useState(false);
+  const router = useRouter();
 
   const initialState: State = { projectId: null, message: null };
   const [state, formAction, pending] = useActionState(
@@ -27,10 +29,12 @@ export function CreateProjectDialog() {
   );
 
   useEffect(() => {
-    if (state.success) {
+    if (state.success && state.projectId) {
       setOpen(false);
+      // Navigate to the project editor
+      router.push(`/projects/${state.projectId}`);
     }
-  }, [state]);
+  }, [state, router]);
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>

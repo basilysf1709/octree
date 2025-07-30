@@ -1,19 +1,14 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import {
-  ChevronRight,
-  ChevronDown,
   FileText,
   Folder,
   Plus,
-  Upload,
   Settings,
-  Home,
   Search,
   Clock,
-  Star,
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -36,20 +31,7 @@ interface Project {
   created_at: string | null;
   updated_at: string | null;
   user_id: string;
-  documents?: Document[];
   files?: ProjectFile[];
-}
-
-interface Document {
-  id: string;
-  title: string;
-  content: string;
-  created_at: string | null;
-  updated_at: string | null;
-  owner_id: string;
-  document_type: string | null;
-  is_public: boolean | null;
-  compile_settings: any;
 }
 
 interface ProjectFile {
@@ -63,16 +45,14 @@ interface ProjectFile {
 
 export function AppSidebar() {
   const [projects, setProjects] = useState<Project[]>([]);
-  const [expandedProjects, setExpandedProjects] = useState<Set<string>>(
-    new Set()
-  );
   const [loading, setLoading] = useState(true);
   const router = useRouter();
+  const pathname = usePathname();
   const supabase = createClient();
 
   useEffect(() => {
     fetchProjects();
-  }, []);
+  }, [pathname]); // Refetch when pathname changes
 
   const fetchProjects = async () => {
     try {
@@ -89,17 +69,9 @@ export function AppSidebar() {
         .order('updated_at', { ascending: false });
 
       if (projectsData) {
-        // For each project, fetch its documents and files
+        // For each project, fetch its files
         const projectsWithContent = await Promise.all(
           projectsData.map(async (project) => {
-            // Fetch documents for this project (for now, show recent documents)
-            const { data: documents } = await supabase
-              .from('documents')
-              .select('*')
-              .eq('owner_id', session.user.id)
-              .order('updated_at', { ascending: false })
-              .limit(5);
-
             // Fetch files for this project
             const { data: files } = await supabase
               .from('files')
@@ -109,7 +81,6 @@ export function AppSidebar() {
 
             return {
               ...project,
-              documents: documents || [],
               files: files || [],
             };
           })
@@ -124,19 +95,7 @@ export function AppSidebar() {
     }
   };
 
-  const toggleProject = (projectId: string) => {
-    const newExpanded = new Set(expandedProjects);
-    if (newExpanded.has(projectId)) {
-      newExpanded.delete(projectId);
-    } else {
-      newExpanded.add(projectId);
-    }
-    setExpandedProjects(newExpanded);
-  };
 
-  const navigateToDocument = (documentId: string) => {
-    router.push(`/editor/${documentId}`);
-  };
 
   const navigateToProject = (projectId: string) => {
     router.push(`/projects/${projectId}`);
@@ -179,29 +138,7 @@ export function AppSidebar() {
           </div>
         </SidebarHeader>
 
-        <SidebarGroup>
-          <SidebarGroupLabel>Navigation</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild>
-                  <a href="/">
-                    <Home className="h-4 w-4" />
-                    <span>Home</span>
-                  </a>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild>
-                  <a href="/projects">
-                    <Folder className="h-4 w-4" />
-                    <span>Projects</span>
-                  </a>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+
 
         <SidebarGroup>
           <SidebarGroupLabel>
@@ -223,48 +160,17 @@ export function AppSidebar() {
                   <div key={project.id}>
                     <SidebarMenuItem>
                       <SidebarMenuButton
-                        onClick={() => toggleProject(project.id)}
+                        onClick={() => navigateToProject(project.id)}
                         className="w-full justify-between"
                       >
                         <div className="flex items-center gap-2">
-                          {expandedProjects.has(project.id) ? (
-                            <ChevronDown className="h-4 w-4" />
-                          ) : (
-                            <ChevronRight className="h-4 w-4" />
-                          )}
                           <Folder className="h-4 w-4" />
                           <span className="truncate">{project.title}</span>
                         </div>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
 
-                    {expandedProjects.has(project.id) && (
-                      <div className="ml-6 space-y-1">
-                        {/* Documents */}
-                        {project.documents && project.documents.length > 0 && (
-                          <div className="ml-4">
-                            <div className="mb-1 text-xs font-medium text-gray-500">
-                              Documents
-                            </div>
-                            {project.documents.map((doc) => (
-                              <SidebarMenuItem key={doc.id}>
-                                <SidebarMenuButton asChild className="pl-4">
-                                  <button
-                                    onClick={() => navigateToDocument(doc.id)}
-                                    className="flex w-full items-center gap-2 text-left text-sm"
-                                  >
-                                    <FileText className="h-3 w-3" />
-                                    <span className="truncate">
-                                      {doc.title}
-                                    </span>
-                                  </button>
-                                </SidebarMenuButton>
-                              </SidebarMenuItem>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    )}
+
                   </div>
                 ))
               )}
@@ -276,21 +182,19 @@ export function AppSidebar() {
           <SidebarGroupLabel>Recent</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {projects.slice(0, 3).map((project) =>
-                project.documents?.slice(0, 2).map((doc) => (
-                  <SidebarMenuItem key={doc.id}>
-                    <SidebarMenuButton asChild className="pl-4">
-                      <button
-                        onClick={() => navigateToDocument(doc.id)}
-                        className="flex w-full items-center gap-2 text-left text-sm"
-                      >
-                        <Clock className="h-3 w-3" />
-                        <span className="truncate">{doc.title}</span>
-                      </button>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))
-              )}
+              {projects.slice(0, 3).map((project) => (
+                <SidebarMenuItem key={project.id}>
+                  <SidebarMenuButton asChild className="pl-4">
+                    <button
+                      onClick={() => navigateToProject(project.id)}
+                      className="flex w-full items-center gap-2 text-left text-sm"
+                    >
+                      <Clock className="h-3 w-3" />
+                      <span className="truncate">{project.title}</span>
+                    </button>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

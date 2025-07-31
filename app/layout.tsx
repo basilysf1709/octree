@@ -5,6 +5,7 @@ import './globals.css';
 import { SidebarInset, SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import { AppSidebar } from '@/components/app-sidebar';
 import { createClient } from '@/lib/supabase/server';
+import { ProjectProvider } from '@/lib/project-context';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -25,18 +26,20 @@ export default async function RootLayout({
 
   const userName = user?.user_metadata?.name ?? user?.email ?? null;
 
-  return (
-    <html lang="en">
-      <body className={inter.className}>
-        <SidebarProvider>
-          <AppSidebar userName={userName} />
-          <SidebarInset>
-            <SidebarTrigger />
-            {children}
-          </SidebarInset>
-        </SidebarProvider>
-        <Analytics />
-      </body>
-    </html>
-  );
+          return (
+          <html lang="en">
+            <body className={inter.className}>
+              <ProjectProvider>
+                <SidebarProvider>
+                  <AppSidebar userName={userName} />
+                  <SidebarInset>
+                    <SidebarTrigger />
+                    {children}
+                  </SidebarInset>
+                </SidebarProvider>
+              </ProjectProvider>
+              <Analytics />
+            </body>
+          </html>
+        );
 }

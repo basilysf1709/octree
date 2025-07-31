@@ -22,6 +22,7 @@ import { UserProfileDropdown } from "@/components/user/user-profile-dropdown"
 import { useEffect, useState } from "react"
 import { createClient } from "@/lib/supabase/client"
 import Link from "next/link"
+import { useProjectRefresh } from "@/lib/project-context"
 
 interface Project {
   id: string;
@@ -64,6 +65,7 @@ interface AppSidebarProps {
 export function AppSidebar({ userName }: AppSidebarProps) {
   const [projects, setProjects] = useState<ProjectWithFiles[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const { refreshTrigger } = useProjectRefresh();
 
   useEffect(() => {
     const fetchProjectsAndFiles = async () => {
@@ -115,7 +117,7 @@ export function AppSidebar({ userName }: AppSidebarProps) {
     };
 
     fetchProjectsAndFiles();
-  }, []);
+  }, [refreshTrigger]);
 
   return (
     <Sidebar>

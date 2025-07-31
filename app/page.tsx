@@ -10,6 +10,7 @@ import { Loader2, PlusIcon } from 'lucide-react';
 import { Document } from '@/types/document';
 import { CreateDocumentDialog } from '@/components/ui/create-document-dialog';
 import { defaultLatexContent } from '@/app/editor/default-content';
+import { useProjectRefresh } from '@/lib/project-context';
 import {
   Dialog,
   DialogContent,
@@ -22,6 +23,7 @@ import {
 export default function Dashboard() {
   const supabase = createClient();
   const router = useRouter();
+  const { refreshProjects } = useProjectRefresh();
 
   const [userName, setUserName] = useState<string | null>(null);
   const [documents, setDocuments] = useState<Document[]>([]);
@@ -67,7 +69,9 @@ export default function Dashboard() {
       }
     };
     fetchUserAndDocuments();
-  }, [router, supabase]);
+    // Refresh sidebar projects when page loads
+    refreshProjects();
+  }, [router, supabase, refreshProjects]);
 
   const handleCreateClick = () => {
     setCreateDialog(true);

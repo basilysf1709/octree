@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useActionState, useEffect } from 'react';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -10,7 +10,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/components/ui/dialog';
-import { deleteProject, State } from '@/app/projects/actions/delete-project';
+import { useDeleteProject } from '@/app/projects/actions/delete-project-client';
 
 export function DeleteProjectDialog({
   row,
@@ -18,28 +18,24 @@ export function DeleteProjectDialog({
   row: { id: string; title: string };
 }) {
   const [open, setOpen] = useState(false);
-
-  const initialState: State = {
-    projectId: null,
-    message: null,
-    success: false,
-  };
-  const [state, formAction, isPending] = useActionState(
-    deleteProject,
-    initialState
-  );
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const { deleteProjectWithRefresh } = useDeleteProject();
 
   const handleDelete = async () => {
-    const formData = new FormData();
-    formData.append('projectId', row.id);
-    formAction(formData);
-  };
+    setIsLoading(true);
+    setError(null);
 
-  useEffect(() => {
-    if (state.success) {
+    const result = await deleteProjectWithRefresh(row.id);
+
+    if (result.success) {
       setOpen(false);
+    } else {
+      setError(result.message || 'Failed to delete project');
     }
-  }, [state.success]);
+
+    setIsLoading(false);
+  };
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -51,25 +47,25 @@ export function DeleteProjectDialog({
             undone and will permanently remove the project and all its files.
           </DialogDescription>
         </DialogHeader>
-        {state.message && !state.success && (
+        {error && (
           <div className="rounded-md bg-red-50 p-3 text-sm text-red-600">
-            {state.message}
+            {error}
           </div>
         )}
         <DialogFooter>
           <Button
             variant="outline"
             onClick={() => setOpen(false)}
-            disabled={isPending}
+            disabled={isLoading}
           >
             Cancel
           </Button>
           <Button
             variant="destructive"
             onClick={handleDelete}
-            disabled={isPending}
+            disabled={isLoading}
           >
-            {isPending ? 'Deleting...' : 'Delete Project'}
+            {isLoading ? 'Deleting...' : 'Delete Project'}
           </Button>
         </DialogFooter>
       </DialogContent>

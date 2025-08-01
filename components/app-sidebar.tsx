@@ -1,6 +1,18 @@
 'use client';
 
-import { Folder, Plus, User, FileText, ChevronDown, Settings, LogOut, Receipt, FileText as DocumentIcon } from "lucide-react"
+import {
+  Folder,
+  Plus,
+  User,
+  FileText,
+  ChevronDown,
+  Settings,
+  LogOut,
+  Receipt,
+  FileText as DocumentIcon,
+  Minus,
+  PlusIcon,
+} from 'lucide-react';
 import {
   Sidebar,
   SidebarContent,
@@ -15,15 +27,32 @@ import {
   SidebarMenuSubButton,
   SidebarHeader,
   SidebarFooter,
-} from "@/components/ui/sidebar"
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
-import { Button } from "@/components/ui/button"
-import { UserProfileDropdown } from "@/components/user/user-profile-dropdown"
-import { useEffect, useState } from "react"
-import { createClient } from "@/lib/supabase/client"
-import Link from "next/link"
-import { useProjectRefresh } from "@/lib/project-context"
+} from '@/components/ui/sidebar';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
+import { Button } from '@/components/ui/button';
+import { UserProfileDropdown } from '@/components/user/user-profile-dropdown';
+import { useEffect, useState } from 'react';
+import { createClient } from '@/lib/supabase/client';
+import Link from 'next/link';
+import { useProjectRefresh } from '@/lib/project-context';
+import { useCreateProject } from '@/app/projects/actions/create-project-client';
 
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import { Label } from './ui/label';
+import { Input } from './ui/input';
 interface Project {
   id: string;
   title: string;
@@ -47,16 +76,16 @@ interface ProjectWithFiles extends Project {
 
 const settings = [
   {
-    title: "Settings",
-    url: "/settings",
+    title: 'Settings',
+    url: '/settings',
     icon: Settings,
   },
   {
-    title: "Billing",
-    url: "/billing",
+    title: 'Billing',
+    url: '/billing',
     icon: Receipt,
   },
-]
+];
 
 interface AppSidebarProps {
   userName: string | null;
@@ -66,14 +95,19 @@ export function AppSidebar({ userName }: AppSidebarProps) {
   const [projects, setProjects] = useState<ProjectWithFiles[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { refreshTrigger } = useProjectRefresh();
-
+  const [open, setOpen] = useState(false);
+  const [title, setTitle] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const { createProjectWithRefresh } = useCreateProject();
   useEffect(() => {
     const fetchProjectsAndFiles = async () => {
       try {
         const supabase = createClient();
-        
+
         // Get current user
-        const { data: { session } } = await supabase.auth.getSession();
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
         if (!session?.user) return;
 
         // Fetch projects for the current user
@@ -90,7 +124,7 @@ export function AppSidebar({ userName }: AppSidebarProps) {
 
         // Fetch files for each project
         const projectsWithFiles: ProjectWithFiles[] = [];
-        
+
         for (const project of projectsData || []) {
           const { data: filesData, error: filesError } = await supabase
             .from('files')
@@ -99,12 +133,16 @@ export function AppSidebar({ userName }: AppSidebarProps) {
             .order('uploaded_at', { ascending: false });
 
           if (filesError) {
-            console.error('Error fetching files for project:', project.id, filesError);
+            console.error(
+              'Error fetching files for project:',
+              project.id,
+              filesError
+            );
           }
 
           projectsWithFiles.push({
             ...project,
-            files: filesData || []
+            files: filesData || [],
           });
         }
 
@@ -118,14 +156,34 @@ export function AppSidebar({ userName }: AppSidebarProps) {
 
     fetchProjectsAndFiles();
   }, [refreshTrigger]);
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!title.trim()) return;
 
+    setIsLoading(true);
+    setError(null);
+
+    const formData = new FormData();
+    formData.append('title', title);
+
+    const result = await createProjectWithRefresh(formData);
+
+    if (result.success) {
+      setOpen(false);
+      setTitle('');
+    } else {
+      setError(result.message || 'Failed to create project');
+    }
+
+    setIsLoading(false);
+  };
   return (
     <Sidebar>
       <SidebarHeader className="flex items-center gap-2 p-4">
         <img src="/octree.svg" alt="Octree Logo" className="h-16 w-16" />
         <span className="text-lg font-semibold">Octree</span>
       </SidebarHeader>
-      
+
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupLabel>Documents</SidebarGroupLabel>
@@ -158,8 +216,46 @@ export function AppSidebar({ userName }: AppSidebarProps) {
             </SidebarMenu>
           </SidebarGroupContent>
           <SidebarGroupAction title="New Project">
-            <Plus />
-            <span className="sr-only">New Project</span>
+            <Dialog open={open} onOpenChange={setOpen}>
+              <DialogTrigger asChild>
+                {/* <Button size="sm" className> */}
+                <Plus />
+                {/* New Project */}
+                {/* </Button> */}
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[425px]">
+                <form onSubmit={handleSubmit} className="grid gap-4">
+                  <DialogHeader>
+                    <DialogTitle>New Project</DialogTitle>
+                    <DialogDescription>
+                      Create a new project to get started.
+                    </DialogDescription>
+                  </DialogHeader>
+
+                  <div className="grid gap-3">
+                    <Label htmlFor="title">Title</Label>
+                    <Input
+                      id="title"
+                      value={title}
+                      onChange={(e) => setTitle(e.target.value)}
+                      placeholder="Enter project title"
+                    />
+                    {error && <p className="text-sm text-red-600">{error}</p>}
+                  </div>
+
+                  <DialogFooter>
+                    <DialogClose asChild>
+                      <Button variant="outline" disabled={isLoading}>
+                        Cancel
+                      </Button>
+                    </DialogClose>
+                    <Button type="submit" disabled={isLoading}>
+                      {isLoading ? 'Creating...' : 'Create'}
+                    </Button>
+                  </DialogFooter>
+                </form>
+              </DialogContent>
+            </Dialog>
           </SidebarGroupAction>
           <SidebarGroupContent>
             <SidebarMenu>
@@ -190,7 +286,9 @@ export function AppSidebar({ userName }: AppSidebarProps) {
                             {project.files.map((file) => (
                               <SidebarMenuItem key={file.id}>
                                 <SidebarMenuSubButton asChild>
-                                  <Link href={`/projects/${project.id}/files/${file.id}`}>
+                                  <Link
+                                    href={`/projects/${project.id}/files/${file.id}`}
+                                  >
                                     <FileText />
                                     <span>{file.name}</span>
                                   </Link>
@@ -231,5 +329,5 @@ export function AppSidebar({ userName }: AppSidebarProps) {
         <UserProfileDropdown userName={userName} />
       </SidebarFooter>
     </Sidebar>
-  )
+  );
 }

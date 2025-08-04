@@ -15,7 +15,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useCreateProject } from '@/app/projects/actions/create-project-client';
+import { useCreateProject } from '@/hooks/create-project-client';
 
 export function CreateProjectDialog() {
   const [open, setOpen] = useState(false);

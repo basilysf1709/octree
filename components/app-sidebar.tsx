@@ -39,7 +39,7 @@ import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import Link from 'next/link';
 import { useProjectRefresh } from '@/app/context/project';
-import { useCreateProject } from '@/app/projects/actions/create-project-client';
+import { useCreateProject } from '@/hooks/create-project-client';
 
 import {
   Dialog,

@@ -1,6 +1,6 @@
 'use client';
 
-import { createProject } from './create-project';
+import { createProject } from '../app/projects/actions/create-project';
 import { useProjectRefresh } from '@/app/context/project';
 
 export function useCreateProject() {

@@ -38,7 +38,7 @@ import { UserProfileDropdown } from '@/components/user/user-profile-dropdown';
 import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import Link from 'next/link';
-import { useProjectRefresh } from '@/lib/project-context';
+import { useProjectRefresh } from '@/app/context/project';
 import { useCreateProject } from '@/app/projects/actions/create-project-client';
 
 import {

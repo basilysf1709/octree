@@ -10,7 +10,7 @@ import { Loader2, PlusIcon } from 'lucide-react';
 import { Document } from '@/types/document';
 import { CreateDocumentDialog } from '@/components/ui/create-document-dialog';
 import { defaultLatexContent } from '@/app/editor/default-content';
-import { useProjectRefresh } from '@/lib/project-context';
+import { useProjectRefresh } from '@/app/context/project';
 import {
   Dialog,
   DialogContent,

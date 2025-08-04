@@ -14,7 +14,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
 import { Project, SelectedProject } from '@/types/project';
-import { useProjectRefresh } from '@/lib/project-context';
+import { useProjectRefresh } from '@/app/context/project';
 import { useDeleteProject } from '@/app/projects/actions/delete-project-client';
 
 export function ProjectsTable({ data }: { data: Project[] }) {

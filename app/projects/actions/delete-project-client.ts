@@ -1,7 +1,7 @@
 'use client';
 
 import { deleteProject } from './delete-project';
-import { useProjectRefresh } from '@/lib/project-context';
+import { useProjectRefresh } from '@/app/context/project';
 
 export function useDeleteProject() {
   const { refreshProjects } = useProjectRefresh();

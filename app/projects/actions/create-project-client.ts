@@ -1,7 +1,7 @@
 'use client';
 
 import { createProject } from './create-project';
-import { useProjectRefresh } from '@/lib/project-context';
+import { useProjectRefresh } from '@/app/context/project';
 
 export function useCreateProject() {
   const { refreshProjects } = useProjectRefresh();

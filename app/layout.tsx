@@ -5,7 +5,7 @@ import './globals.css';
 import { SidebarInset, SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import { AppSidebar } from '@/components/app-sidebar';
 import { createClient } from '@/lib/supabase/server';
-import { ProjectProvider } from '@/lib/project-context';
+import { ProjectProvider } from '@/app/context/project';
 
 const inter = Inter({ subsets: ['latin'] });
 

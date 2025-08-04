@@ -13,7 +13,7 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   const refreshProjects = useCallback(() => {
-    setRefreshTrigger(prev => prev + 1);
+    setRefreshTrigger((prev) => prev + 1);
   }, []);
 
   return (
@@ -29,4 +29,4 @@ export function useProjectRefresh() {
     throw new Error('useProjectRefresh must be used within a ProjectProvider');
   }
   return context;
-} 
+}

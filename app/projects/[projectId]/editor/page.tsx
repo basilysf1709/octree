@@ -28,6 +28,7 @@ import { cn, initialContent } from '@/lib/utils';
 import { useDebouncedCallback } from 'use-debounce';
 import { createClient } from '@/lib/supabase/client';
 import { DiffViewer } from '@/components/ui/diff-viewer';
+import { DEFAULT_LATEX_CONTENT } from '@/app/constants/data';
 
 export default function ProjectEditorPage() {
   const supabase = createClient();
@@ -118,26 +119,7 @@ export default function ProjectEditorPage() {
 
         if (documentError) {
           // If no main.tex document exists, create one
-          const defaultContent = `\\documentclass{article}
-\\usepackage[utf8]{inputenc}
-\\usepackage{amsmath}
-\\usepackage{graphicx}
-
-\\title{${projectData.title}}
-\\author{Your Name}
-\\date{\\today}
-
-\\begin{document}
-
-\\maketitle
-
-\\section{Introduction}
-This is the main document for your project: ${projectData.title}.
-
-\\section{Getting Started}
-You can start writing your LaTeX content here.
-
-\\end{document}`;
+          const defaultContent = DEFAULT_LATEX_CONTENT(projectData.title);
 
           const { data: newDocument, error: createError } = await supabase
             .from('documents')

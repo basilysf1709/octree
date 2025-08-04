@@ -5,8 +5,9 @@ import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { TablesInsert } from '@/database.types';
 import { z } from 'zod';
+import { DEFAULT_LATEX_CONTENT } from '@/app/constants/data';
 
-const CreateProject = z.object({
+export const CreateProject = z.object({
   title: z.string().min(1, 'Project title is required').trim(),
 });
 
@@ -56,26 +57,7 @@ export async function createProject(prevState: State, formData: FormData) {
     }
 
     // Create a default LaTeX document for the project
-    const defaultContent = `\\documentclass{article}
-\\usepackage[utf8]{inputenc}
-\\usepackage{amsmath}
-\\usepackage{graphicx}
-
-\\title{${title}}
-\\author{Your Name}
-\\date{\\today}
-
-\\begin{document}
-
-\\maketitle
-
-\\section{Introduction}
-This is the main document for your project: ${title}.
-
-\\section{Getting Started}
-You can start writing your LaTeX content here.
-
-\\end{document}`;
+    const defaultContent = DEFAULT_LATEX_CONTENT(title);
 
     const { data: documentData, error: documentError } = await supabase
       .from('documents')

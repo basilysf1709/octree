@@ -15,7 +15,7 @@ import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
 import { Project, SelectedProject } from '@/types/project';
 import { useProjectRefresh } from '@/app/context/project';
-import { useDeleteProject } from '@/app/projects/actions/delete-project-client';
+import { useDeleteProject } from '@/hooks/delete-project-client';
 
 export function ProjectsTable({ data }: { data: Project[] }) {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);

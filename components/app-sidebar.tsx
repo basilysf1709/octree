@@ -99,61 +99,61 @@ export function AppSidebar({ userName }: AppSidebarProps) {
   const [title, setTitle] = useState('');
   const [error, setError] = useState<string | null>(null);
   const { createProjectWithRefresh } = useCreateProject();
-  useEffect(() => {
-    const fetchProjectsAndFiles = async () => {
-      try {
-        const supabase = createClient();
 
-        // Get current user
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
-        if (!session?.user) return;
+  const fetchProjectsAndFiles = async () => {
+    try {
+      const supabase = createClient();
 
-        // Fetch projects for the current user
-        const { data: projectsData, error: projectsError } = await supabase
-          .from('projects')
-          .select('*')
-          .eq('user_id', session.user.id)
-          .order('updated_at', { ascending: false });
+      // Get current user
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (!session?.user) return;
 
-        if (projectsError) {
-          console.error('Error fetching projects:', projectsError);
-          return;
-        }
+      // Fetch projects for the current user
+      const { data: projectsData, error: projectsError } = await supabase
+        .from('projects')
+        .select('*')
+        .eq('user_id', session.user.id)
+        .order('updated_at', { ascending: false });
 
-        // Fetch files for each project
-        const projectsWithFiles: ProjectWithFiles[] = [];
-
-        for (const project of projectsData || []) {
-          const { data: filesData, error: filesError } = await supabase
-            .from('files')
-            .select('*')
-            .eq('project_id', project.id)
-            .order('uploaded_at', { ascending: false });
-
-          if (filesError) {
-            console.error(
-              'Error fetching files for project:',
-              project.id,
-              filesError
-            );
-          }
-
-          projectsWithFiles.push({
-            ...project,
-            files: filesData || [],
-          });
-        }
-
-        setProjects(projectsWithFiles);
-      } catch (error) {
-        console.error('Error fetching projects and files:', error);
-      } finally {
-        setIsLoading(false);
+      if (projectsError) {
+        console.error('Error fetching projects:', projectsError);
+        return;
       }
-    };
 
+      // Fetch files for each project
+      const projectsWithFiles: ProjectWithFiles[] = [];
+
+      for (const project of projectsData || []) {
+        const { data: filesData, error: filesError } = await supabase
+          .from('files')
+          .select('*')
+          .eq('project_id', project.id)
+          .order('uploaded_at', { ascending: false });
+
+        if (filesError) {
+          console.error(
+            'Error fetching files for project:',
+            project.id,
+            filesError
+          );
+        }
+
+        projectsWithFiles.push({
+          ...project,
+          files: filesData || [],
+        });
+      }
+
+      setProjects(projectsWithFiles);
+    } catch (error) {
+      console.error('Error fetching projects and files:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  useEffect(() => {
     fetchProjectsAndFiles();
   }, [refreshTrigger]);
   const handleSubmit = async (e: React.FormEvent) => {
@@ -171,6 +171,8 @@ export function AppSidebar({ userName }: AppSidebarProps) {
     if (result.success) {
       setOpen(false);
       setTitle('');
+      // Refresh projects list after successful creation
+      await fetchProjectsAndFiles();
     } else {
       setError(result.message || 'Failed to create project');
     }

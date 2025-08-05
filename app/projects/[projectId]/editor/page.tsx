@@ -212,7 +212,7 @@ export default function ProjectEditorPage() {
 
   // New function to save document
   const saveDocument = async (contentToSave?: string): Promise<boolean> => {
-    if (!document) return false;
+    if (!projectId) return false;
 
     // Use provided content or fall back to state
     const contentToUse = contentToSave !== undefined ? contentToSave : content;
@@ -220,15 +220,50 @@ export default function ProjectEditorPage() {
     try {
       setIsSaving(true);
 
-      const { error } = await supabase
+      // First, get the current user
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) {
+        throw new Error('User not authenticated');
+      }
+
+      // Get the document ID using project ID
+      const { data: documentData, error: documentError } = await supabase
+        .from('documents')
+        .select('id')
+        .eq('project_id', projectId)
+        .eq('filename', 'main.tex')
+        .eq('owner_id', session.user.id)
+        .single();
+
+      if (documentError || !documentData) {
+        throw new Error('Document not found');
+      }
+
+      // Update the document
+      const { error: updateError } = await supabase
         .from('documents')
         .update({
           content: contentToUse,
           updated_at: new Date().toISOString(),
         })
-        .eq('id', document.id);
+        .eq('id', documentData.id);
 
-      if (error) throw error;
+      if (updateError) throw updateError;
+
+      // Save version to document_versions table
+      const { error: versionError } = await supabase
+        .from('document_versions')
+        .insert({
+          document_id: documentData.id,
+          content: contentToUse,
+          change_summary: 'Auto-saved version',
+          created_by: session.user.id,
+        });
+
+      if (versionError) {
+        console.warn('Failed to save version:', versionError);
+        // Don't throw here as the main document was saved successfully
+      }
 
       // Update state if we used a different content
       if (contentToSave !== undefined && contentToSave !== content) {

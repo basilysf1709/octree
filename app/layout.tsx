@@ -2,8 +2,6 @@ import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import { Analytics } from '@vercel/analytics/react';
 import './globals.css';
-import { SidebarInset, SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
-import { AppSidebar } from '@/components/app-sidebar';
 import { createClient } from '@/lib/supabase/server';
 import { ProjectProvider } from '@/app/context/project';
 
@@ -30,13 +28,7 @@ export default async function RootLayout({
           <html lang="en">
             <body className={inter.className}>
               <ProjectProvider>
-                <SidebarProvider>
-                  <AppSidebar userName={userName} />
-                  <SidebarInset>
-                    <SidebarTrigger />
-                    {children}
-                  </SidebarInset>
-                </SidebarProvider>
+                {children}
               </ProjectProvider>
               <Analytics />
             </body>

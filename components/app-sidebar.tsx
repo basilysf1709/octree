@@ -37,6 +37,7 @@ import Link from 'next/link';
 import { useProjectRefresh } from '@/app/context/project';
 import { useCreateProject } from '@/hooks/create-project-client';
 import Image from 'next/image';
+import { AddFileDialog } from '@/components/projects/add-file-dialog';
 
 import {
   Dialog,
@@ -185,22 +186,6 @@ export function AppSidebar({ userName }: AppSidebarProps) {
 
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Documents</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild>
-                  <Link href="/">
-                    <DocumentIcon />
-                    <span>All Documents</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        <SidebarGroup>
           <SidebarGroupLabel>Projects</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
@@ -217,9 +202,7 @@ export function AppSidebar({ userName }: AppSidebarProps) {
           <SidebarGroupAction title="New Project">
             <Dialog open={open} onOpenChange={setOpen}>
               <DialogTrigger asChild>
-                
-                <Plus />
-                
+              <Plus />
               </DialogTrigger>
               <DialogContent className="sm:max-w-[425px]">
                 <form onSubmit={handleSubmit} className="grid gap-4">
@@ -273,29 +256,49 @@ export function AppSidebar({ userName }: AppSidebarProps) {
                         <SidebarMenuButton>
                           <Folder />
                           <span>{project.title}</span>
-                          {project.files && project.files.length > 0 && (
-                            <ChevronDown className="ml-auto size-4 transition-transform group-data-[state=open]/collapsible:rotate-180" />
-                          )}
+                          <ChevronDown className="ml-auto size-4 transition-transform group-data-[state=open]/collapsible:rotate-180" />
                         </SidebarMenuButton>
                       </CollapsibleTrigger>
-                      {project.files && project.files.length > 0 && (
-                        <CollapsibleContent>
-                          <SidebarMenuSub>
-                            {project.files.map((file) => (
-                              <SidebarMenuItem key={file.id}>
+                      <CollapsibleContent>
+                        <SidebarMenuSub>
+                          {project.files && project.files.length > 0 && (
+                            <>
+                              {project.files.map((file) => (
+                                <SidebarMenuItem key={file.id}>
+                                  <SidebarMenuSubButton asChild>
+                                    <Link
+                                      href={`/projects/${project.id}/editor`}
+                                    >
+                                      <FileText />
+                                      <span>{file.name}</span>
+                                    </Link>
+                                  </SidebarMenuSubButton>
+                                </SidebarMenuItem>
+                              ))}
+                              <SidebarMenuItem>
                                 <SidebarMenuSubButton asChild>
-                                  <Link
-                                    href={`/projects/${project.id}/files/${file.id}`}
-                                  >
-                                    <FileText />
-                                    <span>{file.name}</span>
-                                  </Link>
+                                  <AddFileDialog 
+                                    projectId={project.id} 
+                                    projectTitle={project.title}
+                                    onFileAdded={fetchProjectsAndFiles}
+                                  />
                                 </SidebarMenuSubButton>
                               </SidebarMenuItem>
-                            ))}
-                          </SidebarMenuSub>
-                        </CollapsibleContent>
-                      )}
+                            </>
+                          )}
+                          {(!project.files || project.files.length === 0) && (
+                            <SidebarMenuItem>
+                              <SidebarMenuSubButton asChild>
+                                <AddFileDialog 
+                                  projectId={project.id} 
+                                  projectTitle={project.title}
+                                  onFileAdded={fetchProjectsAndFiles}
+                                />
+                              </SidebarMenuSubButton>
+                            </SidebarMenuItem>
+                          )}
+                        </SidebarMenuSub>
+                      </CollapsibleContent>
                     </SidebarMenuItem>
                   </Collapsible>
                 ))

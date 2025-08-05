@@ -10,7 +10,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/components/ui/dialog';
-import { useDeleteProject } from '@/app/projects/actions/delete-project-client';
+import { useDeleteProject } from '@/hooks/delete-project-client';
 
 export function DeleteProjectDialog({
   row,

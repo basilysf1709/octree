@@ -3,15 +3,11 @@
 import {
   Folder,
   Plus,
-  User,
   FileText,
   ChevronDown,
   Settings,
-  LogOut,
   Receipt,
   FileText as DocumentIcon,
-  Minus,
-  PlusIcon,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -220,10 +216,9 @@ export function AppSidebar({ userName }: AppSidebarProps) {
           <SidebarGroupAction title="New Project">
             <Dialog open={open} onOpenChange={setOpen}>
               <DialogTrigger asChild>
-                {/* <Button size="sm" className> */}
+                
                 <Plus />
-                {/* New Project */}
-                {/* </Button> */}
+                
               </DialogTrigger>
               <DialogContent className="sm:max-w-[425px]">
                 <form onSubmit={handleSubmit} className="grid gap-4">

@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { FileText, Calendar, CreditCard, Loader2 } from 'lucide-react';
+import { User } from '@supabase/supabase-js';
 
 interface BillingSummary {
   totalPaid: number;
@@ -41,7 +42,7 @@ interface PaymentMethod {
 }
 
 export default function BillingPage() {
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [billingData, setBillingData] = useState<{
     billingSummary: BillingSummary;
     invoices: Invoice[];

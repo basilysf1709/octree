@@ -2,7 +2,15 @@
 
 import { useState } from 'react';
 import { FileText } from 'lucide-react';
-import { Button } from './button';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
 
 interface CreateDocumentDialogProps {
   isOpen: boolean;
@@ -17,25 +25,23 @@ export function CreateDocumentDialog({
 }: CreateDocumentDialogProps) {
   const [title, setTitle] = useState('Untitled Document');
 
-  if (!isOpen) return null;
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onConfirm(title);
-    setTitle('Untitled Document'); // Reset for next time
+    setTitle('Untitled Document');
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="animate-in fade-in zoom-in w-[400px] rounded-lg bg-white p-6 shadow-xl">
-        <div className="mb-6 flex items-center gap-3">
-          <div className="rounded-full bg-blue-100 p-2">
-            <FileText className="h-6 w-6 text-blue-600" />
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent>
+        <DialogHeader>
+          <div className="flex items-center gap-3">
+            <div className="rounded-full bg-blue-100 p-2">
+              <FileText className="size-5 text-blue-600" />
+            </div>
+            <DialogTitle>Create New Document</DialogTitle>
           </div>
-          <h3 className="text-xl font-semibold text-blue-900">
-            Create New Document
-          </h3>
-        </div>
+        </DialogHeader>
 
         <form onSubmit={handleSubmit}>
           <div className="mb-6">
@@ -45,18 +51,17 @@ export function CreateDocumentDialog({
             >
               Document Title
             </label>
-            <input
-              type="text"
+            <Input
               id="title"
+              type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="w-full rounded-lg border border-blue-200 px-3 py-2 text-blue-900 focus:ring-2 focus:ring-blue-500 focus:outline-none"
               autoFocus
               required
             />
           </div>
 
-          <div className="flex justify-end gap-3">
+          <DialogFooter>
             <Button
               type="button"
               variant="ghost"
@@ -71,9 +76,9 @@ export function CreateDocumentDialog({
             >
               Create
             </Button>
-          </div>
+          </DialogFooter>
         </form>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

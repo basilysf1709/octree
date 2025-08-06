@@ -1,24 +1,17 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { Button } from '@/components/ui/button';
+import { useRouter } from 'next/navigation';
+import { PlusIcon } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
+import { defaultLatexContent } from '@/app/editor/default-content';
 import Navbar from '@/components/navbar';
+import { Button } from '@/components/ui/button';
 import { DataTable } from '@/components/documents/data-table';
 import { columns } from '@/components/documents/columns';
-import { Loader2, PlusIcon } from 'lucide-react';
+import { CreateDocumentDialog } from '@/components/documents/create-document-dialog';
+import { DeleteDocumentDialog } from '@/components/documents/delete-document-dialog';
 import { Document } from '@/types/document';
-import { CreateDocumentDialog } from '@/components/ui/create-document-dialog';
-import { defaultLatexContent } from '@/app/editor/default-content';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
 
 export default function Dashboard() {
   const supabase = createClient();
@@ -26,7 +19,6 @@ export default function Dashboard() {
 
   const [userName, setUserName] = useState<string | null>(null);
   const [documents, setDocuments] = useState<Document[]>([]);
-
   const [createDialog, setCreateDialog] = useState(false);
   const [deleteDialog, setDeleteDialog] = useState<{
     isOpen: boolean;
@@ -126,7 +118,6 @@ export default function Dashboard() {
       setDeleteDialog({ isOpen: false, docId: null, title: '' });
     } catch (error) {
       console.error('Error deleting document:', error);
-      alert('Failed to delete document');
     } finally {
       setIsDeleting(false);
     }
@@ -159,47 +150,13 @@ export default function Dashboard() {
         />
       </main>
 
-      <Dialog
-        open={deleteDialog.isOpen}
-        onOpenChange={(isOpen) =>
-          !isDeleting && setDeleteDialog((prev) => ({ ...prev, isOpen }))
-        }
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Delete Document</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to delete &quot;{deleteDialog.title}&quot;?
-              This action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              variant="ghost"
-              onClick={() =>
-                setDeleteDialog({ isOpen: false, docId: null, title: '' })
-              }
-              disabled={isDeleting}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleDeleteConfirm}
-              disabled={isDeleting}
-            >
-              {isDeleting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Deleting...
-                </>
-              ) : (
-                'Delete'
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <DeleteDocumentDialog
+        isOpen={deleteDialog.isOpen}
+        setIsOpen={(isOpen) => setDeleteDialog((prev) => ({ ...prev, isOpen }))}
+        title={deleteDialog.title}
+        onConfirm={handleDeleteConfirm}
+        isDeleting={isDeleting}
+      />
 
       <CreateDocumentDialog
         isOpen={createDialog}

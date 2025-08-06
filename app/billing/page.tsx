@@ -1,13 +1,18 @@
-/* eslint-disable */
 'use client';
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import Navbar from '@/components/navbar';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Download, FileText, Calendar, CreditCard, Loader2 } from 'lucide-react';
+import { FileText, Calendar, CreditCard, Loader2 } from 'lucide-react';
 
 interface BillingSummary {
   totalPaid: number;
@@ -50,7 +55,9 @@ export default function BillingPage() {
     const fetchUserAndBillingData = async () => {
       try {
         const supabase = createClient();
-        const { data: { session } } = await supabase.auth.getSession();
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
 
         if (!session) {
           router.push('/auth/login');
@@ -59,7 +66,6 @@ export default function BillingPage() {
 
         setUser(session.user);
 
-        // Fetch billing data
         const response = await fetch('/api/billing');
         const data = await response.json();
 
@@ -113,7 +119,7 @@ export default function BillingPage() {
       <div className="min-h-screen">
         <Navbar userName={user?.user_metadata?.name ?? user?.email} />
         <main className="container mx-auto px-4 py-8">
-          <div className="flex items-center justify-center h-64">
+          <div className="flex h-64 items-center justify-center">
             <Loader2 className="h-8 w-8 animate-spin" />
           </div>
         </main>
@@ -140,7 +146,9 @@ export default function BillingPage() {
 
       <main className="container mx-auto px-4 py-8">
         <div className="mb-8">
-          <h1 className="text-2xl font-bold text-neutral-900">Billing History</h1>
+          <h1 className="text-2xl font-bold text-neutral-900">
+            Billing History
+          </h1>
           <p className="text-sm text-neutral-500">
             View your billing activity and payment methods
           </p>
@@ -159,26 +167,31 @@ export default function BillingPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                 <div>
-                  <p className="text-sm font-medium text-neutral-700">Total Paid</p>
+                  <p className="text-sm font-medium text-neutral-700">
+                    Total Paid
+                  </p>
                   <p className="text-2xl font-bold text-neutral-900">
                     {formatAmount(billingData?.billingSummary.totalPaid || 0)}
                   </p>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-neutral-700">Invoices</p>
+                  <p className="text-sm font-medium text-neutral-700">
+                    Invoices
+                  </p>
                   <p className="text-2xl font-bold text-neutral-900">
                     {billingData?.billingSummary.invoiceCount || 0}
                   </p>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-neutral-700">Next Billing</p>
+                  <p className="text-sm font-medium text-neutral-700">
+                    Next Billing
+                  </p>
                   <p className="text-2xl font-bold text-neutral-900">
-                    {billingData?.billingSummary.nextBilling 
+                    {billingData?.billingSummary.nextBilling
                       ? formatDate(billingData.billingSummary.nextBilling)
-                      : 'No active subscription'
-                    }
+                      : 'No active subscription'}
                   </p>
                 </div>
               </div>
@@ -192,9 +205,7 @@ export default function BillingPage() {
                 <FileText className="h-5 w-5" />
                 Invoice History
               </CardTitle>
-              <CardDescription>
-                Your recent invoices
-              </CardDescription>
+              <CardDescription>Your recent invoices</CardDescription>
             </CardHeader>
             <CardContent>
               {billingData?.invoices && billingData.invoices.length > 0 ? (
@@ -202,7 +213,7 @@ export default function BillingPage() {
                   {billingData.invoices.map((invoice) => (
                     <div
                       key={invoice.id}
-                      className="flex items-center justify-between p-4 border rounded-lg"
+                      className="flex items-center justify-between rounded-lg border p-4"
                     >
                       <div className="flex items-center gap-4">
                         <div className="flex flex-col">
@@ -226,7 +237,7 @@ export default function BillingPage() {
                   ))}
                 </div>
               ) : (
-                <div className="text-center py-8 text-neutral-500">
+                <div className="py-8 text-center text-neutral-500">
                   No invoices found
                 </div>
               )}
@@ -240,27 +251,28 @@ export default function BillingPage() {
                 <CreditCard className="h-5 w-5" />
                 Payment Methods
               </CardTitle>
-              <CardDescription>
-                Your saved payment methods
-              </CardDescription>
+              <CardDescription>Your saved payment methods</CardDescription>
             </CardHeader>
             <CardContent>
-              {billingData?.paymentMethods && billingData.paymentMethods.length > 0 ? (
+              {billingData?.paymentMethods &&
+              billingData.paymentMethods.length > 0 ? (
                 <div className="space-y-4">
                   {billingData.paymentMethods.map((pm) => (
                     <div
                       key={pm.id}
-                      className="flex items-center justify-between p-4 border rounded-lg"
+                      className="flex items-center justify-between rounded-lg border p-4"
                     >
                       <div className="flex items-center gap-4">
-                        <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                          <span className="text-blue-600 font-medium">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100">
+                          <span className="font-medium text-blue-600">
                             {pm.card ? getCardBrandIcon(pm.card.brand) : '•'}
                           </span>
                         </div>
                         <div>
                           <p className="font-medium text-neutral-900">
-                            {pm.card ? `${pm.card.brand} ending in ${pm.card.last4}` : 'Payment method'}
+                            {pm.card
+                              ? `${pm.card.brand} ending in ${pm.card.last4}`
+                              : 'Payment method'}
                           </p>
                           {pm.card && (
                             <p className="text-sm text-neutral-500">
@@ -276,7 +288,7 @@ export default function BillingPage() {
                   ))}
                 </div>
               ) : (
-                <div className="text-center py-8 text-neutral-500">
+                <div className="py-8 text-center text-neutral-500">
                   No payment methods found
                 </div>
               )}
@@ -286,4 +298,4 @@ export default function BillingPage() {
       </main>
     </div>
   );
-} 
+}

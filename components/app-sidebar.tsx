@@ -38,6 +38,7 @@ import { useProjectRefresh } from '@/app/context/project';
 import { useCreateProject } from '@/hooks/create-project-client';
 import Image from 'next/image';
 import { AddFileDialog } from '@/components/projects/add-file-dialog';
+import { usePathname } from 'next/navigation';
 
 import {
   Dialog,
@@ -97,6 +98,7 @@ export function AppSidebar({ userName }: AppSidebarProps) {
   const [title, setTitle] = useState('');
   const [error, setError] = useState<string | null>(null);
   const { createProjectWithRefresh } = useCreateProject();
+  const pathname = usePathname();
 
   const fetchProjectsAndFiles = async () => {
     try {
@@ -263,18 +265,24 @@ export function AppSidebar({ userName }: AppSidebarProps) {
                         <SidebarMenuSub>
                           {project.files && project.files.length > 0 && (
                             <>
-                              {project.files.map((file) => (
-                                <SidebarMenuItem key={file.id}>
-                                  <SidebarMenuSubButton asChild>
-                                    <Link
-                                      href={`/projects/${project.id}/editor`}
+                              {project.files.map((file) => {
+                                const isActive = pathname === `/projects/${project.id}/files/${file.id}/editor`;
+                                return (
+                                  <SidebarMenuItem key={file.id}>
+                                    <SidebarMenuSubButton 
+                                      asChild
+                                      className={isActive ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-500' : ''}
                                     >
-                                      <FileText />
-                                      <span>{file.name}</span>
-                                    </Link>
-                                  </SidebarMenuSubButton>
-                                </SidebarMenuItem>
-                              ))}
+                                      <Link
+                                        href={`/projects/${project.id}/files/${file.id}/editor`}
+                                      >
+                                        <FileText />
+                                        <span>{file.name}</span>
+                                      </Link>
+                                    </SidebarMenuSubButton>
+                                  </SidebarMenuItem>
+                                );
+                              })}
                               <SidebarMenuItem>
                                 <SidebarMenuSubButton asChild>
                                   <AddFileDialog 

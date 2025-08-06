@@ -30,12 +30,10 @@ import { createClient } from '@/lib/supabase/client';
 import { DiffViewer } from '@/components/ui/diff-viewer';
 
 export default function EditorPage() {
-  // Add Supabase client and params
   const supabase = createClient();
   const params = useParams();
   const documentId = params.id as string;
 
-  // Add document metadata state
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [buttonPos, setButtonPos] = useState({ top: 0, left: 0 });
@@ -43,10 +41,8 @@ export default function EditorPage() {
   const [selectedText, setSelectedText] = useState('');
   const [textFromEditor, setTextFromEditor] = useState<string | null>(null);
 
-  // Add editor ref
   const editorRef = useRef<Monaco.editor.IStandaloneCodeEditor | null>(null);
 
-  // Move Monaco initialization into useEffect
   useEffect(() => {
     loader.init().then((monaco) => {
       monaco.languages.register({ id: 'latex' });
@@ -57,7 +53,7 @@ export default function EditorPage() {
       monaco.languages.setMonarchTokensProvider('latex', latexTokenProvider);
       registerLatexCompletions(monaco);
     });
-  }, []); // Empty dependency array means this runs once on mount
+  }, []);
 
   const [title, setTitle] = useState<string>('');
   const [content, setContent] = useState(initialContent);
@@ -74,10 +70,8 @@ export default function EditorPage() {
   const [decorationIds, setDecorationIds] = useState<string[]>([]);
   const [exportingPDF, setExportingPDF] = useState(false);
 
-  // Keep track of whether we've attempted initial compilation
   const initialCompileRef = useRef(false);
 
-  // Load document on initial render and compile once after loading
   useEffect(() => {
     const fetchAndCompile = async () => {
       if (!documentId) return;
@@ -113,23 +107,16 @@ export default function EditorPage() {
     fetchAndCompile();
   }, [documentId, supabase]);
 
-  // Simplified handleCompile function
   const handleCompile = async (contentToCompile?: string) => {
-    if (compiling) {
-      return;
-    }
+    if (compiling) return;
 
-    // Use provided content or fall back to state
-    const contentToUse =
-      contentToCompile !== undefined ? contentToCompile : content;
+    const contentToUse = contentToCompile ?? content;
 
     setCompiling(true);
 
     try {
-      // Save the document first
       await saveDocument(contentToUse);
 
-      // Then compile
       const response = await fetch('/api/compile-pdf', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -155,14 +142,11 @@ export default function EditorPage() {
     }
   };
 
-  // New function to save document
   const saveDocument = async (contentToSave?: string): Promise<boolean> => {
     if (!documentId) return false;
 
-    // Use provided content or fall back to state
-    const contentToUse = contentToSave !== undefined ? contentToSave : content;
-
     try {
+      const contentToUse = contentToSave ?? content;
       setIsSaving(true);
 
       const { error } = await supabase
@@ -190,17 +174,13 @@ export default function EditorPage() {
     }
   };
 
-  // Also update export handler
   const handleExportPDF = async () => {
-    // Start loading indicator immediately
     setExportingPDF(true);
 
     try {
-      // Get the latest content
       const currentContent = editor?.getValue() || content;
 
-      // Save document in the background
-      const savePromise = saveDocument(currentContent);
+      await saveDocument(currentContent);
 
       const response = await fetch('/api/compile-pdf', {
         method: 'POST',
@@ -208,15 +188,10 @@ export default function EditorPage() {
         body: JSON.stringify({ content: currentContent }),
       });
 
-      // Wait for save to complete in background
-      await savePromise;
-
       if (!response.ok) throw new Error('PDF compilation failed');
 
-      // Log raw response for debugging
       const rawText = await response.text();
 
-      // Parse manually to avoid potential issues
       let data;
       try {
         data = JSON.parse(rawText);
@@ -225,27 +200,22 @@ export default function EditorPage() {
         throw new Error('Failed to parse server response');
       }
 
-      // Continue with PDF processing...
       if (data.pdf) {
-        // Convert Base64 back to binary
         const binaryString = atob(data.pdf);
         const bytes = new Uint8Array(binaryString.length);
         for (let i = 0; i < binaryString.length; i++) {
           bytes[i] = binaryString.charCodeAt(i);
         }
 
-        // Create downloadable blob
         const blob = new Blob([bytes], { type: 'application/pdf' });
         const url = URL.createObjectURL(blob);
 
-        // Download
         const a = document.createElement('a');
         a.href = url;
         a.download = 'document.pdf';
         document.body.appendChild(a);
         a.click();
 
-        // Clean up
         URL.revokeObjectURL(url);
         document.body.removeChild(a);
       } else {
@@ -259,7 +229,6 @@ export default function EditorPage() {
   };
 
   const handleEditSuggestion = (suggestion: EditSuggestion | string) => {
-    // Accept both object and stringified suggestion
     let parsedSuggestion: EditSuggestion;
     if (typeof suggestion === 'string') {
       parsedSuggestion = JSON.parse(suggestion) as EditSuggestion;
@@ -281,7 +250,7 @@ export default function EditorPage() {
   const handleAcceptEdit = (suggestionId: string) => {
     const suggestion = editSuggestions.find((s) => s.id === suggestionId);
     if (!suggestion || suggestion.status !== 'pending') return;
-    // Get editor from ref
+
     const editor = editorRef.current;
     const monaco = monacoInstance;
 
@@ -327,7 +296,17 @@ export default function EditorPage() {
           s.id === suggestionId ? { ...s, status: 'accepted' } : s
         )
       );
-      setTimeout(handleNextSuggestion, 0);
+
+      // Check if this is the last suggestion
+      const isLastSuggestion = suggestionQueueRef.current.length === 0;
+
+      setTimeout(() => {
+        handleNextSuggestion();
+        // If this was the last suggestion, compile the document
+        if (isLastSuggestion) {
+          handleCompile();
+        }
+      }, 0);
     } catch (error) {
       console.error('Error applying edit:', error);
       setEditSuggestions((prev) =>
@@ -396,8 +375,7 @@ export default function EditorPage() {
 
   // Update the decoration effect for a clear inline diff view
   useEffect(() => {
-    // Ensure editor and monaco are ready
-    const editor = editorRef.current; // Get current editor instance
+    const editor = editorRef.current;
     if (!editor || !monacoInstance) {
       return;
     }
@@ -407,7 +385,7 @@ export default function EditorPage() {
       return;
     }
 
-    const oldDecorationIds = decorationIds; // Get IDs of previous decorations
+    const oldDecorationIds = decorationIds;
     const newDecorations: Monaco.editor.IModelDeltaDecoration[] = [];
 
     const pendingSuggestions = editSuggestions.filter(
@@ -432,7 +410,7 @@ export default function EditorPage() {
         console.warn(
           `Suggestion ${suggestion.id} line numbers [${startLineNumber}-${endLineNumber}] are out of bounds for model line count ${model.getLineCount()}. Skipping decoration.`
         );
-        return; // Skip this suggestion if lines are invalid
+        return;
       }
 
       // Calculate end column precisely
@@ -525,19 +503,16 @@ export default function EditorPage() {
     setDecorationIds(newDecorationIds);
 
     // Dependencies: Re-run when suggestions change, or editor/monaco become available.
-  }, [editSuggestions, editor, monacoInstance]); // Removed decorationIds from deps
+  }, [editSuggestions, editor, monacoInstance]);
 
-  // Cleanup on unmount (adjust to remove any references to pdfUrl)
   useEffect(() => {
     return () => {
-      // Optional: Clear decorations when component unmounts
       if (editorRef.current && decorationIds.length > 0) {
         editorRef.current.deltaDecorations(decorationIds, []);
       }
     };
-  }, []); // Empty dependency array for unmount cleanup
+  }, []);
 
-  // Modify handleCopy to set the new state
   function handleCopy(textToCopy?: string) {
     const currentSelectedText = textToCopy ?? selectedText;
 
@@ -579,7 +554,7 @@ export default function EditorPage() {
       }
     },
     200
-  ); // debounce delay in ms
+  );
 
   // Update onMount handler to include better keyboard shortcut handling
   const handleEditorDidMount = (
@@ -613,7 +588,6 @@ export default function EditorPage() {
       });
     }
 
-    // Configure suggestion actions
     // Add suggestion actions (Accept/Reject in context menu)
     editor.addAction({
       id: 'accept-suggestion',
@@ -797,9 +771,9 @@ export default function EditorPage() {
             {showButton && (
               <Button
                 variant="outline"
-                size="xs"
-                onClick={() => handleCopy()} // Button click uses state via default arg
-                className="absolute z-10 py-3 font-medium"
+                size="sm"
+                onClick={() => handleCopy()}
+                className="absolute z-10 border border-slate-300 py-3 font-medium"
                 style={{
                   top: buttonPos.top,
                   left: buttonPos.left,
@@ -869,16 +843,16 @@ export default function EditorPage() {
         </div>
       </div>
 
-      {/* Add Chat component */}
       <Chat
         isOpen={chatOpen}
         setIsOpen={setChatOpen}
         onEditSuggestion={(suggestionArray) => {
-          // Always expect an array of stringified suggestions
           if (Array.isArray(suggestionArray)) {
             const [first, ...rest] = suggestionArray;
             handleEditSuggestion(first);
-            suggestionQueueRef.current = rest.map(s => typeof s === 'string' ? JSON.parse(s) : s);
+            suggestionQueueRef.current = rest.map((s) =>
+              typeof s === 'string' ? JSON.parse(s) : s
+            );
           } else {
             // Fallback for legacy single suggestion
             handleEditSuggestion(suggestionArray);

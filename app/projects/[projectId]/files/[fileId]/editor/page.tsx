@@ -18,6 +18,13 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
+import {
+  latexLanguageConfiguration,
+  latexTokenProvider,
+  registerLatexCompletions,
+} from '@/lib/editor-config';
+import { Chat } from '@/components/chat';
+import { EditSuggestion } from '@/types/edit';
 
 export default function FileEditorPage() {
   const supabase = createClient();
@@ -62,6 +69,10 @@ export default function FileEditorPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [exportingPDF, setExportingPDF] = useState(false);
+  const [chatOpen, setChatOpen] = useState(false);
+  const [editSuggestions, setEditSuggestions] = useState<EditSuggestion[]>([]);
+  const [textFromEditor, setTextFromEditor] = useState<string | null>(null);
+  const suggestionQueueRef = useRef<EditSuggestion[]>([]);
 
   const editorRef = useRef<Monaco.editor.IStandaloneCodeEditor | null>(null);
 
@@ -77,6 +88,12 @@ export default function FileEditorPage() {
   useEffect(() => {
     loader.init().then((monaco) => {
       monaco.languages.register({ id: 'latex' });
+      monaco.languages.setLanguageConfiguration(
+        'latex',
+        latexLanguageConfiguration
+      );
+      monaco.languages.setMonarchTokensProvider('latex', latexTokenProvider);
+      registerLatexCompletions(monaco);
     });
   }, []);
 
@@ -175,13 +192,16 @@ export default function FileEditorPage() {
     setCompiling(true);
 
     try {
+      // Get the current content from the editor
+      const currentContent = editorRef.current?.getValue() || content;
+      
       // Save the document first
-      await saveDocument();
+      await saveDocument(currentContent);
 
       const response = await fetch('/api/compile-pdf', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content }),
+        body: JSON.stringify({ content: currentContent }),
       });
 
       if (!response.ok) {
@@ -200,6 +220,94 @@ export default function FileEditorPage() {
     } finally {
       setCompiling(false);
     }
+  };
+
+  const handleEditSuggestion = (suggestion: EditSuggestion | string) => {
+    if (typeof suggestion === 'string') {
+      try {
+        const parsed = JSON.parse(suggestion);
+        setEditSuggestions((prev) => [...prev, parsed]);
+      } catch (error) {
+        console.error('Failed to parse suggestion:', error);
+      }
+    } else {
+      setEditSuggestions((prev) => [...prev, suggestion]);
+    }
+  };
+
+  const handleNextSuggestion = () => {
+    if (suggestionQueueRef.current.length > 0) {
+      const nextSuggestion = suggestionQueueRef.current.shift();
+      if (nextSuggestion) {
+        handleEditSuggestion(nextSuggestion);
+      }
+    }
+  };
+
+  const handleAcceptEdit = (suggestionId: string) => {
+    const suggestion = editSuggestions.find((s) => s.id === suggestionId);
+    if (!suggestion || !editorRef.current) return;
+
+    try {
+      const editor = editorRef.current;
+      const model = editor.getModel();
+      if (!model) return;
+
+      const startLineNumber = suggestion.startLine;
+      const endLineNumber = suggestion.startLine + suggestion.originalLineCount - 1;
+
+      // Get the range for the original text
+      const startColumn = 1;
+      const endColumn = model.getLineMaxColumn(endLineNumber);
+
+      // Create range using the editor's range constructor
+      const rangeToReplace = {
+        startLineNumber,
+        startColumn,
+        endLineNumber,
+        endColumn,
+      };
+
+      // Apply the suggested text
+      editor.executeEdits('accept-suggestion', [
+        {
+          range: rangeToReplace,
+          text: suggestion.suggested,
+          forceMoveMarkers: true,
+        },
+      ]);
+
+      // Get the updated content from the editor
+      const updatedContent = editor.getValue();
+      
+      // Update content state
+      setContent(updatedContent);
+
+      // Save the document with the new content
+      saveDocument(updatedContent).then((saved) => {
+        if (saved) {
+          // Trigger compilation with the updated content
+          handleCompile();
+        }
+      });
+
+      // Remove the suggestion from the list
+      setEditSuggestions((prev) =>
+        prev.filter((s) => s.id !== suggestionId)
+      );
+
+      // Process next suggestion if available
+      setTimeout(handleNextSuggestion, 0);
+    } catch (error) {
+      console.error('Error applying edit:', error);
+    }
+  };
+
+  const handleRejectEdit = (suggestionId: string) => {
+    setEditSuggestions((prev) =>
+      prev.filter((s) => s.id !== suggestionId)
+    );
+    setTimeout(handleNextSuggestion, 0);
   };
 
   const handleExportPDF = async () => {
@@ -296,7 +404,7 @@ export default function FileEditorPage() {
   ) => {
     editorRef.current = editor;
 
-    // Add keyboard shortcut for save (Cmd+S / Ctrl+S)
+    // Add keyboard shortcut for save and compile (Cmd+S / Ctrl+S)
     const editorDomNode = editor.getDomNode();
     if (editorDomNode) {
       editorDomNode.addEventListener('keydown', (e) => {
@@ -305,7 +413,9 @@ export default function FileEditorPage() {
           e.stopPropagation();
           
           const currentContent = editor.getValue();
-          saveDocument(currentContent);
+          saveDocument(currentContent).then((saved) => {
+            if (saved) handleCompile();
+          });
           
           return false;
         }
@@ -445,24 +555,77 @@ export default function FileEditorPage() {
       <div className="flex-1 flex min-h-0">
         {/* Editor */}
         <div className="flex-1 relative overflow-hidden">
-                      <Editor
-              height="100%"
-              defaultLanguage="latex"
-              value={content}
-              onChange={(value) => {
-                const newContent = value || '';
-                setContent(newContent);
-                debouncedSave(newContent);
-              }}
-              theme="vs-light"
-              options={{
-                minimap: { enabled: false },
-                fontSize: 13,
-                wordWrap: 'on',
-                lineNumbers: 'on',
-              }}
-              onMount={handleEditorDidMount}
-            />
+          <Editor
+            height="100%"
+            defaultLanguage="latex"
+            value={content}
+            onChange={(value) => {
+              const newContent = value || '';
+              setContent(newContent);
+              debouncedSave(newContent);
+            }}
+            theme="vs-light"
+            options={{
+              minimap: { enabled: false },
+              fontSize: 13,
+              wordWrap: 'on',
+              lineNumbers: 'on',
+            }}
+            onMount={handleEditorDidMount}
+          />
+
+          {/* Enhanced Suggestion Actions with Diff View */}
+          <div className="absolute top-1 right-3 z-50 max-w-[350px] space-y-2">
+            {editSuggestions
+              .filter((s) => s.status === 'pending')
+              .map((suggestion) => (
+                <div
+                  key={suggestion.id}
+                  className="flex flex-col gap-3 rounded-lg border border-blue-200 bg-white p-4 shadow-xl backdrop-blur-sm max-w-full"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="text-sm font-medium text-blue-700">
+                      Lines {suggestion.startLine}
+                      {suggestion.originalLineCount > 1 &&
+                        `-${suggestion.startLine + suggestion.originalLineCount - 1}`}
+                    </div>
+                    <div className="rounded bg-gray-100 px-2 py-1 text-xs text-gray-500">
+                      AI Suggestion
+                    </div>
+                  </div>
+
+                  <div className="max-w-full overflow-x-auto">
+                    <div className="text-sm">
+                      <div className="text-red-600 line-through">
+                        {suggestion.original}
+                      </div>
+                      <div className="text-green-600 font-medium">
+                        {suggestion.suggested}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => handleAcceptEdit(suggestion.id)}
+                      className="flex-1 border border-green-200 text-green-700 hover:border-green-300 hover:bg-green-50"
+                    >
+                      Accept
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => handleRejectEdit(suggestion.id)}
+                      className="flex-1 border border-red-200 text-red-700 hover:border-red-300 hover:bg-red-50"
+                    >
+                      Reject
+                    </Button>
+                  </div>
+                </div>
+              ))}
+          </div>
         </div>
 
         {/* PDF Viewer */}
@@ -470,6 +633,27 @@ export default function FileEditorPage() {
           <PDFViewer pdfData={pdfData} isLoading={compiling} />
         </div>
       </div>
+
+      {/* Chat component */}
+      <Chat
+        isOpen={chatOpen}
+        setIsOpen={setChatOpen}
+        onEditSuggestion={(suggestionArray) => {
+          // Always expect an array of stringified suggestions
+          if (Array.isArray(suggestionArray)) {
+            const [first, ...rest] = suggestionArray;
+            handleEditSuggestion(first);
+            suggestionQueueRef.current = rest.map(s => typeof s === 'string' ? JSON.parse(s) : s);
+          } else {
+            // Fallback for legacy single suggestion
+            handleEditSuggestion(suggestionArray);
+            suggestionQueueRef.current = [];
+          }
+        }}
+        fileContent={content}
+        textFromEditor={textFromEditor}
+        setTextFromEditor={setTextFromEditor}
+      />
     </div>
   );
 } 

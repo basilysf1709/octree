@@ -89,6 +89,7 @@ function DynamicPDFViewer({ pdfData, isLoading = false }: PDFViewerProps) {
         )}
 
         <Document
+          key={pdfData?.substring(0, 100)} // Force re-render when PDF data changes
           file={pdfUrl}
           options={options}
           onLoadSuccess={onDocumentLoadSuccess}
@@ -99,7 +100,7 @@ function DynamicPDFViewer({ pdfData, isLoading = false }: PDFViewerProps) {
           }
         >
           <Page
-            key={`page_${pageNumber}`} // Key for force re-render
+            key={`page_${pageNumber}_${pdfData?.substring(0, 50)}`} // Key includes PDF data to force re-render when PDF changes
             pageNumber={pageNumber}
             className="border border-slate-200 shadow-sm"
             onLoadSuccess={onPageLoadSuccess}

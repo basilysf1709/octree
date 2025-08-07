@@ -195,6 +195,9 @@ export default function FileEditorPage() {
       // Get the current content from the editor
       const currentContent = editorRef.current?.getValue() || content;
       
+      console.log('Compiling content, length:', currentContent.length);
+      console.log('Content preview:', currentContent.substring(0, 200) + '...');
+      
       // Save the document first
       await saveDocument(currentContent);
 
@@ -211,6 +214,7 @@ export default function FileEditorPage() {
       const data = await response.json();
 
       if (data.pdf) {
+        console.log('PDF generated successfully, size:', data.size);
         setPdfData(data.pdf);
       } else {
         throw new Error('No PDF data received');
@@ -268,6 +272,15 @@ export default function FileEditorPage() {
         endColumn,
       };
 
+      console.log('Applying suggestion:', {
+        suggestionId,
+        startLineNumber,
+        endLineNumber,
+        original: suggestion.original,
+        suggested: suggestion.suggested,
+        range: rangeToReplace
+      });
+
       // Apply the suggested text
       editor.executeEdits('accept-suggestion', [
         {
@@ -280,13 +293,17 @@ export default function FileEditorPage() {
       // Get the updated content from the editor
       const updatedContent = editor.getValue();
       
+      console.log('Content updated, new length:', updatedContent.length);
+      
       // Update content state
       setContent(updatedContent);
 
       // Save the document with the new content
       saveDocument(updatedContent).then((saved) => {
+        console.log('Document saved:', saved);
         if (saved) {
           // Trigger compilation with the updated content
+          console.log('Triggering compilation...');
           handleCompile();
         }
       });

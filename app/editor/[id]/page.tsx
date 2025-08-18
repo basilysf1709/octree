@@ -28,6 +28,7 @@ import { cn, initialContent } from '@/lib/utils';
 import { useDebouncedCallback } from 'use-debounce';
 import { createClient } from '@/lib/supabase/client';
 import { DiffViewer } from '@/components/ui/diff-viewer';
+import { UsageIndicator } from '@/components/subscription/usage-indicator';
 
 export default function EditorPage() {
   const supabase = createClient();
@@ -247,9 +248,34 @@ export default function EditorPage() {
     }
   };
 
-  const handleAcceptEdit = (suggestionId: string) => {
+  const handleAcceptEdit = async (suggestionId: string) => {
     const suggestion = editSuggestions.find((s) => s.id === suggestionId);
     if (!suggestion || suggestion.status !== 'pending') return;
+
+    // Check if user can make edits
+    try {
+      const response = await fetch('/api/track-edit', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to check edit limits');
+      }
+
+      const data = await response.json();
+      
+      if (!data.canEdit) {
+        // Show paywall or error message
+        alert('You have reached your free edit limit. Please upgrade to Pro for unlimited edits.');
+        return;
+      }
+    } catch (error) {
+      console.error('Error checking edit limits:', error);
+      // Continue with edit if we can't check limits
+    }
 
     const editor = editorRef.current;
     const monaco = monacoInstance;
@@ -726,6 +752,9 @@ export default function EditorPage() {
                 )}
               </Button>
             </div>
+            
+            {/* Usage Indicator */}
+            <UsageIndicator />
           </div>
         </div>
 

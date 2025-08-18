@@ -1,42 +1,48 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { CancelSubscriptionDialog } from './cancel-subscription-dialog';
-import { CreditCard, Calendar, AlertTriangle } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { CreditCard, Calendar, AlertCircle, CheckCircle, XCircle, Zap } from 'lucide-react';
+import { PaywallDialog } from './paywall-dialog';
 
-interface Subscription {
-  id: string;
-  status: string;
-  cancel_at_period_end: boolean;
-  current_period_end: number;
-  current_period_start: number;
-  items: Array<{
+interface SubscriptionData {
+  hasSubscription: boolean;
+  subscription: {
     id: string;
-    price: {
+    status: string;
+    cancel_at_period_end: boolean;
+    current_period_end: number;
+    current_period_start: number;
+    items: Array<{
       id: string;
-      unit_amount: number;
-      currency: string;
-      recurring: {
-        interval: string;
+      price: {
+        id: string;
+        unit_amount: number;
+        currency: string;
+        recurring: {
+          interval: string;
+        };
       };
-    };
-  }>;
+    }>;
+  } | null;
+  usage: {
+    editCount: number;
+    monthlyEditCount: number;
+    remainingEdits: number;
+    remainingMonthlyEdits: number;
+    isPro: boolean;
+    limitReached: boolean;
+    monthlyLimitReached: boolean;
+    monthlyResetDate: string | null;
+  };
 }
 
-interface SubscriptionStatusProps {
-  className?: string;
-}
-
-export function SubscriptionStatus({ className }: SubscriptionStatusProps) {
-  const [subscription, setSubscription] = useState<Subscription | null>(null);
+export function SubscriptionStatus() {
+  const [subscriptionData, setSubscriptionData] = useState<SubscriptionData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
-  const router = useRouter();
+  const [showPaywall, setShowPaywall] = useState(false);
 
   useEffect(() => {
     fetchSubscriptionStatus();
@@ -44,95 +50,221 @@ export function SubscriptionStatus({ className }: SubscriptionStatusProps) {
 
   const fetchSubscriptionStatus = async () => {
     try {
-      setIsLoading(true);
       const response = await fetch('/api/subscription-status');
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to fetch subscription status');
-      }
-
-      if (data.hasSubscription) {
-        setSubscription(data.subscription);
+      if (response.ok) {
+        const data = await response.json();
+        setSubscriptionData(data);
       }
     } catch (error) {
-      setError(error instanceof Error ? error.message : 'An error occurred');
+      console.error('Error fetching subscription status:', error);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const formatDate = (timestamp: number) => {
-    return new Date(timestamp * 1000).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    });
-  };
-
-  const formatPrice = (amount: number, currency: string) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: currency.toUpperCase(),
-    }).format(amount / 100);
+  const handleUpgradeClick = () => {
+    setShowPaywall(true);
   };
 
   if (isLoading) {
     return (
-      <Card className={className}>
+      <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <CreditCard className="h-5 w-5" />
             Subscription Status
           </CardTitle>
+          <CardDescription>Loading subscription information...</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="animate-pulse">
-            <div className="h-4 bg-gray-200 rounded w-1/2 mb-2"></div>
-            <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+          <div className="animate-pulse space-y-2">
+            <div className="h-4 bg-neutral-200 rounded w-3/4"></div>
+            <div className="h-4 bg-neutral-200 rounded w-1/2"></div>
           </div>
         </CardContent>
       </Card>
     );
   }
 
-  if (error) {
+  if (!subscriptionData) {
     return (
-      <Card className={className}>
+      <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <CreditCard className="h-5 w-5" />
             Subscription Status
           </CardTitle>
+          <CardDescription>Unable to load subscription information</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="text-red-600 text-sm">{error}</div>
+          <p className="text-sm text-neutral-600">Please try again later.</p>
         </CardContent>
       </Card>
     );
   }
 
-  if (!subscription) {
+  const { hasSubscription, subscription, usage } = subscriptionData;
+
+  if (hasSubscription && subscription) {
+    const isActive = subscription.status === 'active';
+    const isCancelling = subscription.cancel_at_period_end;
+    const periodEnd = new Date(subscription.current_period_end * 1000);
+    const periodStart = new Date(subscription.current_period_start * 1000);
+    
+    const price = subscription.items[0]?.price;
+    const amount = price ? (price.unit_amount / 100).toFixed(2) : '0.00';
+    const currency = price?.currency?.toUpperCase() || 'USD';
+    const interval = price?.recurring?.interval || 'month';
+
     return (
-      <Card className={className}>
+      <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <CreditCard className="h-5 w-5" />
             Subscription Status
           </CardTitle>
-          <CardDescription>
-            You don't have an active subscription
-          </CardDescription>
+          <CardDescription>Manage your subscription and billing</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="text-sm text-neutral-600">
-            Upgrade to unlock all features and remove limitations.
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-medium text-neutral-700">Status</span>
+            <Badge variant={isActive ? "default" : "secondary"}>
+              {isActive ? 'Active' : subscription.status}
+            </Badge>
           </div>
+
+          {isCancelling && (
+            <div className="flex items-center gap-2 p-3 bg-orange-50 rounded-md">
+              <AlertCircle className="h-4 w-4 text-orange-500" />
+              <span className="text-sm text-orange-700">
+                Your subscription will end on {periodEnd.toLocaleDateString()}
+              </span>
+            </div>
+          )}
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-sm font-medium text-neutral-700">Current Plan</label>
+              <p className="text-sm text-neutral-500">
+                {amount} {currency}/{interval}
+              </p>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-neutral-700">Billing Period</label>
+              <p className="text-sm text-neutral-500">
+                {periodStart.toLocaleDateString()} - {periodEnd.toLocaleDateString()}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-medium text-neutral-700">AI Edits Used</span>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-neutral-500">
+                {subscription.status === 'active' 
+                  ? `${usage.monthlyEditCount}/50 monthly edits`
+                  : `${usage.editCount} edits`
+                }
+              </span>
+              <CheckCircle className="h-4 w-4 text-green-500" />
+            </div>
+          </div>
+
+          {subscription.status === 'active' && (
+            <div className="bg-blue-50 rounded-lg p-3">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium text-blue-700">Monthly Usage</span>
+                <Badge variant="outline" className="text-xs">
+                  {usage.remainingMonthlyEdits} remaining
+                </Badge>
+              </div>
+              <div className="w-full bg-blue-200 rounded-full h-2">
+                <div 
+                  className="bg-blue-500 h-2 rounded-full transition-all duration-300"
+                  style={{ width: `${(usage.monthlyEditCount / 50) * 100}%` }}
+                />
+              </div>
+              {usage.monthlyResetDate && (
+                <p className="text-xs text-blue-600 mt-2">
+                  Resets on {new Date(usage.monthlyResetDate).toLocaleDateString()}
+                </p>
+              )}
+            </div>
+          )}
+
           <div className="flex gap-2">
-            <Button asChild>
+            <Button asChild variant="outline" size="sm">
+              <a href="/billing">View Billing History</a>
+            </Button>
+            <Button asChild size="sm">
               <a href="https://buy.stripe.com/6oUdR9fyd8Sd6Cifd46oo00" target="_blank" rel="noopener noreferrer">
-                Subscribe Now
+                Manage Subscription
               </a>
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // No subscription - show usage and upgrade options
+  return (
+    <>
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <CreditCard className="h-5 w-5" />
+            Subscription Status
+          </CardTitle>
+          <CardDescription>You don't have an active subscription</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Usage Summary */}
+          <div className="bg-neutral-50 rounded-lg p-4">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium text-neutral-700">Your Usage</span>
+              <Badge variant={usage.limitReached ? "destructive" : "secondary"}>
+                {usage.editCount}/5 edits used
+              </Badge>
+            </div>
+            <div className="w-full bg-neutral-200 rounded-full h-2">
+              <div 
+                className="bg-amber-500 h-2 rounded-full transition-all duration-300"
+                style={{ width: `${(usage.editCount / 5) * 100}%` }}
+              />
+            </div>
+            <p className="text-xs text-neutral-500 mt-2">
+              {usage.remainingEdits > 0 ? `${usage.remainingEdits} edits remaining` : 'No edits remaining'}
+            </p>
+          </div>
+
+          <div className="text-sm text-neutral-600">
+            {usage.limitReached 
+              ? 'You have reached your free edit limit. Upgrade to Pro for 50 edits per month!'
+              : 'Upgrade to unlock 50 edits per month and remove daily limitations.'
+            }
+          </div>
+
+          <div className="bg-blue-50 rounded-lg p-3">
+            <div className="flex items-center gap-2 mb-2">
+              <Zap className="h-4 w-4 text-blue-500" />
+              <span className="text-sm font-medium text-blue-700">Pro Plan Benefits</span>
+            </div>
+            <ul className="space-y-1 text-xs text-blue-700">
+              <li>• 50 AI edits per month (vs 5 per day)</li>
+              <li>• Monthly reset instead of daily</li>
+              <li>• Advanced LaTeX compilation</li>
+              <li>• Priority support</li>
+            </ul>
+          </div>
+
+          <div className="flex gap-2">
+            <Button 
+              onClick={handleUpgradeClick}
+              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
+            >
+              <CreditCard className="h-4 w-4 mr-2" />
+              {usage.limitReached ? 'Upgrade Now' : 'Subscribe Now'}
             </Button>
             <Button variant="outline" asChild>
               <a href="/pricing">View Plans</a>
@@ -140,97 +272,12 @@ export function SubscriptionStatus({ className }: SubscriptionStatusProps) {
           </div>
         </CardContent>
       </Card>
-    );
-  }
 
-  const isCancelled = subscription.cancel_at_period_end;
-  const isActive = subscription.status === 'active';
-
-  return (
-    <>
-      <Card className={className}>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <CreditCard className="h-5 w-5" />
-            Subscription Status
-          </CardTitle>
-          <CardDescription>
-            Manage your subscription and billing
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-medium">Status</span>
-            <div className="flex items-center gap-2">
-              <Badge variant={isActive ? "default" : "secondary"}>
-                {isActive ? 'Active' : subscription.status}
-              </Badge>
-              {isCancelled && (
-                <Badge variant="destructive">Cancelling</Badge>
-              )}
-            </div>
-          </div>
-
-          {subscription.items.length > 0 && (
-            <div>
-              <span className="text-sm font-medium">Plan</span>
-              <p className="text-sm text-neutral-500">
-                {formatPrice(
-                  subscription.items[0].price.unit_amount,
-                  subscription.items[0].price.currency
-                )} / {subscription.items[0].price.recurring.interval}
-              </p>
-            </div>
-          )}
-
-          <div className="flex items-center gap-2">
-            <Calendar className="h-4 w-4 text-neutral-500" />
-            <div>
-              <span className="text-sm font-medium">Current Period</span>
-              <p className="text-sm text-neutral-500">
-                {formatDate(subscription.current_period_start)} - {formatDate(subscription.current_period_end)}
-              </p>
-            </div>
-          </div>
-
-          {isCancelled && (
-            <div className="flex items-center gap-2 p-3 bg-orange-50 rounded-md">
-              <AlertTriangle className="h-4 w-4 text-orange-500" />
-              <div>
-                <p className="text-sm font-medium text-orange-800">
-                  Subscription Cancelled
-                </p>
-                <p className="text-xs text-orange-600">
-                  Your subscription will end on {formatDate(subscription.current_period_end)}
-                </p>
-              </div>
-            </div>
-          )}
-
-          <div className="flex gap-2 pt-2">
-            {!isCancelled && (
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={() => setIsCancelDialogOpen(true)}
-              >
-                Cancel Subscription
-              </Button>
-            )}
-            <Button 
-              variant="outline" 
-              size="sm"
-              onClick={() => router.push('/billing')}
-            >
-              View Billing History
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      <CancelSubscriptionDialog
-        open={isCancelDialogOpen}
-        onOpenChange={setIsCancelDialogOpen}
+      <PaywallDialog
+        isOpen={showPaywall}
+        onClose={() => setShowPaywall(false)}
+        editCount={usage.editCount}
+        remainingEdits={usage.remainingEdits}
       />
     </>
   );

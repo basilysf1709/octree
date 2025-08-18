@@ -18,7 +18,13 @@ export async function POST() {
     }
 
     // First, ensure user has a usage record
-    let { data: usageData, error: usageError } = await supabase
+    let { data: usageData } = await supabase
+      .from('user_usage')
+      .select('edit_count, monthly_edit_count, monthly_reset_date, is_pro, subscription_status')
+      .eq('user_id', user.id)
+      .single();
+    
+    const { error: usageError } = await supabase
       .from('user_usage')
       .select('edit_count, monthly_edit_count, monthly_reset_date, is_pro, subscription_status')
       .eq('user_id', user.id)

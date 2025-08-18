@@ -23,7 +23,13 @@ export async function GET() {
     }
 
     // Get current usage from database
-    let { data: usageData, error: usageError } = await supabase
+    let { data: usageData } = await supabase
+      .from('user_usage')
+      .select('*')
+      .eq('user_id', user.id)
+      .single();
+    
+    const { error: usageError } = await supabase
       .from('user_usage')
       .select('*')
       .eq('user_id', user.id)

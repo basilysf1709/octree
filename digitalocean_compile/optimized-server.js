@@ -2,205 +2,202 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
 const { exec } = require('child_process');
-const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
+
 const app = express();
 const port = 3001;
 
-// Add queue to prevent overload
-let isCompiling = false;
-const queue = [];
-let currentChild = null;
-
-// Simple in-memory cache
-const cache = new Map();
-const CACHE_DIR = '/tmp/latex-cache';
-
-// Ensure cache directory exists
-if (!fs.existsSync(CACHE_DIR)) {
-  fs.mkdirSync(CACHE_DIR, { recursive: true });
-}
+// Request queue to prevent overload
+let requestQueue = [];
+let isProcessing = false;
+const MAX_CONCURRENT_REQUESTS = 2;
 
 app.use(cors());
 app.use(bodyParser.text({ type: 'text/plain', limit: '10mb' }));
 
-app.post('/compile', (req, res) => {
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok', queueLength: requestQueue.length, isProcessing });
+});
+
+// Process queue
+async function processQueue() {
+  if (isProcessing || requestQueue.length === 0) return;
+  
+  isProcessing = true;
+  
+  while (requestQueue.length > 0) {
+    const { req, res, next } = requestQueue.shift();
+    await handleCompilation(req, res, next);
+  }
+  
+  isProcessing = false;
+}
+
+// Main compilation endpoint
+app.post('/compile', (req, res, next) => {
+  // Add to queue if we're at capacity
+  if (requestQueue.length >= MAX_CONCURRENT_REQUESTS) {
+    return res.status(503).json({
+      error: 'Server busy',
+      message: 'Too many compilation requests. Please try again in a moment.',
+      queuePosition: requestQueue.length + 1
+    });
+  }
+  
+  requestQueue.push({ req, res, next });
+  processQueue();
+});
+
+async function handleCompilation(req, res, next) {
   console.log('==== COMPILE REQUEST RECEIVED ====');
-  
-  // Add to queue if already compiling
-  if (isCompiling) {
-    console.log('Request queued - already compiling');
-    queue.push({ req, res });
-    return;
-  }
-  
-  isCompiling = true;
   const texContent = req.body;
-  
-  // Check cache first
-  const contentHash = crypto.createHash('md5').update(texContent).digest('hex');
-  const cacheFile = path.join(CACHE_DIR, `${contentHash}.pdf`);
-  
-  if (fs.existsSync(cacheFile)) {
-    console.log('Serving from cache');
-    const pdfBuffer = fs.readFileSync(cacheFile);
-    res.set('Content-Type', 'application/pdf');
-    res.send(pdfBuffer);
-    isCompiling = false;
-    processNextInQueue();
-    return;
-  }
   
   // Log the first 100 chars of the content
   console.log(`TeX content received (first 100 chars): ${texContent.substring(0, 100)}...`);
   console.log(`Content length: ${texContent.length} bytes`);
   
-  // Add timeout to prevent hanging processes
-  const timeout = setTimeout(() => {
-    console.log('Compilation timeout - killing process');
-    if (currentChild) {
-      currentChild.kill('SIGKILL');
-      currentChild = null;
-    }
-    res.status(500).json({ error: 'Compilation timeout' });
-    isCompiling = false;
-    processNextInQueue();
-  }, 30000); // 30 second timeout
+  // Create temporary directory
+  const tempDir = fs.mkdtempSync('/tmp/latex-');
+  const texFilePath = path.join(tempDir, 'main.tex');
+  const pdfPath = path.join(tempDir, 'main.pdf');
+  const logPath = path.join(tempDir, 'main.log');
   
-  console.log('Spawning LaTeX compilation process...');
-  currentChild = exec('/opt/latex-service/run-latex.sh', { 
-    encoding: 'buffer',
-    timeout: 25000 // 25 second timeout
-  });
-  
-  currentChild.stdin.write(texContent);
-  currentChild.stdin.end();
-  console.log('TeX content sent to compiler');
-  
-  let pdfData = [];
-  let errorData = [];
-  
-  currentChild.stdout.on('data', (data) => {
-    console.log(`Received stdout chunk: ${data.length} bytes`);
-    console.log(`Is Buffer: ${Buffer.isBuffer(data)}`);
-    // First 20 bytes as hex for debugging
-    console.log(`First 20 bytes: ${data.slice(0, 20).toString('hex')}`);
+  try {
+    // Write TeX content to file
+    fs.writeFileSync(texFilePath, texContent);
+    console.log('TeX content written to:', texFilePath);
     
-    // Ensure data is a Buffer before pushing to array
-    pdfData.push(Buffer.isBuffer(data) ? data : Buffer.from(data));
-  });
-  
-  currentChild.stderr.on('data', (data) => {
-    console.log(`Received stderr data: ${data.length} bytes`);
-    console.log(`Error data: ${data.toString().substring(0, 200)}...`);
-    errorData.push(data);
-  });
-  
-  currentChild.on('close', (code) => {
-    clearTimeout(timeout);
-    console.log(`Child process exited with code ${code}`);
+    // Run LaTeX compilation
+    console.log('Spawning LaTeX compilation process...');
     
-    if (code === 0 && pdfData.length > 0) {
-      const pdfBuffer = Buffer.concat(pdfData);
-      console.log(`Sending PDF: ${pdfBuffer.length} bytes`);
+    const result = await new Promise((resolve, reject) => {
+      const child = exec('/opt/latex-service/run-latex.sh', {
+        cwd: tempDir,
+        timeout: 30000, // 30 second timeout
+        maxBuffer: 1024 * 1024 // 1MB buffer
+      });
       
-      // Cache the result
-      try {
-        fs.writeFileSync(cacheFile, pdfBuffer);
-        console.log(`Cached PDF with hash: ${contentHash}`);
-      } catch (cacheError) {
-        console.error('Failed to cache PDF:', cacheError);
+      // Send content to stdin
+      child.stdin.write(texContent);
+      child.stdin.end();
+      
+      let stdout = '';
+      let stderr = '';
+      
+      child.stdout.on('data', (data) => {
+        stdout += data.toString();
+      });
+      
+      child.stderr.on('data', (data) => {
+        stderr += data.toString();
+      });
+      
+      child.on('close', (code) => {
+        console.log(`LaTeX process exited with code: ${code}`);
+        console.log(`stdout length: ${stdout.length}`);
+        console.log(`stderr length: ${stderr.length}`);
+        
+        resolve({ code, stdout, stderr });
+      });
+      
+      child.on('error', (error) => {
+        console.error('Child process error:', error);
+        reject(error);
+      });
+    });
+    
+    // Check if PDF was created
+    if (fs.existsSync(pdfPath)) {
+      console.log('PDF created successfully');
+      
+      // Read PDF file
+      const pdfBuffer = fs.readFileSync(pdfPath);
+      console.log(`PDF size: ${pdfBuffer.length} bytes`);
+      
+      // Verify it's a valid PDF
+      const firstBytes = pdfBuffer.slice(0, 4).toString('hex');
+      if (firstBytes !== '25504446') {
+        throw new Error(`Invalid PDF format. First bytes: ${firstBytes}`);
       }
       
-      res.set('Content-Type', 'application/pdf');
+      // Set response headers
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Length', pdfBuffer.length);
+      res.setHeader('Content-Disposition', 'attachment; filename="compiled.pdf"');
+      
+      // Send PDF
       res.send(pdfBuffer);
+      
+      console.log('PDF sent successfully');
     } else {
-      console.log('Compilation failed or no PDF generated');
-      console.log('Error output:', Buffer.concat(errorData).toString());
-      res.status(500).json({ 
-        error: 'Compilation failed', 
-        stderr: Buffer.concat(errorData).toString() 
+      // PDF not created, check log file
+      let logContent = '';
+      if (fs.existsSync(logPath)) {
+        logContent = fs.readFileSync(logPath, 'utf-8');
+        console.log('LaTeX log content:', logContent.substring(0, 500));
+      }
+      
+      // Return error with log details
+      res.status(500).json({
+        error: 'LaTeX compilation failed',
+        code: result.code,
+        log: logContent || 'No log file generated',
+        stdout: result.stdout.substring(0, 1000),
+        stderr: result.stderr.substring(0, 1000)
       });
     }
     
-    currentChild = null;
-    isCompiling = false;
-    processNextInQueue();
-  });
-  
-  currentChild.on('error', (error) => {
-    clearTimeout(timeout);
-    console.error('Child process error:', error);
-    res.status(500).json({ error: 'Process error', details: error.message });
-    currentChild = null;
-    isCompiling = false;
-    processNextInQueue();
-  });
-});
-
-function processNextInQueue() {
-  if (queue.length > 0) {
-    console.log(`Processing next request from queue (${queue.length} remaining)`);
-    const { req, res } = queue.shift();
-    // Re-trigger the compile endpoint
-    app._router.handle(req, res);
+  } catch (error) {
+    console.error('Compilation error:', error);
+    
+    // Try to get log content for debugging
+    let logContent = '';
+    if (fs.existsSync(logPath)) {
+      logContent = fs.readFileSync(logPath, 'utf-8');
+    }
+    
+    res.status(500).json({
+      error: 'LaTeX compilation failed',
+      message: error.message,
+      log: logContent || 'No log file generated'
+    });
+    
+  } finally {
+    // Clean up temporary files
+    try {
+      fs.rmSync(tempDir, { recursive: true, force: true });
+      console.log('Temporary directory cleaned up');
+    } catch (cleanupError) {
+      console.error('Cleanup error:', cleanupError);
+    }
   }
 }
 
-app.get('/health', (req, res) => {
-  res.json({ 
-    status: 'ok', 
-    queueLength: queue.length, 
-    isCompiling,
-    cacheSize: cache.size,
-    uptime: process.uptime()
+// Error handling middleware
+app.use((error, req, res, next) => {
+  console.error('Express error:', error);
+  res.status(500).json({
+    error: 'Internal server error',
+    message: error.message
   });
 });
 
-app.get('/stats', (req, res) => {
-  const cacheFiles = fs.readdirSync(CACHE_DIR).filter(f => f.endsWith('.pdf'));
-  res.json({
-    cacheFiles: cacheFiles.length,
-    cacheSize: cacheFiles.length,
-    queueLength: queue.length,
-    isCompiling,
-    uptime: process.uptime()
-  });
-});
-
-app.post('/clear-cache', (req, res) => {
-  try {
-    const files = fs.readdirSync(CACHE_DIR);
-    files.forEach(file => {
-      if (file.endsWith('.pdf')) {
-        fs.unlinkSync(path.join(CACHE_DIR, file));
-      }
-    });
-    res.json({ success: true, cleared: files.length });
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to clear cache' });
-  }
+// Start server
+app.listen(port, () => {
+  console.log(`LaTeX compilation server running on port ${port}`);
+  console.log(`Max concurrent requests: ${MAX_CONCURRENT_REQUESTS}`);
+  console.log(`Health check: http://localhost:${port}/health`);
 });
 
 // Graceful shutdown
 process.on('SIGTERM', () => {
-  console.log('Shutting down gracefully...');
-  if (currentChild) {
-    currentChild.kill('SIGKILL');
-  }
+  console.log('SIGTERM received, shutting down gracefully');
   process.exit(0);
 });
 
 process.on('SIGINT', () => {
-  console.log('Received SIGINT, shutting down...');
-  if (currentChild) {
-    currentChild.kill('SIGKILL');
-  }
+  console.log('SIGINT received, shutting down gracefully');
   process.exit(0);
-});
-
-app.listen(port, () => {
-  console.log(`LaTeX service running on port ${port}`);
-  console.log(`Cache directory: ${CACHE_DIR}`);
 }); 

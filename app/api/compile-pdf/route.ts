@@ -14,8 +14,92 @@ export const runtime = 'nodejs';
 export async function POST(request: Request) {
   try {
     const { content } = await request.json();
+    const isProd = process.env.ENVIRONMENT === 'prod';
 
-    // Always use local Docker compilation (both dev and prod)
+    if (isProd) {
+      // Use the remote TeX Live service in production
+      try {
+        console.log('Attempting remote LaTeX compilation...');
+        
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout
+        
+        const response = await fetch('http://142.93.195.236:3001/compile', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'text/plain',
+          },
+          body: content,
+          signal: controller.signal,
+        });
+
+        clearTimeout(timeoutId);
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('Remote server error response:', errorText);
+          throw new Error(`LaTeX compilation failed: ${errorText}`);
+        }
+
+        const pdfArrayBuffer = await response.arrayBuffer();
+
+        // Check if we got a valid PDF
+        if (pdfArrayBuffer.byteLength === 0) {
+          throw new Error('Remote server returned empty response');
+        }
+
+        // Check the first few bytes to verify it's a PDF
+        const firstBytes = Buffer.from(pdfArrayBuffer.slice(0, 4)).toString('hex');
+        if (firstBytes !== '25504446') { // PDF magic number
+          throw new Error(`Invalid PDF format. First bytes: ${firstBytes}`);
+        }
+
+        // Convert to Base64
+        const pdfBuffer = Buffer.from(pdfArrayBuffer);
+        const base64PDF = pdfBuffer.toString('base64');
+
+        console.log('Remote compilation successful:', {
+          size: pdfBuffer.length,
+          firstBytes: firstBytes
+        });
+
+        // Return with verbose info
+        return NextResponse.json({
+          pdf: base64PDF,
+          size: pdfBuffer.length,
+          mimeType: 'application/pdf',
+          debugInfo: {
+            firstBytesHex: firstBytes,
+            contentLength: pdfArrayBuffer.byteLength,
+            base64Length: base64PDF.length,
+          },
+        });
+      } catch (error) {
+        console.error('Remote compilation error:', error);
+        
+        if (error instanceof Error && error.name === 'AbortError') {
+          return NextResponse.json(
+            {
+              error: 'LaTeX compilation timed out on remote server',
+              details: 'Request took longer than 60 seconds',
+              suggestion: 'Try again or contact support if the issue persists'
+            },
+            { status: 504 }
+          );
+        }
+        
+        return NextResponse.json(
+          {
+            error: 'LaTeX compilation failed on remote server',
+            details: String(error),
+            suggestion: 'The remote compilation service may be temporarily unavailable'
+          },
+          { status: 500 }
+        );
+      }
+    }
+
+    // Fallback: Use local compilation if remote fails or in development
     console.log('Using local LaTeX compilation...');
     
     // Create a unique ID for this compilation

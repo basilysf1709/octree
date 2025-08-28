@@ -227,6 +227,7 @@ export function Chat({
     api: '/api/octra',
     body: {
       fileContent: fileContent,
+      textFromEditor: textFromEditor,
     },
     onFinish(message) {
       const allSuggestions = parseEditSuggestions(message.content);
@@ -238,12 +239,8 @@ export function Chat({
   });
 
   useEffect(() => {
-    setInput(
-      textFromEditor
-        ? `Attached from editor: ${textFromEditor} ` + userInput
-        : userInput
-    );
-  }, [textFromEditor, userInput, setInput]);
+    setInput(userInput);
+  }, [userInput, setInput]);
 
   useEffect(() => {
     if (textFromEditor) {

@@ -7,7 +7,7 @@ export const preferredRegion = 'auto';
 
 export async function POST(request: Request) {
   try {
-    const { messages, fileContent } = await request.json();
+    const { messages, fileContent, textFromEditor } = await request.json();
 
     // --- Add Line Numbers to Content ---
     const lines = fileContent.split('\n');
@@ -69,6 +69,10 @@ Correct Output Diff Block:
           role: 'system',
           content: `Current numbered file content:\n---\n${numberedContent}\n---\n`,
         },
+        ...(textFromEditor ? [{
+          role: 'system' as const,
+          content: `Selected text from editor for context:\n---\n${textFromEditor}\n---\n\nThe user has selected this specific text and may be asking about improvements or changes to it.`,
+        }] : []),
         ...messages.slice(-3),
       ],
       temperature: 0.2,

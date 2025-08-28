@@ -10,6 +10,13 @@ import { EditSuggestion } from '@/types/edit';
 import { v4 as uuidv4 } from 'uuid';
 import { cn } from '@/lib/utils';
 import { Textarea } from './ui/textarea';
+import LatexRenderer from './latex-renderer';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from './ui/accordion';
 
 interface ChatProps {
   onEditSuggestion: (
@@ -40,6 +47,90 @@ export function Chat({
       chatContainerRef.current.scrollTop =
         chatContainerRef.current.scrollHeight;
     }
+  };
+
+  const renderMessageContent = (content: string) => {
+    const incompleteLatexDiffMatch = content.match(
+      /```latex-diff(?!\n[\s\S]*?\n```)/
+    );
+
+    const latexDiffRegex = /```latex-diff\n([\s\S]*?)\n```/g;
+
+    const hasLatexDiff = content.includes('```latex-diff');
+
+    if (!hasLatexDiff) {
+      return content;
+    }
+
+    const parts = [];
+    let lastIndex = 0;
+    let match;
+
+    while ((match = latexDiffRegex.exec(content)) !== null) {
+      if (match.index > lastIndex) {
+        parts.push(
+          <span key={`text-before-${match.index}`} className="mb-2 block">
+            {content.slice(lastIndex, match.index)}
+          </span>
+        );
+      }
+
+      const isComplete = match[1] && match[1].trim().length > 0;
+
+      parts.push(
+        <div key={`latex-${match.index}`} className="my-2">
+          <Accordion type="single" collapsible className="rounded-md border">
+            <AccordionItem value="latex-diff" className="border-none">
+              <AccordionTrigger className="px-3 py-1 text-xs font-medium text-slate-600 hover:no-underline">
+                <div className="flex items-center gap-2">
+                  {!isComplete && <Loader2 className="h-3 w-3 animate-spin" />}
+                  LaTeX Diff
+                </div>
+              </AccordionTrigger>
+              <AccordionContent className="px-3 pb-2">
+                <LatexRenderer latex={match[1]} />
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
+        </div>
+      );
+
+      lastIndex = match.index + match[0].length;
+    }
+
+    if (incompleteLatexDiffMatch) {
+      const incompleteIndex = incompleteLatexDiffMatch.index!;
+
+      if (incompleteIndex > lastIndex) {
+        parts.push(
+          <span key={`text-before-incomplete`} className="mb-2 block">
+            {content.slice(lastIndex, incompleteIndex)}
+          </span>
+        );
+      }
+
+      parts.push(
+        <div
+          key="latex-incomplete"
+          className="animate-in fade-in-0 slide-in-from-bottom-2 my-2 flex items-center gap-2 rounded-md border px-3 py-1 text-xs font-medium text-slate-600 duration-500"
+        >
+          <Loader2 className="h-3 w-3 animate-spin" />
+          LaTeX Diff
+        </div>
+      );
+
+      return parts;
+    }
+
+    if (lastIndex < content.length) {
+      parts.push(
+        <span key={`text-after-${lastIndex}`} className="mt-2 block">
+          {content.slice(lastIndex)}
+        </span>
+      );
+    }
+
+    return parts;
   };
 
   const parseEditSuggestions = (
@@ -131,7 +222,6 @@ export function Chat({
     messages,
     handleSubmit: originalHandleSubmit,
     isLoading,
-    setMessages,
     setInput,
   } = useChat({
     api: '/api/octra',
@@ -293,11 +383,9 @@ export function Chat({
                 </div>
               )}
               {messages.map((message) => (
-                <motion.div
-                  initial={{ y: 10, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
+                <div
                   key={message.id}
-                  className={`mb-4 break-words whitespace-pre-wrap ${
+                  className={`mb-4 break-words ${
                     message.role === 'assistant'
                       ? 'rounded-lg border border-slate-200 bg-gradient-to-br from-blue-50 to-blue-50/50 p-3 shadow-xs'
                       : 'rounded-lg border border-slate-200 bg-white p-3 shadow-xs'
@@ -306,10 +394,10 @@ export function Chat({
                   <div className="mb-1 text-sm font-semibold text-blue-800">
                     {message.role === 'assistant' ? 'Octra' : 'You'}
                   </div>
-                  <div className="text-sm leading-relaxed text-slate-800">
-                    {message.content}
+                  <div className="text-sm text-slate-800">
+                    {renderMessageContent(message.content)}
                   </div>
-                </motion.div>
+                </div>
               ))}
             </div>
 

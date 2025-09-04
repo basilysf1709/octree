@@ -5,8 +5,6 @@ import {
   Plus,
   FileText,
   ChevronDown,
-  Settings,
-  Receipt,
   FileText as DocumentIcon,
 } from 'lucide-react';
 import {
@@ -72,18 +70,7 @@ interface ProjectWithFiles extends Project {
   files: File[];
 }
 
-const settings = [
-  {
-    title: 'Settings',
-    url: '/settings',
-    icon: Settings,
-  },
-  {
-    title: 'Billing',
-    url: '/billing',
-    icon: Receipt,
-  },
-];
+
 
 interface AppSidebarProps {
   userName: string | null;
@@ -312,23 +299,7 @@ export function AppSidebar({ userName }: AppSidebarProps) {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        <SidebarGroup>
-          <SidebarGroupLabel>Settings</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {settings.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild>
-                    <Link href={item.url}>
-                      <item.icon />
-                      <span>{item.title}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+
       </SidebarContent>
 
       <SidebarFooter className="border-t p-4">

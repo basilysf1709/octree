@@ -36,7 +36,6 @@ import { createClient } from '@/lib/supabase/client';
 import Link from 'next/link';
 import { useProjectRefresh } from '@/app/context/project';
 import { useCreateProject } from '@/hooks/create-project-client';
-import Image from 'next/image';
 import { AddFileDialog } from '@/components/projects/add-file-dialog';
 import { usePathname } from 'next/navigation';
 
@@ -182,8 +181,6 @@ export function AppSidebar({ userName }: AppSidebarProps) {
   return (
     <Sidebar>
       <SidebarHeader className="flex items-center gap-2 p-4">
-        <Image src="/octree.svg" alt="Octree Logo" width={64} height={64} className="h-16 w-16" />
-        <span className="text-lg font-semibold">Octree</span>
       </SidebarHeader>
 
       <SidebarContent>

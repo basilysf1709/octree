@@ -15,7 +15,7 @@ export default async function ProjectLayout({
   const userName = user?.user_metadata?.name ?? user?.email ?? null;
 
   return (
-    <SidebarProvider>
+    <SidebarProvider defaultOpen={false}>
       <AppSidebar userName={userName} />
       <SidebarInset>
         <SidebarTrigger />

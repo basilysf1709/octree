@@ -61,7 +61,9 @@ export function Chat({
 
     if (!hasLatexDiff) {
       return (
-        <ReactMarkdown className="whitespace-pre-wrap">{content}</ReactMarkdown>
+        <div className="whitespace-pre-wrap">
+          <ReactMarkdown>{content}</ReactMarkdown>
+        </div>
       );
     }
 
@@ -72,12 +74,14 @@ export function Chat({
     while ((match = latexDiffRegex.exec(content)) !== null) {
       if (match.index > lastIndex) {
         parts.push(
-          <ReactMarkdown
+          <div
             key={`text-before-${match.index}`}
             className="mb-2 whitespace-pre-wrap"
           >
-            {content.slice(lastIndex, match.index)}
-          </ReactMarkdown>
+            <ReactMarkdown>
+              {content.slice(lastIndex, match.index)}
+            </ReactMarkdown>
+          </div>
         );
       }
 
@@ -109,12 +113,14 @@ export function Chat({
 
       if (incompleteIndex > lastIndex) {
         parts.push(
-          <ReactMarkdown
+          <div
             key={`text-before-incomplete`}
             className="mb-2 whitespace-pre-wrap"
           >
-            {content.slice(lastIndex, incompleteIndex)}
-          </ReactMarkdown>
+            <ReactMarkdown>
+              {content.slice(lastIndex, incompleteIndex)}
+            </ReactMarkdown>
+          </div>
         );
       }
 
@@ -133,12 +139,9 @@ export function Chat({
 
     if (lastIndex < content.length) {
       parts.push(
-        <ReactMarkdown
-          key={`text-after-${lastIndex}`}
-          className="mt-2 whitespace-pre-wrap"
-        >
-          {content.slice(lastIndex)}
-        </ReactMarkdown>
+        <div key={`text-after-${lastIndex}`} className="mt-2 whitespace-pre-wrap">
+          <ReactMarkdown>{content.slice(lastIndex)}</ReactMarkdown>
+        </div>
       );
     }
 

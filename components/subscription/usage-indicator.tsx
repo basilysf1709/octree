@@ -28,9 +28,17 @@ export function UsageIndicator({ className }: UsageIndicatorProps) {
 
   useEffect(() => {
     fetchUsageData();
+    const handleUsageUpdate = () => {
+      fetchUsageData();
+    };
+    window.addEventListener('usage-update', handleUsageUpdate);
+    return () => {
+      window.removeEventListener('usage-update', handleUsageUpdate);
+    };
   }, []);
 
   const fetchUsageData = async () => {
+    setIsLoading(true);
     try {
       const response = await fetch('/api/subscription-status');
       if (response.ok) {

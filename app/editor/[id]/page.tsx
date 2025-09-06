@@ -288,15 +288,18 @@ export default function EditorPage() {
       }
 
       const data = await response.json();
-      
+
       if (!data.canEdit) {
         // Show paywall or error message
         alert('You have reached your free edit limit. Please upgrade to Pro for unlimited edits.');
         return;
       }
+
+      // Notify other components to refresh usage data
+      window.dispatchEvent(new Event('usage-update'));
     } catch (error) {
       console.error('Error checking edit limits:', error);
-      // Continue with edit if we can't check limits
+      return;
     }
 
     const editor = editorRef.current;

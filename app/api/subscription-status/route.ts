@@ -126,13 +126,26 @@ export async function GET() {
     }
 
     // Get subscriptions for this customer
-    const subscriptions = await stripe.subscriptions.list({
+    // Only consider active or trialing subscriptions so cancelled users can resubscribe
+    let subscription: Stripe.Subscription | null = null;
+
+    const activeSubs = await stripe.subscriptions.list({
       customer: customer.id,
-      status: 'all',
+      status: 'active',
       limit: 1,
     });
+    subscription = activeSubs.data[0] || null;
 
-    if (subscriptions.data.length === 0) {
+    if (!subscription) {
+      const trialSubs = await stripe.subscriptions.list({
+        customer: customer.id,
+        status: 'trialing',
+        limit: 1,
+      });
+      subscription = trialSubs.data[0] || null;
+    }
+
+    if (!subscription) {
       return NextResponse.json({
         hasSubscription: false,
         subscription: null,
@@ -148,8 +161,6 @@ export async function GET() {
         }
       });
     }
-
-    const subscription = subscriptions.data[0];
 
     // Update database with latest subscription info
     try {

@@ -18,17 +18,13 @@ export async function POST() {
     }
 
     // First, ensure user has a usage record
-    let { data: usageData } = await supabase
+    const { data: initialUsageData, error: usageError } = await supabase
       .from('user_usage')
       .select('edit_count, monthly_edit_count, monthly_reset_date, is_pro, subscription_status')
       .eq('user_id', user.id)
       .single();
-    
-    const { error: usageError } = await supabase
-      .from('user_usage')
-      .select('edit_count, monthly_edit_count, monthly_reset_date, is_pro, subscription_status')
-      .eq('user_id', user.id)
-      .single();
+
+    let usageData = initialUsageData;
 
     // If no usage record exists, create one
     if (usageError && usageError.code === 'PGRST116') {
@@ -127,7 +123,8 @@ export async function POST() {
       isPro: updatedUsageData.is_pro,
       subscriptionStatus: updatedUsageData.subscription_status,
       limitReached: !canEdit,
-      monthlyLimitReached: updatedUsageData.is_pro && updatedUsageData.monthly_edit_count >= 50
+      monthlyLimitReached: updatedUsageData.is_pro && updatedUsageData.monthly_edit_count >= 50,
+      monthlyResetDate: updatedUsageData.monthly_reset_date
     });
 
   } catch (error) {

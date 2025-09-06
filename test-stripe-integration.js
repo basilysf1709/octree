@@ -64,7 +64,7 @@ async function testStripeIntegration() {
 
     // Test 3: Check webhook endpoint
     console.log('\n3. Testing webhook endpoint...');
-    const webhookUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'\;
+    const webhookUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
     const webhookEndpoint = `${webhookUrl}/api/stripe-webhook`;
     console.log(`📡 Webhook endpoint: ${webhookEndpoint}`);
 

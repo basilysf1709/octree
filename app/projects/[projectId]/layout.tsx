@@ -6,8 +6,10 @@ import { BackButton } from "@/components/projects/back-button"
 
 export default async function ProjectLayout({
   children,
+  params,
 }: {
   children: React.ReactNode
+  params: { projectId: string }
 }) {
   const supabase = await createClient()
   const {
@@ -18,7 +20,7 @@ export default async function ProjectLayout({
 
   return (
     <SidebarProvider defaultOpen={false}>
-      <AppSidebar userName={userName} />
+      <AppSidebar userName={userName} projectId={params.projectId} />
       <SidebarInset>
         <header className="flex items-center gap-2 border-b px-4 py-2">
           <SidebarTrigger />

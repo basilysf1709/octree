@@ -169,9 +169,10 @@ export function AddFileDialog({ projectId, projectTitle, onFileAdded }: AddFileD
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+        <div className="flex items-center gap-3 p-2 pl-3 rounded-md hover:bg-gray-50 text-gray-600 hover:text-gray-900 transition-colors cursor-pointer border-2 border-dashed border-gray-200 hover:border-gray-300">
           <Plus className="h-4 w-4" />
-        </Button>
+          <span className="text-sm font-medium">Add File</span>
+        </div>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>

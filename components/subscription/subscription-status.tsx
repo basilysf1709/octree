@@ -198,7 +198,7 @@ export function SubscriptionStatus() {
             </Button>
             <Button asChild size="sm">
               <a href="https://buy.stripe.com/6oUdR9fyd8Sd6Cifd46oo00" target="_blank" rel="noopener noreferrer">
-                Manage Subscription
+                Change Plan
               </a>
             </Button>
           </div>

@@ -36,6 +36,8 @@ export async function POST(request: Request) {
 
     const supabase = await createClient();
 
+    console.log(`Processing webhook event: ${event.type}`);
+
     switch (event.type) {
       case 'customer.subscription.created':
       case 'customer.subscription.updated':
@@ -48,31 +50,39 @@ export async function POST(request: Request) {
           if (customer && !customer.deleted) {
             const customerData = customer as Stripe.Customer;
             
+            console.log(`Processing subscription ${subscription.id} for customer ${customerData.id}`);
+            
             // Find user by email or metadata
             let user = null;
             
+            // Try email first
             if (customerData.email) {
               const { data: userData } = await supabase.auth.admin.listUsers();
               user = userData.users.find(u => u.email === customerData.email);
+              console.log(`Found user by email ${customerData.email}:`, user?.id);
             }
             
+            // Try user_id metadata
             if (!user && customerData.metadata?.user_id) {
               const { data: userData } = await supabase.auth.admin.getUserById(
                 customerData.metadata.user_id
               );
               user = userData.user;
+              console.log(`Found user by user_id metadata:`, user?.id);
             }
             
+            // Try supabase_user_id metadata
             if (!user && customerData.metadata?.supabase_user_id) {
               const { data: userData } = await supabase.auth.admin.getUserById(
                 customerData.metadata.supabase_user_id
               );
               user = userData.user;
+              console.log(`Found user by supabase_user_id metadata:`, user?.id);
             }
             
             if (user) {
               try {
-                await supabase.rpc('update_user_subscription_status', {
+                const result = await supabase.rpc('update_user_subscription_status', {
                   p_user_id: user.id,
                   p_stripe_customer_id: customerData.id,
                   p_stripe_subscription_id: subscription.id,
@@ -82,25 +92,27 @@ export async function POST(request: Request) {
                   p_cancel_at_period_end: subscription.cancel_at_period_end
                 });
                 
-                console.log(`Updated subscription status for user ${user.id}: ${subscription.status}`);
+                console.log(`Updated subscription status for user ${user.id}: ${subscription.status}`, result);
               } catch (error) {
                 console.error('Error updating subscription status:', error);
               }
+            } else {
+              console.error(`No user found for customer ${customerData.id} with email ${customerData.email}`);
             }
           }
         }
         break;
         
       case 'customer.subscription.trial_will_end':
-        // Handle trial ending
+        console.log('Trial will end event received');
         break;
         
       case 'invoice.payment_succeeded':
-        // Handle successful payment
+        console.log('Payment succeeded event received');
         break;
         
       case 'invoice.payment_failed':
-        // Handle failed payment
+        console.log('Payment failed event received');
         break;
         
       default:
@@ -115,4 +127,4 @@ export async function POST(request: Request) {
       { status: 500 }
     );
   }
-} 
+}

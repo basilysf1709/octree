@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import Stripe from 'stripe';
 import { createClient } from '@/lib/supabase/server';
+import Stripe from 'stripe';
 
 const stripe = new Stripe(process.env.STRIPE_PROD_SECRET_KEY!, {
   apiVersion: '2025-02-24.acacia',
@@ -23,22 +23,17 @@ export async function GET() {
     }
 
     // Get current usage from database
-    let { data: usageData } = await supabase
-      .from('user_usage')
-      .select('*')
-      .eq('user_id', user.id)
-      .single();
-    
-    const { error: usageError } = await supabase
+    const { data: usageData, error: usageError } = await supabase
       .from('user_usage')
       .select('*')
       .eq('user_id', user.id)
       .single();
 
+    let finalUsageData = usageData;
+
     // If no usage record exists, create one
     if (usageError && usageError.code === 'PGRST116') {
       console.log('Creating new user_usage record for user:', user.id);
-      
       const { data: newUsageData, error: createError } = await supabase
         .from('user_usage')
         .insert({
@@ -59,8 +54,7 @@ export async function GET() {
           { status: 500 }
         );
       }
-      
-      usageData = newUsageData;
+      finalUsageData = newUsageData;
     } else if (usageError) {
       console.error('Error fetching usage data:', usageError);
       return NextResponse.json(
@@ -70,12 +64,10 @@ export async function GET() {
     }
 
     // Check if monthly reset is needed
-    if (usageData && usageData.monthly_reset_date) {
-      const resetDate = new Date(usageData.monthly_reset_date);
+    if (finalUsageData && finalUsageData.monthly_reset_date) {
+      const resetDate = new Date(finalUsageData.monthly_reset_date);
       const currentDate = new Date();
-      
       if (currentDate >= resetDate) {
-        // Reset monthly count
         const { error: resetError } = await supabase
           .from('user_usage')
           .update({
@@ -83,71 +75,57 @@ export async function GET() {
             monthly_reset_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
           })
           .eq('user_id', user.id);
-        
         if (!resetError) {
-          usageData.monthly_edit_count = 0;
+          finalUsageData.monthly_edit_count = 0;
         }
       }
     }
 
-    // Try multiple methods to find the customer
+    // Try to find Stripe customer by email first
     let customer = null;
-    
-    // Method 1: Try to find by email
     try {
-      const customersByEmail = await stripe.customers.list({
+      const customers = await stripe.customers.list({
         email: user.email,
         limit: 1,
       });
-      
-      if (customersByEmail.data.length > 0) {
-        customer = customersByEmail.data[0];
-        console.log('Found customer by email:', customer.id);
-      }
+      customer = customers.data[0];
     } catch (error) {
-      console.log('No customer found by email:', user.email);
+      console.error('Error fetching customer by email:', error);
     }
 
-    // Method 2: If no customer by email, try to find by user ID in metadata
+    // If not found by email, try by metadata
     if (!customer) {
       try {
-        const customersByMetadata = await stripe.customers.list({
-          limit: 100, // We'll need to search through customers
+        const customers = await stripe.customers.list({
+          limit: 100,
         });
-        
-        customer = customersByMetadata.data.find(c => 
+        customer = customers.data.find(c => 
           c.metadata?.user_id === user.id || 
           c.metadata?.supabase_user_id === user.id
         );
-        
-        if (customer) {
-          console.log('Found customer by metadata:', customer.id);
-        }
       } catch (error) {
-        console.log('Error searching customers by metadata:', error);
+        console.error('Error fetching customer by metadata:', error);
       }
     }
 
-    // Method 3: If still no customer, return current database state
     if (!customer) {
-      console.log('No customer found for user:', user.email);
       return NextResponse.json({
         hasSubscription: false,
         subscription: null,
         usage: {
-          editCount: usageData?.edit_count || 0,
-          monthlyEditCount: usageData?.monthly_edit_count || 0,
-          remainingEdits: Math.max(0, 5 - (usageData?.edit_count || 0)),
-          remainingMonthlyEdits: Math.max(0, 50 - (usageData?.monthly_edit_count || 0)),
-          isPro: usageData?.is_pro || false,
-          limitReached: (usageData?.edit_count || 0) >= 5,
-          monthlyLimitReached: (usageData?.monthly_edit_count || 0) >= 50,
-          monthlyResetDate: usageData?.monthly_reset_date || null
+          editCount: finalUsageData?.edit_count || 0,
+          monthlyEditCount: finalUsageData?.monthly_edit_count || 0,
+          remainingEdits: Math.max(0, 5 - (finalUsageData?.edit_count || 0)),
+          remainingMonthlyEdits: 0,
+          isPro: false,
+          limitReached: (finalUsageData?.edit_count || 0) >= 5,
+          monthlyLimitReached: false,
+          monthlyResetDate: finalUsageData?.monthly_reset_date || null
         }
       });
     }
 
-    // Get the user's subscription from Stripe using customer ID
+    // Get subscriptions for this customer
     const subscriptions = await stripe.subscriptions.list({
       customer: customer.id,
       status: 'all',
@@ -159,14 +137,14 @@ export async function GET() {
         hasSubscription: false,
         subscription: null,
         usage: {
-          editCount: usageData?.edit_count || 0,
-          monthlyEditCount: usageData?.monthly_edit_count || 0,
-          remainingEdits: Math.max(0, 5 - (usageData?.edit_count || 0)),
-          remainingMonthlyEdits: Math.max(0, 50 - (usageData?.monthly_edit_count || 0)),
-          isPro: usageData?.is_pro || false,
-          limitReached: (usageData?.edit_count || 0) >= 5,
-          monthlyLimitReached: (usageData?.monthly_edit_count || 0) >= 50,
-          monthlyResetDate: usageData?.monthly_reset_date || null
+          editCount: finalUsageData?.edit_count || 0,
+          monthlyEditCount: finalUsageData?.monthly_edit_count || 0,
+          remainingEdits: Math.max(0, 5 - (finalUsageData?.edit_count || 0)),
+          remainingMonthlyEdits: 0,
+          isPro: false,
+          limitReached: (finalUsageData?.edit_count || 0) >= 5,
+          monthlyLimitReached: false,
+          monthlyResetDate: finalUsageData?.monthly_reset_date || null
         }
       });
     }
@@ -207,16 +185,17 @@ export async function GET() {
         })),
       },
       usage: {
-        editCount: usageData?.edit_count || 0,
-        monthlyEditCount: usageData?.monthly_edit_count || 0,
-        remainingEdits: subscription.status === 'active' ? Math.max(0, 50 - (usageData?.monthly_edit_count || 0)) : Math.max(0, 5 - (usageData?.edit_count || 0)),
-        remainingMonthlyEdits: subscription.status === 'active' ? Math.max(0, 50 - (usageData?.monthly_edit_count || 0)) : 0,
+        editCount: finalUsageData?.edit_count || 0,
+        monthlyEditCount: finalUsageData?.monthly_edit_count || 0,
+        remainingEdits: subscription.status === 'active' ? Math.max(0, 50 - (finalUsageData?.monthly_edit_count || 0)) : Math.max(0, 5 - (finalUsageData?.edit_count || 0)),
+        remainingMonthlyEdits: subscription.status === 'active' ? Math.max(0, 50 - (finalUsageData?.monthly_edit_count || 0)) : 0,
         isPro: subscription.status === 'active',
-        limitReached: subscription.status === 'active' ? (usageData?.monthly_edit_count || 0) >= 50 : (usageData?.edit_count || 0) >= 5,
-        monthlyLimitReached: subscription.status === 'active' ? (usageData?.monthly_edit_count || 0) >= 50 : false,
-        monthlyResetDate: usageData?.monthly_reset_date || null
+        limitReached: subscription.status === 'active' ? (finalUsageData?.monthly_edit_count || 0) >= 50 : (finalUsageData?.edit_count || 0) >= 5,
+        monthlyLimitReached: subscription.status === 'active' ? (finalUsageData?.monthly_edit_count || 0) >= 50 : false,
+        monthlyResetDate: finalUsageData?.monthly_reset_date || null
       }
     });
+
   } catch (error) {
     console.error('Error fetching subscription status:', error);
     return NextResponse.json(
@@ -224,4 +203,4 @@ export async function GET() {
       { status: 500 }
     );
   }
-} 
+}

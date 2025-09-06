@@ -1,14 +1,12 @@
 import { NextResponse } from 'next/server';
 import { exec } from 'child_process';
+import { promisify } from 'util';
 import fs from 'fs';
 import path from 'path';
-import { promisify } from 'util';
 import { v4 as uuidv4 } from 'uuid';
-import { createClient } from '@/lib/supabase/server';
 
 const execAsync = promisify(exec);
 
-// Set runtime to nodejs
 export const runtime = 'nodejs';
 
 export async function POST(request: Request) {
@@ -38,7 +36,27 @@ export async function POST(request: Request) {
         if (!response.ok) {
           const errorText = await response.text();
           console.error('Remote server error response:', errorText);
-          throw new Error(`LaTeX compilation failed: ${errorText}`);
+          
+          // Try to parse error response as JSON
+          let errorData;
+          try {
+            errorData = JSON.parse(errorText);
+          } catch {
+            errorData = { error: errorText };
+          }
+          
+          return NextResponse.json(
+            {
+              error: errorData.error || 'LaTeX compilation failed',
+              details: errorData.details || errorData.message || `Server returned status ${response.status}`,
+              log: errorData.log,
+              stdout: errorData.stdout,
+              stderr: errorData.stderr,
+              code: errorData.code,
+              suggestion: 'Check your LaTeX syntax and try again'
+            },
+            { status: response.status }
+          );
         }
 
         const pdfArrayBuffer = await response.arrayBuffer();
@@ -162,14 +180,40 @@ export async function POST(request: Request) {
         // Clean up temp directory
         fs.rmSync(tempDir, { recursive: true, force: true });
 
-        throw new Error(`PDF not generated. Log: ${logContent.substring(0, 500)}`);
+        return NextResponse.json(
+          {
+            error: 'PDF not generated',
+            details: 'LaTeX compilation completed but no PDF was created',
+            log: logContent.substring(0, 2000), // Limit log size
+            stdout: stdout.substring(0, 1000),
+            stderr: stderr ? stderr.substring(0, 1000) : null,
+            suggestion: 'Check your LaTeX syntax and ensure all required packages are included'
+          },
+          { status: 500 }
+        );
       }
     } catch (dockerError) {
       // Clean up temp directory
       fs.rmSync(tempDir, { recursive: true, force: true });
 
       console.error('Docker compilation error:', dockerError);
-      throw new Error(`Docker compilation failed: ${dockerError}`);
+      
+      // Try to get log content for debugging
+      const logPath = path.join(tempDir, 'main.log');
+      let logContent = '';
+      if (fs.existsSync(logPath)) {
+        logContent = fs.readFileSync(logPath, 'utf-8');
+      }
+
+      return NextResponse.json(
+        {
+          error: 'Docker compilation failed',
+          details: String(dockerError),
+          log: logContent.substring(0, 2000),
+          suggestion: 'Check your LaTeX syntax and try again'
+        },
+        { status: 500 }
+      );
     }
   } catch (error) {
     console.error('LaTeX compilation error:', error);

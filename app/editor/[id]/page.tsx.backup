@@ -29,7 +29,6 @@ import { useDebouncedCallback } from 'use-debounce';
 import { createClient } from '@/lib/supabase/client';
 import { DiffViewer } from '@/components/ui/diff-viewer';
 import { UsageIndicator } from '@/components/subscription/usage-indicator';
-import { CompilationError } from '@/components/latex/compilation-error';
 
 export default function EditorPage() {
   const supabase = createClient();
@@ -62,14 +61,6 @@ export default function EditorPage() {
   const [chatOpen, setChatOpen] = useState(false);
   const [compiling, setCompiling] = useState(false);
   const [pdfData, setPdfData] = useState<string | null>(null);
-  const [compilationError, setCompilationError] = useState<{
-    message: string;
-    details?: string;
-    log?: string;
-    stdout?: string;
-    stderr?: string;
-    code?: number;
-  } | null>(null);
   const [editSuggestions, setEditSuggestions] = useState<EditSuggestion[]>([]);
   const suggestionQueueRef = useRef<EditSuggestion[]>([]);
   const [editor, setEditor] =
@@ -123,7 +114,6 @@ export default function EditorPage() {
     const contentToUse = contentToCompile ?? content;
 
     setCompiling(true);
-    setCompilationError(null); // Clear any previous errors
 
     try {
       await saveDocument(contentToUse);
@@ -135,28 +125,19 @@ export default function EditorPage() {
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `Compilation failed with status ${response.status}`);
+        throw new Error(`Compilation failed with status ${response.status}`);
       }
 
       const data = await response.json();
 
       if (data.pdf) {
         setPdfData(data.pdf);
-        setCompilationError(null); // Clear error on success
       } else {
         console.error('[EditorPage] No PDF data in response');
         throw new Error('No PDF data received');
       }
     } catch (error) {
       console.error('[EditorPage] Compilation error:', error);
-      
-      // Set compilation error for display
-      const errorMessage = error instanceof Error ? error.message : 'Unknown compilation error';
-      setCompilationError({
-        message: errorMessage,
-        details: error instanceof Error ? error.stack : undefined,
-      });
     } finally {
       setCompiling(false);
     }
@@ -208,10 +189,7 @@ export default function EditorPage() {
         body: JSON.stringify({ content: currentContent }),
       });
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || 'PDF compilation failed');
-      }
+      if (!response.ok) throw new Error('PDF compilation failed');
 
       const rawText = await response.text();
 
@@ -779,15 +757,6 @@ export default function EditorPage() {
             <UsageIndicator />
           </div>
         </div>
-
-        {/* Compilation Error Display */}
-        {compilationError && (
-          <CompilationError
-            error={compilationError}
-            onRetry={() => handleCompile()}
-            onDismiss={() => setCompilationError(null)}
-          />
-        )}
 
         <div className="flex h-full gap-1">
           <div className="relative h-full flex-4 overflow-hidden rounded-md bg-white shadow-sm">

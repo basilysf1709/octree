@@ -1,7 +1,8 @@
 'use client';
 
 import { useChat } from 'ai/react';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, type ReactNode } from 'react';
+import ReactMarkdown from 'react-markdown';
 import { Button } from '@/components/ui/button';
 import { Loader2, X, Maximize2, Minimize2, ArrowUp } from 'lucide-react';
 import { OctreeLogo } from '@/components/icons/octree-logo';
@@ -49,7 +50,7 @@ export function Chat({
     }
   };
 
-  const renderMessageContent = (content: string) => {
+  const renderMessageContent = (content: string): ReactNode => {
     const incompleteLatexDiffMatch = content.match(
       /```latex-diff(?!\n[\s\S]*?\n```)/
     );
@@ -59,19 +60,24 @@ export function Chat({
     const hasLatexDiff = content.includes('```latex-diff');
 
     if (!hasLatexDiff) {
-      return content;
+      return (
+        <ReactMarkdown className="whitespace-pre-wrap">{content}</ReactMarkdown>
+      );
     }
 
-    const parts = [];
+    const parts: ReactNode[] = [];
     let lastIndex = 0;
     let match;
 
     while ((match = latexDiffRegex.exec(content)) !== null) {
       if (match.index > lastIndex) {
         parts.push(
-          <span key={`text-before-${match.index}`} className="mb-2 block">
+          <ReactMarkdown
+            key={`text-before-${match.index}`}
+            className="mb-2 whitespace-pre-wrap"
+          >
             {content.slice(lastIndex, match.index)}
-          </span>
+          </ReactMarkdown>
         );
       }
 
@@ -103,9 +109,12 @@ export function Chat({
 
       if (incompleteIndex > lastIndex) {
         parts.push(
-          <span key={`text-before-incomplete`} className="mb-2 block">
+          <ReactMarkdown
+            key={`text-before-incomplete`}
+            className="mb-2 whitespace-pre-wrap"
+          >
             {content.slice(lastIndex, incompleteIndex)}
-          </span>
+          </ReactMarkdown>
         );
       }
 
@@ -124,9 +133,12 @@ export function Chat({
 
     if (lastIndex < content.length) {
       parts.push(
-        <span key={`text-after-${lastIndex}`} className="mt-2 block">
+        <ReactMarkdown
+          key={`text-after-${lastIndex}`}
+          className="mt-2 whitespace-pre-wrap"
+        >
           {content.slice(lastIndex)}
-        </span>
+        </ReactMarkdown>
       );
     }
 
@@ -256,7 +268,7 @@ export function Chat({
         inputRef.current?.focus();
       }, 100);
     }
-  }, [textFromEditor]);
+  }, [textFromEditor, isOpen, isMinimized, setIsOpen, setIsMinimized]);
 
   useEffect(() => {
     scrollToBottom();

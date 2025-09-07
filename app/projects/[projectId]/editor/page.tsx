@@ -787,7 +787,7 @@ export default function ProjectEditorPage() {
   return (
     <div className="h-screen bg-slate-100 flex flex-col">
       {/* Header */}
-      <div className="flex-shrink-0 p-2 border-b border-slate-200 bg-white">
+      <div className="flex-shrink-0 px-2 py-0.5 border-b border-slate-200 bg-white">
         <div className="flex items-center justify-between">
           <Breadcrumb>
             <BreadcrumbList>
@@ -829,7 +829,7 @@ export default function ProjectEditorPage() {
           <div className="flex items-center gap-2">
             <Button
               variant="ghost"
-              size="sm"
+              size="xs"
               onClick={() => handleCompile()}
               disabled={compiling}
             >
@@ -847,7 +847,7 @@ export default function ProjectEditorPage() {
             </Button>
             <Button
               variant="ghost"
-              size="sm"
+              size="xs"
               onClick={handleExportPDF}
               disabled={exportingPDF || isSaving}
             >

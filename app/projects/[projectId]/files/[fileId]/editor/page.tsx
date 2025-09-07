@@ -11,14 +11,6 @@ import { createClient } from '@/lib/supabase/client';
 import { useDebouncedCallback } from 'use-debounce';
 import { ButtonGroup, ButtonGroupItem } from '@/components/ui/button-group';
 import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from '@/components/ui/breadcrumb';
-import {
   latexLanguageConfiguration,
   latexTokenProvider,
   registerLatexCompletions,
@@ -478,45 +470,8 @@ export default function FileEditorPage() {
 
   return (
     <div className="h-screen bg-slate-100 flex flex-col">
-            {/* Header */}
-      <div className="flex-shrink-0 p-2 border-b border-slate-200 bg-white">
-        <div className="flex items-center justify-between">
-          <Breadcrumb>
-            <BreadcrumbList>
-              <BreadcrumbItem>
-                <BreadcrumbLink href="/projects">Projects</BreadcrumbLink>
-              </BreadcrumbItem>
-              <BreadcrumbSeparator />
-              <BreadcrumbItem>
-                <BreadcrumbLink href={`/projects/${projectId}`}>
-                  {project.title}
-                </BreadcrumbLink>
-              </BreadcrumbItem>
-              <BreadcrumbSeparator />
-              <BreadcrumbItem>
-                <BreadcrumbPage>{file.name}</BreadcrumbPage>
-              </BreadcrumbItem>
-            </BreadcrumbList>
-          </Breadcrumb>
-
-          <div className="flex items-center gap-2">
-            {lastSaved && (
-              <span className="text-xs text-slate-500">
-                Last saved: {lastSaved.toLocaleTimeString()}
-              </span>
-            )}
-            {isSaving && (
-              <span className="text-xs text-blue-500">
-                <Loader2 className="h-3 w-3 animate-spin inline mr-1" />
-                Saving...
-              </span>
-            )}
-          </div>
-        </div>
-      </div>
-
       {/* Toolbar */}
-      <div className="flex-shrink-0 p-2 border-b border-slate-200 bg-white">
+      <div className="flex-shrink-0 px-2 py-0.5 border-b border-slate-200 bg-white">
         <div className="flex items-center justify-between">
           <ButtonGroup>
             <ButtonGroupItem onClick={() => handleTextFormat('bold')}>
@@ -531,9 +486,20 @@ export default function FileEditorPage() {
           </ButtonGroup>
 
           <div className="flex items-center gap-2">
+            {lastSaved && (
+              <span className="text-xs text-slate-500">
+                Last saved: {lastSaved.toLocaleTimeString()}
+              </span>
+            )}
+            {isSaving && (
+              <span className="text-xs text-blue-500">
+                <Loader2 className="h-3 w-3 animate-spin inline mr-1" />
+                Saving...
+              </span>
+            )}
             <Button
               variant="ghost"
-              size="sm"
+              size="xs"
               onClick={handleCompile}
               disabled={compiling}
             >
@@ -551,7 +517,7 @@ export default function FileEditorPage() {
             </Button>
             <Button
               variant="ghost"
-              size="sm"
+              size="xs"
               onClick={handleExportPDF}
               disabled={exportingPDF || isSaving}
             >

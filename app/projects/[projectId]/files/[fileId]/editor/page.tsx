@@ -678,7 +678,6 @@ export default function FileEditorPage() {
               </kbd>
             </Button>
           )}
-          {console.log('showButton state:', showButton, 'buttonPos:', buttonPos)}
 
           {/* Enhanced Suggestion Actions with Diff View */}
           <div className="absolute top-1 right-3 z-50 max-w-[350px] space-y-2">

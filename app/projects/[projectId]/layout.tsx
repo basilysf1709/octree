@@ -77,7 +77,7 @@ export default async function ProjectLayout({
           
           <div className="flex-1 flex justify-center">
             <Breadcrumb>
-              <BreadcrumbList>
+              <BreadcrumbList className="text-xs gap-1">
                 <BreadcrumbItem>
                   <BreadcrumbLink href="/projects">Projects</BreadcrumbLink>
                 </BreadcrumbItem>
@@ -106,7 +106,7 @@ export default async function ProjectLayout({
           <div className="w-32"></div>
         </header>
 
-        <main className="flex-1 p-4">{children}</main>
+        <main className="flex-1">{children}</main>
       </SidebarInset>
     </SidebarProvider>
   )

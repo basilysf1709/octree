@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { PlusIcon } from 'lucide-react';
+import { PlusIcon, FileText } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
 import { DataTable } from '@/components/documents/data-table';
@@ -147,13 +147,15 @@ export default function Dashboard() {
       {/* Custom Navbar */}
       <nav className="bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-6">
-          <div className="flex h-16 items-center justify-between">
+          <div className="flex h-14 items-center justify-between">
             <div className="flex items-center">
-              <Link href="/" className="flex items-center space-x-3">
-                <OctreeLogo className="h-8 w-8" />
+              <Link href="/" className="flex items-center space-x-2">
+                <div className="h-5 w-5 bg-blue-500 rounded flex items-center justify-center">
+                  <FileText className="h-3 w-3 text-white" />
+                </div>
                 <span
                   className={cn(
-                    'text-xl font-medium tracking-tight text-neutral-900',
+                    'text-lg font-medium tracking-tight text-neutral-900',
                     dmSans.className
                   )}
                 >

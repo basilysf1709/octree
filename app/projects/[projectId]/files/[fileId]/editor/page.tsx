@@ -490,17 +490,17 @@ export default function FileEditorPage() {
   return (
     <div className="h-screen bg-slate-100 flex flex-col">
       {/* Toolbar */}
-      <div className="flex-shrink-0 px-2 py-0.5 border-b border-slate-200 bg-white">
-        <div className="flex items-center justify-between">
+      <div className="sticky top-0 z-30 flex-shrink-0 px-2 py-0 border-b border-slate-200 bg-white">
+        <div className="flex items-center justify-between ">
           <ButtonGroup>
-            <ButtonGroupItem onClick={() => handleTextFormat('bold')}>
-              <span className="text-sm font-bold">B</span>
+            <ButtonGroupItem onClick={() => handleTextFormat('bold')} className="px-2 py-1 text-xs">
+              <span className="text-xs font-bold">B</span>
             </ButtonGroupItem>
-            <ButtonGroupItem onClick={() => handleTextFormat('italic')}>
-              <span className="text-sm italic">I</span>
+            <ButtonGroupItem onClick={() => handleTextFormat('italic')} className="px-2 py-1 text-xs">
+              <span className="text-xs italic">I</span>
             </ButtonGroupItem>
-            <ButtonGroupItem onClick={() => handleTextFormat('underline')}>
-              <span className="text-sm underline">U</span>
+            <ButtonGroupItem onClick={() => handleTextFormat('underline')} className="px-2 py-1 text-xs">
+              <span className="text-xs underline">U</span>
             </ButtonGroupItem>
           </ButtonGroup>
 

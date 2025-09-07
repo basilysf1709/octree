@@ -352,16 +352,24 @@ export function Chat({
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => setIsMinimized(!isMinimized)}
-            className="h-8 w-8 rounded-lg p-0 text-blue-600 hover:bg-blue-50 hover:text-blue-800"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setIsMinimized(!isMinimized);
+            }}
+            className="h-8 w-8 rounded-lg p-0 text-blue-600 hover:bg-blue-50 hover:text-blue-800 z-20"
           >
             {isMinimized ? <Maximize2 size={16} /> : <Minimize2 size={16} />}
           </Button>
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => setIsOpen(false)}
-            className="h-8 w-8 rounded-lg p-0 text-blue-600 hover:bg-blue-50 hover:text-blue-800"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setIsOpen(false);
+            }}
+            className="h-8 w-8 rounded-lg p-0 text-blue-600 hover:bg-blue-50 hover:text-blue-800 z-20"
           >
             <X size={16} />
           </Button>
@@ -415,7 +423,7 @@ export function Chat({
 
             <div className="relative px-2">
               {textFromEditor && (
-                <div className="absolute top-0 left-1/2 w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-full rounded-t-md border border-b-0 border-slate-300 bg-slate-50 px-2 py-1 text-xs shadow-xs">
+                <div className="absolute top-0 left-1/2 w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-full rounded-t-md border border-b-0 border-slate-300 bg-slate-50 px-2 py-1 text-xs shadow-xs z-10 pointer-events-auto">
                   <Button
                     onClick={() => setTextFromEditor(null)}
                     size="icon"

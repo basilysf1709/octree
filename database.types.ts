@@ -153,6 +153,65 @@ export type Database = {
         };
         Relationships: [];
       };
+      user_usage: {
+        Row: {
+          id: string;
+          user_id: string;
+          edit_count: number;
+          monthly_edit_count: number;
+          monthly_reset_date: string;
+          is_pro: boolean;
+          stripe_customer_id: string | null;
+          stripe_subscription_id: string | null;
+          subscription_status: string;
+          current_period_start: string | null;
+          current_period_end: string | null;
+          cancel_at_period_end: boolean;
+          created_at: string | null;
+          updated_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          edit_count?: number;
+          monthly_edit_count?: number;
+          monthly_reset_date?: string;
+          is_pro?: boolean;
+          stripe_customer_id?: string | null;
+          stripe_subscription_id?: string | null;
+          subscription_status?: string;
+          current_period_start?: string | null;
+          current_period_end?: string | null;
+          cancel_at_period_end?: boolean;
+          created_at?: string | null;
+          updated_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          edit_count?: number;
+          monthly_edit_count?: number;
+          monthly_reset_date?: string;
+          is_pro?: boolean;
+          stripe_customer_id?: string | null;
+          stripe_subscription_id?: string | null;
+          subscription_status?: string;
+          current_period_start?: string | null;
+          current_period_end?: string | null;
+          cancel_at_period_end?: boolean;
+          created_at?: string | null;
+          updated_at?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'user_usage_user_id_fkey';
+            columns: ['user_id'];
+            isOneToOne: false;
+            referencedRelation: 'users';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
     };
     Views: {
       [_ in never]: never;
@@ -207,6 +266,10 @@ export type Database = {
         Args: { '': unknown };
         Returns: unknown;
       };
+      increment_edit_count: {
+        Args: { p_user_id: string };
+        Returns: boolean;
+      };
       ivfflat_bit_support: {
         Args: { '': unknown };
         Returns: unknown;
@@ -239,17 +302,29 @@ export type Database = {
         Args: { '': unknown[] };
         Returns: number;
       };
+      update_user_subscription_status: {
+        Args: {
+          p_user_id: string;
+          p_stripe_customer_id: string;
+          p_stripe_subscription_id: string;
+          p_subscription_status: string;
+          p_current_period_start: string;
+          p_current_period_end: string;
+          p_cancel_at_period_end: boolean;
+        };
+        Returns: undefined;
+      };
       vector_avg: {
         Args: { '': number[] };
         Returns: string;
       };
       vector_dims: {
         Args: { '': string } | { '': unknown };
-        Returns: number;
+        Returns: unknown;
       };
       vector_norm: {
         Args: { '': string };
-        Returns: number;
+        Returns: unknown;
       };
       vector_out: {
         Args: { '': string };

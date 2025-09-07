@@ -29,7 +29,6 @@ import { useDebouncedCallback } from 'use-debounce';
 import { createClient } from '@/lib/supabase/client';
 import { DiffViewer } from '@/components/ui/diff-viewer';
 import { UsageIndicator } from '@/components/subscription/usage-indicator';
-import { CompilationError } from '@/components/latex/compilation-error';
 
 export default function EditorPage() {
   const supabase = createClient();
@@ -62,14 +61,6 @@ export default function EditorPage() {
   const [chatOpen, setChatOpen] = useState(false);
   const [compiling, setCompiling] = useState(false);
   const [pdfData, setPdfData] = useState<string | null>(null);
-  const [compilationError, setCompilationError] = useState<{
-    message: string;
-    details?: string;
-    log?: string;
-    stdout?: string;
-    stderr?: string;
-    code?: number;
-  } | null>(null);
   const [editSuggestions, setEditSuggestions] = useState<EditSuggestion[]>([]);
   const suggestionQueueRef = useRef<EditSuggestion[]>([]);
   const [editor, setEditor] =
@@ -123,7 +114,6 @@ export default function EditorPage() {
     const contentToUse = contentToCompile ?? content;
 
     setCompiling(true);
-    setCompilationError(null); // Clear any previous errors
 
     try {
       await saveDocument(contentToUse);
@@ -135,28 +125,19 @@ export default function EditorPage() {
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `Compilation failed with status ${response.status}`);
+        throw new Error(`Compilation failed with status ${response.status}`);
       }
 
       const data = await response.json();
 
       if (data.pdf) {
         setPdfData(data.pdf);
-        setCompilationError(null); // Clear error on success
       } else {
         console.error('[EditorPage] No PDF data in response');
         throw new Error('No PDF data received');
       }
     } catch (error) {
       console.error('[EditorPage] Compilation error:', error);
-      
-      // Set compilation error for display
-      const errorMessage = error instanceof Error ? error.message : 'Unknown compilation error';
-      setCompilationError({
-        message: errorMessage,
-        details: error instanceof Error ? error.stack : undefined,
-      });
     } finally {
       setCompiling(false);
     }
@@ -208,10 +189,7 @@ export default function EditorPage() {
         body: JSON.stringify({ content: currentContent }),
       });
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || 'PDF compilation failed');
-      }
+      if (!response.ok) throw new Error('PDF compilation failed');
 
       const rawText = await response.text();
 
@@ -288,18 +266,15 @@ export default function EditorPage() {
       }
 
       const data = await response.json();
-
+      
       if (!data.canEdit) {
         // Show paywall or error message
         alert('You have reached your free edit limit. Please upgrade to Pro for unlimited edits.');
         return;
       }
-
-      // Notify other components to refresh usage data
-      window.dispatchEvent(new Event('usage-update'));
     } catch (error) {
       console.error('Error checking edit limits:', error);
-      return;
+      // Continue with edit if we can't check limits
     }
 
     const editor = editorRef.current;
@@ -697,10 +672,10 @@ export default function EditorPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-100 overflow-x-hidden">
-      <div className="mx-auto h-[calc(100vh-4rem)] px-2 py-2 max-w-full overflow-hidden">
-        <div className="flex h-6 items-center justify-between py-1">
-          <Breadcrumb>
+    <div className="min-h-screen bg-slate-100">
+      <div className="mx-auto h-[calc(100vh-4rem)] px-2 py-2">
+        <div className="relative flex h-6 justify-end gap-1 py-1">
+          <Breadcrumb className="absolute top-1 left-1/2 -translate-x-1/2">
             <BreadcrumbList>
               <BreadcrumbItem>
                 <BreadcrumbLink href="/">Documents</BreadcrumbLink>
@@ -721,7 +696,7 @@ export default function EditorPage() {
           )}
         </div>
 
-        <div className="mb-1 flex items-center justify-between min-w-0">
+        <div className="mb-1 flex items-center justify-between">
           <ButtonGroup>
             <ButtonGroupItem onClick={() => handleTextFormat('bold')}>
               <span className="text-sm font-bold">B</span>
@@ -734,7 +709,7 @@ export default function EditorPage() {
             </ButtonGroupItem>
           </ButtonGroup>
 
-          <div className="flex items-center gap-2 min-w-0">
+          <div className="flex items-center gap-2">
             <div className="bg-background flex w-fit items-center gap-1 rounded-md border border-slate-300 p-1 shadow-xs">
               <Button
                 variant="ghost"
@@ -782,15 +757,6 @@ export default function EditorPage() {
             <UsageIndicator />
           </div>
         </div>
-
-        {/* Compilation Error Display */}
-        {compilationError && (
-          <CompilationError
-            error={compilationError}
-            onRetry={() => handleCompile()}
-            onDismiss={() => setCompilationError(null)}
-          />
-        )}
 
         <div className="flex h-full gap-1">
           <div className="relative h-full flex-4 overflow-hidden rounded-md bg-white shadow-sm">
@@ -850,13 +816,13 @@ export default function EditorPage() {
             )}
 
             {/* Enhanced Suggestion Actions with Diff View */}
-            <div className="absolute top-1 right-3 z-50 max-w-[350px] space-y-2">
+            <div className="absolute top-1 right-3 z-50 max-w-[400px] space-y-2">
               {editSuggestions
                 .filter((s) => s.status === 'pending')
                 .map((suggestion) => (
                   <div
                     key={suggestion.id}
-                    className="flex flex-col gap-3 rounded-lg border border-blue-200 bg-white p-4 shadow-xl backdrop-blur-sm max-w-full"
+                    className="flex flex-col gap-3 rounded-lg border border-blue-200 bg-white p-4 shadow-xl backdrop-blur-sm"
                   >
                     <div className="flex items-center justify-between">
                       <div className="text-sm font-medium text-blue-700">
@@ -869,13 +835,11 @@ export default function EditorPage() {
                       </div>
                     </div>
 
-                    <div className="max-w-full overflow-x-auto">
-                      <DiffViewer
-                        original={suggestion.original}
-                        suggested={suggestion.suggested}
-                        className="max-w-full"
-                      />
-                    </div>
+                    <DiffViewer
+                      original={suggestion.original}
+                      suggested={suggestion.suggested}
+                      className="max-w-full"
+                    />
 
                     <div className="flex items-center gap-2">
                       <Button
@@ -902,7 +866,7 @@ export default function EditorPage() {
             </div>
           </div>
 
-          <div className="h-full flex-1 overflow-auto min-w-0">
+          <div className="h-full flex-3 overflow-auto">
             <PDFViewer pdfData={pdfData} isLoading={compiling} />
           </div>
         </div>

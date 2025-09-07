@@ -1,8 +1,8 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 'use client';
 
 import { useChat } from 'ai/react';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, type ReactNode } from 'react';
+import ReactMarkdown from 'react-markdown';
 import { Button } from '@/components/ui/button';
 import { Loader2, X, Maximize2, Minimize2, ArrowUp } from 'lucide-react';
 import { OctreeLogo } from '@/components/icons/octree-logo';
@@ -11,9 +11,18 @@ import { EditSuggestion } from '@/types/edit';
 import { v4 as uuidv4 } from 'uuid';
 import { cn } from '@/lib/utils';
 import { Textarea } from './ui/textarea';
+import LatexRenderer from './latex-renderer';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from './ui/accordion';
 
 interface ChatProps {
-  onEditSuggestion: (edit: EditSuggestion | string | (string | EditSuggestion)[]) => void;
+  onEditSuggestion: (
+    edit: EditSuggestion | string | (string | EditSuggestion)[]
+  ) => void;
   fileContent: string;
   textFromEditor: string | null;
   setTextFromEditor: (text: string | null) => void;
@@ -31,9 +40,117 @@ export function Chat({
 }: ChatProps) {
   const [isMinimized, setIsMinimized] = useState(false);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
   const [userInput, setUserInput] = useState<string>('');
 
-  const parseEditSuggestions = (content: string): (string | EditSuggestion)[] => {
+  const scrollToBottom = () => {
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTop =
+        chatContainerRef.current.scrollHeight;
+    }
+  };
+
+  const renderMessageContent = (content: string): ReactNode => {
+    const incompleteLatexDiffMatch = content.match(
+      /```latex-diff(?!\n[\s\S]*?\n```)/
+    );
+
+    const latexDiffRegex = /```latex-diff\n([\s\S]*?)\n```/g;
+
+    const hasLatexDiff = content.includes('```latex-diff');
+
+    if (!hasLatexDiff) {
+      return (
+        <div className="whitespace-pre-wrap">
+          <ReactMarkdown>{content}</ReactMarkdown>
+        </div>
+      );
+    }
+
+    const parts: ReactNode[] = [];
+    let lastIndex = 0;
+    let match;
+
+    while ((match = latexDiffRegex.exec(content)) !== null) {
+      if (match.index > lastIndex) {
+        parts.push(
+          <div
+            key={`text-before-${match.index}`}
+            className="mb-2 whitespace-pre-wrap"
+          >
+            <ReactMarkdown>
+              {content.slice(lastIndex, match.index)}
+            </ReactMarkdown>
+          </div>
+        );
+      }
+
+      const isComplete = match[1] && match[1].trim().length > 0;
+
+      parts.push(
+        <div key={`latex-${match.index}`} className="my-2">
+          <Accordion type="single" collapsible className="rounded-md border">
+            <AccordionItem value="latex-diff" className="border-none">
+              <AccordionTrigger className="px-3 py-1 text-xs font-medium text-slate-600 hover:no-underline">
+                <div className="flex items-center gap-2">
+                  {!isComplete && <Loader2 className="h-3 w-3 animate-spin" />}
+                  LaTeX Diff
+                </div>
+              </AccordionTrigger>
+              <AccordionContent className="px-3 pb-2">
+                <LatexRenderer latex={match[1]} />
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
+        </div>
+      );
+
+      lastIndex = match.index + match[0].length;
+    }
+
+    if (incompleteLatexDiffMatch) {
+      const incompleteIndex = incompleteLatexDiffMatch.index!;
+
+      if (incompleteIndex > lastIndex) {
+        parts.push(
+          <div
+            key={`text-before-incomplete`}
+            className="mb-2 whitespace-pre-wrap"
+          >
+            <ReactMarkdown>
+              {content.slice(lastIndex, incompleteIndex)}
+            </ReactMarkdown>
+          </div>
+        );
+      }
+
+      parts.push(
+        <div
+          key="latex-incomplete"
+          className="animate-in fade-in-0 slide-in-from-bottom-2 my-2 flex items-center gap-2 rounded-md border px-3 py-1 text-xs font-medium text-slate-600 duration-500"
+        >
+          <Loader2 className="h-3 w-3 animate-spin" />
+          LaTeX Diff
+        </div>
+      );
+
+      return parts;
+    }
+
+    if (lastIndex < content.length) {
+      parts.push(
+        <div key={`text-after-${lastIndex}`} className="mt-2 whitespace-pre-wrap">
+          <ReactMarkdown>{content.slice(lastIndex)}</ReactMarkdown>
+        </div>
+      );
+    }
+
+    return parts;
+  };
+
+  const parseEditSuggestions = (
+    content: string
+  ): (string | EditSuggestion)[] => {
     const editRegex = /```latex-diff\n([\s\S]*?)\n```/g;
     let match;
     let cleanContent = content;
@@ -111,7 +228,7 @@ export function Chat({
     // Only show the first suggestion now, return the rest for queueing
     if (suggestions.length > 0) {
       // Always pass all suggestions as an array
-      return suggestions.map(s => JSON.stringify(s));
+      return suggestions.map((s) => JSON.stringify(s));
     }
     return [];
   };
@@ -120,12 +237,12 @@ export function Chat({
     messages,
     handleSubmit: originalHandleSubmit,
     isLoading,
-    setMessages,
     setInput,
   } = useChat({
     api: '/api/octra',
     body: {
       fileContent: fileContent,
+      textFromEditor: textFromEditor,
     },
     onFinish(message) {
       const allSuggestions = parseEditSuggestions(message.content);
@@ -137,12 +254,8 @@ export function Chat({
   });
 
   useEffect(() => {
-    setInput(
-      textFromEditor
-        ? `Attached from editor: ${textFromEditor} ` + userInput
-        : userInput
-    );
-  }, [textFromEditor, userInput, setInput]);
+    setInput(userInput);
+  }, [userInput, setInput]);
 
   useEffect(() => {
     if (textFromEditor) {
@@ -158,7 +271,11 @@ export function Chat({
         inputRef.current?.focus();
       }, 100);
     }
-  }, [textFromEditor]);
+  }, [textFromEditor, isOpen, isMinimized, setIsOpen, setIsMinimized]);
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages, isLoading]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -227,7 +344,7 @@ export function Chat({
             <OctreeLogo className="h-5 w-5 text-blue-600" />
           </div>
           <div>
-            <h3 className="font-semibold text-blue-900">Octree</h3>
+            <h3 className="font-semibold text-blue-800">Octra</h3>
             <p className="text-xs text-slate-500">LaTeX Assistant</p>
           </div>
         </div>
@@ -260,6 +377,7 @@ export function Chat({
             exit={{ opacity: 0 }}
           >
             <div
+              ref={chatContainerRef}
               className={cn(
                 'scrollbar-thin scrollbar-thumb-neutral-300 scrollbar-track-transparent h-[440px] overflow-auto p-4',
                 textFromEditor && 'pb-24'
@@ -278,35 +396,22 @@ export function Chat({
                 </div>
               )}
               {messages.map((message) => (
-                <motion.div
-                  initial={{ y: 10, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
+                <div
                   key={message.id}
-                  className={`mb-4 break-words whitespace-pre-wrap ${
+                  className={`mb-4 break-words ${
                     message.role === 'assistant'
-                      ? 'rounded-lg bg-gradient-to-br from-blue-50 to-blue-50/50 p-3'
-                      : 'rounded-lg border border-blue-100 bg-white p-3'
+                      ? 'rounded-lg border border-slate-200 bg-gradient-to-br from-blue-50 to-blue-50/50 p-3 shadow-xs'
+                      : 'rounded-lg border border-slate-200 bg-white p-3 shadow-xs'
                   }`}
                 >
-                  <div className="mb-1 text-sm font-medium text-blue-900">
+                  <div className="mb-1 text-sm font-semibold text-blue-800">
                     {message.role === 'assistant' ? 'Octra' : 'You'}
                   </div>
-                  <div className="text-sm leading-relaxed text-blue-800">
-                    {message.content}
+                  <div className="text-sm text-slate-800">
+                    {renderMessageContent(message.content)}
                   </div>
-                </motion.div>
+                </div>
               ))}
-              {isLoading && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="flex justify-center py-2"
-                >
-                  <div className="rounded-full bg-blue-50 p-2">
-                    <Loader2 className="h-5 w-5 animate-spin text-blue-600" />
-                  </div>
-                </motion.div>
-              )}
             </div>
 
             <div className="relative px-2">
@@ -360,7 +465,11 @@ export function Chat({
                   disabled={isLoading}
                   className="size-6 rounded-full"
                 >
-                  <ArrowUp />
+                  {isLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <ArrowUp />
+                  )}
                 </Button>
               </form>
             </div>

@@ -9,7 +9,7 @@ const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
   title: 'Octree',
-  description: 'This is a latex editor that uses AI to help you write latex',
+  description: 'A latex editor that uses AI to help you write latex',
 };
 
 export default async function RootLayout({

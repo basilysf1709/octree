@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import Stripe from 'stripe';
 import { createClient } from '@/lib/supabase/server';
+import Stripe from 'stripe';
 
 const stripe = new Stripe(process.env.STRIPE_PROD_SECRET_KEY!, {
   apiVersion: '2025-02-24.acacia',
@@ -22,70 +22,160 @@ export async function GET() {
       );
     }
 
-    // Try multiple methods to find the customer
+    // Get current usage from database
+    const { data: usageData, error: usageError } = await supabase
+      .from('user_usage')
+      .select('*')
+      .eq('user_id', user.id)
+      .single();
+
+    let finalUsageData = usageData;
+
+    // If no usage record exists, create one
+    if (usageError && usageError.code === 'PGRST116') {
+      console.log('Creating new user_usage record for user:', user.id);
+      const { data: newUsageData, error: createError } = await supabase
+        .from('user_usage')
+        .insert({
+          user_id: user.id,
+          edit_count: 0,
+          monthly_edit_count: 0,
+          monthly_reset_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 30 days from now
+          is_pro: false,
+          subscription_status: 'inactive'
+        })
+        .select('*')
+        .single();
+      
+      if (createError) {
+        console.error('Error creating user_usage record:', createError);
+        return NextResponse.json(
+          { error: 'Failed to create usage record' },
+          { status: 500 }
+        );
+      }
+      finalUsageData = newUsageData;
+    } else if (usageError) {
+      console.error('Error fetching usage data:', usageError);
+      return NextResponse.json(
+        { error: 'Failed to fetch usage data' },
+        { status: 500 }
+      );
+    }
+
+    // Check if monthly reset is needed
+    if (finalUsageData && finalUsageData.monthly_reset_date) {
+      const resetDate = new Date(finalUsageData.monthly_reset_date);
+      const currentDate = new Date();
+      if (currentDate >= resetDate) {
+        const { error: resetError } = await supabase
+          .from('user_usage')
+          .update({
+            monthly_edit_count: 0,
+            monthly_reset_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+          })
+          .eq('user_id', user.id);
+        if (!resetError) {
+          finalUsageData.monthly_edit_count = 0;
+        }
+      }
+    }
+
+    // Try to find Stripe customer by email first
     let customer = null;
-    
-    // Method 1: Try to find by email
     try {
-      const customersByEmail = await stripe.customers.list({
+      const customers = await stripe.customers.list({
         email: user.email,
         limit: 1,
       });
-      
-      if (customersByEmail.data.length > 0) {
-        customer = customersByEmail.data[0];
-        console.log('Found customer by email:', customer.id);
-      }
+      customer = customers.data[0];
     } catch (error) {
-      console.log('No customer found by email:', user.email);
+      console.error('Error fetching customer by email:', error);
     }
 
-    // Method 2: If no customer by email, try to find by user ID in metadata
+    // If not found by email, try by metadata
     if (!customer) {
       try {
-        const customersByMetadata = await stripe.customers.list({
-          limit: 100, // We'll need to search through customers
+        const customers = await stripe.customers.list({
+          limit: 100,
         });
-        
-        customer = customersByMetadata.data.find(c => 
+        customer = customers.data.find(c => 
           c.metadata?.user_id === user.id || 
           c.metadata?.supabase_user_id === user.id
         );
-        
-        if (customer) {
-          console.log('Found customer by metadata:', customer.id);
-        }
       } catch (error) {
-        console.log('Error searching customers by metadata:', error);
+        console.error('Error fetching customer by metadata:', error);
       }
     }
 
-    // Method 3: If still no customer, check if user has a customer_id stored
     if (!customer) {
-      // You might want to store customer_id in your database
-      // For now, we'll return no subscription
-      console.log('No customer found for user:', user.email);
       return NextResponse.json({
         hasSubscription: false,
         subscription: null,
+        usage: {
+          editCount: finalUsageData?.edit_count || 0,
+          monthlyEditCount: finalUsageData?.monthly_edit_count || 0,
+          remainingEdits: Math.max(0, 5 - (finalUsageData?.edit_count || 0)),
+          remainingMonthlyEdits: 0,
+          isPro: false,
+          limitReached: (finalUsageData?.edit_count || 0) >= 5,
+          monthlyLimitReached: false,
+          monthlyResetDate: finalUsageData?.monthly_reset_date || null
+        }
       });
     }
 
-    // Get the user's subscription from Stripe using customer ID
-    const subscriptions = await stripe.subscriptions.list({
+    // Get subscriptions for this customer
+    // Only consider active or trialing subscriptions so cancelled users can resubscribe
+    let subscription: Stripe.Subscription | null = null;
+
+    const activeSubs = await stripe.subscriptions.list({
       customer: customer.id,
-      status: 'all',
+      status: 'active',
       limit: 1,
     });
+    subscription = activeSubs.data[0] || null;
 
-    if (subscriptions.data.length === 0) {
+    if (!subscription) {
+      const trialSubs = await stripe.subscriptions.list({
+        customer: customer.id,
+        status: 'trialing',
+        limit: 1,
+      });
+      subscription = trialSubs.data[0] || null;
+    }
+
+    if (!subscription) {
       return NextResponse.json({
         hasSubscription: false,
         subscription: null,
+        usage: {
+          editCount: finalUsageData?.edit_count || 0,
+          monthlyEditCount: finalUsageData?.monthly_edit_count || 0,
+          remainingEdits: Math.max(0, 5 - (finalUsageData?.edit_count || 0)),
+          remainingMonthlyEdits: 0,
+          isPro: false,
+          limitReached: (finalUsageData?.edit_count || 0) >= 5,
+          monthlyLimitReached: false,
+          monthlyResetDate: finalUsageData?.monthly_reset_date || null
+        }
       });
     }
 
-    const subscription = subscriptions.data[0];
+    // Update database with latest subscription info
+    try {
+      await supabase.rpc('update_user_subscription_status', {
+        p_user_id: user.id,
+        p_stripe_customer_id: customer.id,
+        p_stripe_subscription_id: subscription.id,
+        p_subscription_status: subscription.status,
+        p_current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
+        p_current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
+        p_cancel_at_period_end: subscription.cancel_at_period_end
+      });
+    } catch (error) {
+      console.error('Error updating subscription status in database:', error);
+    }
 
     return NextResponse.json({
       hasSubscription: true,
@@ -105,7 +195,18 @@ export async function GET() {
           },
         })),
       },
+      usage: {
+        editCount: finalUsageData?.edit_count || 0,
+        monthlyEditCount: finalUsageData?.monthly_edit_count || 0,
+        remainingEdits: subscription.status === 'active' ? Math.max(0, 50 - (finalUsageData?.monthly_edit_count || 0)) : Math.max(0, 5 - (finalUsageData?.edit_count || 0)),
+        remainingMonthlyEdits: subscription.status === 'active' ? Math.max(0, 50 - (finalUsageData?.monthly_edit_count || 0)) : 0,
+        isPro: subscription.status === 'active',
+        limitReached: subscription.status === 'active' ? (finalUsageData?.monthly_edit_count || 0) >= 50 : (finalUsageData?.edit_count || 0) >= 5,
+        monthlyLimitReached: subscription.status === 'active' ? (finalUsageData?.monthly_edit_count || 0) >= 50 : false,
+        monthlyResetDate: finalUsageData?.monthly_reset_date || null
+      }
     });
+
   } catch (error) {
     console.error('Error fetching subscription status:', error);
     return NextResponse.json(
@@ -113,4 +214,4 @@ export async function GET() {
       { status: 500 }
     );
   }
-} 
+}

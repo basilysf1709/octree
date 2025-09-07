@@ -944,7 +944,7 @@ export default function ProjectEditorPage() {
                   <DiffViewer
                     original={suggestion.original}
                     suggested={suggestion.suggested}
-                    className="max-w-full"
+                    className="max-w-full "
                   />
 
                   <div className="flex items-center gap-2">

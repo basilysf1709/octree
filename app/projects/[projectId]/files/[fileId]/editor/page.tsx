@@ -17,6 +17,7 @@ import {
 } from '@/lib/editor-config';
 import { Chat } from '@/components/chat';
 import { EditSuggestion } from '@/types/edit';
+import { UsageIndicator } from '@/components/subscription/usage-indicator';
 
 export default function FileEditorPage() {
   const supabase = createClient();
@@ -530,6 +531,7 @@ export default function FileEditorPage() {
                 'Export'
               )}
             </Button>
+            <UsageIndicator />
           </div>
         </div>
       </div>

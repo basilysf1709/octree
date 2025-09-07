@@ -7,12 +7,22 @@ import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
 import { DataTable } from '@/components/documents/data-table';
 import { columns } from '@/components/documents/columns';
-// import { CreateDocumentDialog } from '@/components/documents/create-document-dialog';
+import { CreateDocumentDialog } from '@/components/documents/create-document-dialog';
 import { DeleteDocumentDialog } from '@/components/documents/delete-document-dialog';
 import { Document } from '@/types/document';
-import { CreateDocumentDialog } from '@/components/ui/create-document-dialog';
+// import { CreateDocumentDialog } from '@/components/ui/create-document-dialog';
 import { defaultLatexContent } from '@/app/editor/default-content';
 import { useProjectRefresh } from '@/app/context/project';
+import { OctreeLogo } from '@/components/icons/octree-logo';
+import { UserProfileDropdown } from '@/components/user/user-profile-dropdown';
+import { DM_Sans } from 'next/font/google';
+import { cn } from '@/lib/utils';
+import Link from 'next/link';
+
+const dmSans = DM_Sans({
+  subsets: ['latin'],
+  weight: ['400', '500', '700'],
+});
 export default function Dashboard() {
   const supabase = createClient();
   const router = useRouter();
@@ -134,6 +144,30 @@ export default function Dashboard() {
 
   return (
     <>
+      {/* Custom Navbar */}
+      <nav className="bg-white border-b border-gray-200">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="flex h-16 items-center justify-between">
+            <div className="flex items-center">
+              <Link href="/" className="flex items-center space-x-3">
+                <OctreeLogo className="h-8 w-8" />
+                <span
+                  className={cn(
+                    'text-xl font-medium tracking-tight text-neutral-900',
+                    dmSans.className
+                  )}
+                >
+                  Octree
+                </span>
+              </Link>
+            </div>
+            <div className="flex items-center">
+              <UserProfileDropdown userName={userName} />
+            </div>
+          </div>
+        </div>
+      </nav>
+
       <main className="container mx-auto px-4 py-8">
         <div className="mb-8 flex items-center justify-between">
           <div>

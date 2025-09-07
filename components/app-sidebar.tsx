@@ -131,7 +131,7 @@ export function AppSidebar({ userName, projectId }: AppSidebarProps) {
           href="/projects"
           className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 transition-colors"
         >
-          <Folder className="h-4 w-4" />
+          {/* <Folder className="h-4 w-4" /> */}
           <span>All Projects</span>
         </Link>
       </SidebarHeader>

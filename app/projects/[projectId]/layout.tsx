@@ -18,8 +18,9 @@ export default async function ProjectLayout({
   params,
 }: {
   children: React.ReactNode
-  params: { projectId: string }
+  params: Promise<{ projectId: string }>
 }) {
+  const { projectId } = await params
   const supabase = await createClient()
   const {
     data: { user },
@@ -31,7 +32,7 @@ export default async function ProjectLayout({
   const { data: project } = await supabase
     .from('projects')
     .select('title')
-    .eq('id', params.projectId)
+    .eq('id', projectId)
     .eq('user_id', user?.id || '')
     .single()
 
@@ -58,14 +59,14 @@ export default async function ProjectLayout({
       .from('files')
       .select('name')
       .eq('id', fileId)
-      .eq('project_id', params.projectId)
+      .eq('project_id', projectId)
       .single()
     file = fileData
   }
 
   return (
     <SidebarProvider defaultOpen={false}>
-      <AppSidebar userName={userName} projectId={params.projectId} />
+      <AppSidebar userName={userName} projectId={projectId} />
       <SidebarInset>
         <header className="flex items-center justify-between border-b px-4 py-2">
           <div className="flex items-center gap-2">
@@ -83,7 +84,7 @@ export default async function ProjectLayout({
                 <BreadcrumbSeparator />
                 <BreadcrumbItem>
                   {isFileEditor ? (
-                    <BreadcrumbLink href={`/projects/${params.projectId}`}>
+                    <BreadcrumbLink href={`/projects/${projectId}`}>
                       {project?.title || 'Project'}
                     </BreadcrumbLink>
                   ) : (

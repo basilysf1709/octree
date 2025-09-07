@@ -856,7 +856,7 @@ export default function EditorPage() {
                 .map((suggestion) => (
                   <div
                     key={suggestion.id}
-                    className="flex flex-col gap-3 rounded-lg border border-blue-200 bg-white p-4 shadow-xl backdrop-blur-sm max-w-full"
+                    className="flex flex-col gap-3 rounded-lg border border-blue-200 bg-white p-4 shadow-xl backdrop-blur-sm max-w-full max-h-96"
                   >
                     <div className="flex items-center justify-between">
                       <div className="text-sm font-medium text-blue-700">
@@ -869,7 +869,7 @@ export default function EditorPage() {
                       </div>
                     </div>
 
-                    <div className="max-w-full overflow-x-auto">
+                    <div className="max-w-full max-h-48 overflow-auto">
                       <DiffViewer
                         original={suggestion.original}
                         suggested={suggestion.suggested}

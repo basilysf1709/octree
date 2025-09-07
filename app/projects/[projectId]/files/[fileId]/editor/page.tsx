@@ -18,6 +18,7 @@ import {
 import { Chat } from '@/components/chat';
 import { EditSuggestion } from '@/types/edit';
 import { UsageIndicator } from '@/components/subscription/usage-indicator';
+import { CompilationError } from '@/components/latex/compilation-error';
 
 export default function FileEditorPage() {
   const supabase = createClient();
@@ -31,6 +32,14 @@ export default function FileEditorPage() {
   const [title, setTitle] = useState('');
   const [compiling, setCompiling] = useState(false);
   const [pdfData, setPdfData] = useState<string | null>(null);
+  const [compilationError, setCompilationError] = useState<{
+    message: string;
+    details?: string;
+    log?: string;
+    stdout?: string;
+    stderr?: string;
+    code?: number;
+  } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [project, setProject] = useState<{
@@ -201,7 +210,8 @@ export default function FileEditorPage() {
       });
 
       if (!response.ok) {
-        throw new Error(`Compilation failed with status ${response.status}`);
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `Compilation failed with status ${response.status}`);
       }
 
       const data = await response.json();
@@ -209,11 +219,19 @@ export default function FileEditorPage() {
       if (data.pdf) {
         console.log('PDF generated successfully, size:', data.size);
         setPdfData(data.pdf);
+        setCompilationError(null); // Clear any previous errors
       } else {
         throw new Error('No PDF data received');
       }
     } catch (error) {
       console.error('Compilation error:', error);
+      
+      // Set compilation error for display
+      const errorMessage = error instanceof Error ? error.message : 'Unknown compilation error';
+      setCompilationError({
+        message: errorMessage,
+        details: error instanceof Error ? error.stack : undefined,
+      });
     } finally {
       setCompiling(false);
     }
@@ -566,7 +584,7 @@ export default function FileEditorPage() {
               .map((suggestion) => (
                 <div
                   key={suggestion.id}
-                  className="flex flex-col gap-3 rounded-lg border border-blue-200 bg-white p-4 shadow-xl backdrop-blur-sm max-w-full"
+                  className="flex flex-col gap-3 rounded-lg border border-blue-200 bg-white p-4 shadow-xl backdrop-blur-sm max-w-full max-h-96"
                 >
                   <div className="flex items-center justify-between">
                     <div className="text-sm font-medium text-blue-700">
@@ -579,12 +597,12 @@ export default function FileEditorPage() {
                     </div>
                   </div>
 
-                  <div className="max-w-full overflow-x-auto">
-                    <div className="text-sm">
-                      <div className="text-red-600 line-through">
+                  <div className="max-w-full max-h-48 overflow-auto">
+                    <div className="text-sm space-y-2">
+                      <div className="text-red-600 line-through whitespace-pre-wrap break-words">
                         {suggestion.original}
                       </div>
-                      <div className="text-green-600 font-medium">
+                      <div className="text-green-600 font-medium whitespace-pre-wrap break-words">
                         {suggestion.suggested}
                       </div>
                     </div>
@@ -639,6 +657,15 @@ export default function FileEditorPage() {
         textFromEditor={textFromEditor}
         setTextFromEditor={setTextFromEditor}
       />
+      
+      {/* Compilation Error Display */}
+      {compilationError && (
+        <CompilationError
+          error={compilationError}
+          onRetry={handleCompile}
+          onDismiss={() => setCompilationError(null)}
+        />
+      )}
     </div>
   );
 } 

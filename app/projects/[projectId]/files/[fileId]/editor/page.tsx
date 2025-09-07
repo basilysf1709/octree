@@ -432,7 +432,7 @@ export default function FileEditorPage() {
   ) => {
     editorRef.current = editor;
 
-    // Add keyboard shortcut for save and compile (Cmd+S / Ctrl+S)
+    // Add keyboard shortcuts
     const editorDomNode = editor.getDomNode();
     if (editorDomNode) {
       editorDomNode.addEventListener('keydown', (e) => {
@@ -444,6 +444,15 @@ export default function FileEditorPage() {
           saveDocument(currentContent).then((saved) => {
             if (saved) handleCompile();
           });
+          
+          return false;
+        }
+        
+        if ((e.metaKey || e.ctrlKey) && e.key === 'b') {
+          e.preventDefault();
+          e.stopPropagation();
+          
+          setChatOpen((prev) => !prev);
           
           return false;
         }

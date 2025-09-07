@@ -284,8 +284,7 @@ export function Chat({
 
         if (
           target.tagName !== 'INPUT' &&
-          target.tagName !== 'TEXTAREA' &&
-          !target.closest('.monaco-editor')
+          target.tagName !== 'TEXTAREA'
         ) {
           e.preventDefault();
           setIsOpen((prev) => !prev);

@@ -74,6 +74,9 @@ export default function FileEditorPage() {
   const [chatOpen, setChatOpen] = useState(false);
   const [editSuggestions, setEditSuggestions] = useState<EditSuggestion[]>([]);
   const [textFromEditor, setTextFromEditor] = useState<string | null>(null);
+  const [buttonPos, setButtonPos] = useState({ top: 0, left: 0 });
+  const [showButton, setShowButton] = useState(false);
+  const [selectedText, setSelectedText] = useState('');
   const suggestionQueueRef = useRef<EditSuggestion[]>([]);
 
   const editorRef = useRef<Monaco.editor.IStandaloneCodeEditor | null>(null);
@@ -338,6 +341,56 @@ export default function FileEditorPage() {
     setTimeout(handleNextSuggestion, 0);
   };
 
+  function handleCopy(textToCopy?: string) {
+    const currentSelectedText = textToCopy ?? selectedText;
+    console.log('handleCopy called with:', { currentSelectedText, textToCopy, selectedText });
+
+    if (currentSelectedText.trim()) {
+      setTextFromEditor(currentSelectedText);
+      setShowButton(false);
+      setChatOpen(true);
+    }
+  }
+
+  const debouncedCursorSelection = useDebouncedCallback(
+    (editor: Monaco.editor.IStandaloneCodeEditor) => {
+      const selection = editor.getSelection();
+      const model = editor.getModel();
+      const text = model?.getValueInRange(selection!);
+
+      console.log('Selection changed:', { selection, text, isEmpty: selection?.isEmpty() });
+
+      if (text && selection && !selection?.isEmpty()) {
+        const range = {
+          startLineNumber: selection.startLineNumber,
+          startColumn: selection.startColumn,
+          endLineNumber: selection.endLineNumber,
+          endColumn: selection.endColumn,
+        };
+        const startCoords = editor.getScrolledVisiblePosition({
+          lineNumber: range.startLineNumber,
+          column: range.startColumn,
+        });
+
+        console.log('Setting button position:', { startCoords, text });
+
+        if (startCoords) {
+          setButtonPos({
+            top: startCoords.top - 30,
+            left: startCoords.left,
+          });
+          setSelectedText(text);
+          setShowButton(true);
+        }
+      } else {
+        console.log('Hiding button');
+        setShowButton(false);
+        setSelectedText('');
+      }
+    },
+    200
+  );
+
   const handleExportPDF = async () => {
     setExportingPDF(true);
 
@@ -432,6 +485,11 @@ export default function FileEditorPage() {
   ) => {
     editorRef.current = editor;
 
+    // Add selection change listener for floating button
+    editor.onDidChangeCursorSelection((e) => {
+      debouncedCursorSelection(editor);
+    });
+
     // Add keyboard shortcuts
     const editorDomNode = editor.getDomNode();
     if (editorDomNode) {
@@ -451,6 +509,19 @@ export default function FileEditorPage() {
         if ((e.metaKey || e.ctrlKey) && e.key === 'b') {
           e.preventDefault();
           e.stopPropagation();
+          
+          // Get selected text from editor
+          const selection = editor.getSelection();
+          if (selection && !selection.isEmpty()) {
+            const model = editor.getModel();
+            if (model) {
+              const selectedText = model.getValueInRange(selection);
+              setTextFromEditor(selectedText);
+            }
+          } else {
+            // Clear textFromEditor if no selection
+            setTextFromEditor(null);
+          }
           
           setChatOpen((prev) => !prev);
           
@@ -585,6 +656,29 @@ export default function FileEditorPage() {
             }}
             onMount={handleEditorDidMount}
           />
+
+          {/* Floating Edit Button */}
+          {showButton && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                console.log('Edit button clicked');
+                handleCopy();
+              }}
+              className="absolute z-10 border border-slate-300 py-3 font-medium"
+              style={{
+                top: buttonPos.top,
+                left: buttonPos.left,
+              }}
+            >
+              Edit
+              <kbd className="text-muted-foreground ml-auto pt-0.5 font-mono text-xs tracking-widest">
+                ⌘B
+              </kbd>
+            </Button>
+          )}
+          {console.log('showButton state:', showButton, 'buttonPos:', buttonPos)}
 
           {/* Enhanced Suggestion Actions with Diff View */}
           <div className="absolute top-1 right-3 z-50 max-w-[350px] space-y-2">

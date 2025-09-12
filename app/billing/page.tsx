@@ -130,22 +130,16 @@ export default function BillingPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen">
-        <Navbar userName={user?.user_metadata?.name ?? user?.email} />
-        <main className="container mx-auto px-4 py-8">
-          <div className="text-center">
-            <p className="text-red-600">Error: {error}</p>
-          </div>
-        </main>
-      </div>
+      <main className="container mx-auto px-4 py-8">
+        <div className="text-center">
+          <p className="text-red-600">Error: {error}</p>
+        </div>
+      </main>
     );
   }
 
   return (
-    <div className="min-h-screen">
-      <Navbar userName={user?.user_metadata?.name ?? user?.email} />
-
-      <main className="container mx-auto px-4 py-8">
+    <main className="container mx-auto px-4 py-8">
         <div className="mb-8">
           <h1 className="text-2xl font-bold text-neutral-900">
             Billing History
@@ -297,6 +291,5 @@ export default function BillingPage() {
           </Card>
         </div>
       </main>
-    </div>
   );
 }

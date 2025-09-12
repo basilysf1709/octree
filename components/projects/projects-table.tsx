@@ -1,6 +1,6 @@
 'use client';
 
-import { useActionState, useEffect, useState, startTransition } from 'react';
+import { useEffect, useState } from 'react';
 import { columns } from './columns';
 import { DataTable } from './data-table';
 import {
@@ -13,23 +13,18 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
-import { deleteProject, State } from '@/app/projects/actions/delete-project';
 import { Project, SelectedProject } from '@/types/project';
+import { useProjectRefresh } from '@/app/context/project';
+import { useDeleteProject } from '@/hooks/delete-project-client';
 
 export function ProjectsTable({ data }: { data: Project[] }) {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedProject, setSelectedProject] =
     useState<SelectedProject | null>(null);
-
-  const initialState: State = {
-    projectId: null,
-    message: null,
-    success: false,
-  };
-  const [state, formAction, pending] = useActionState(
-    deleteProject,
-    initialState
-  );
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const { refreshProjects } = useProjectRefresh();
+  const { deleteProjectWithRefresh } = useDeleteProject();
 
   const handleDeleteClick = (projectId: string, projectTitle: string) => {
     setSelectedProject({
@@ -42,23 +37,27 @@ export function ProjectsTable({ data }: { data: Project[] }) {
   const handleDeleteConfirm = async () => {
     if (!selectedProject) return;
 
-    const formData = new FormData();
-    formData.append('projectId', selectedProject.id);
-    startTransition(() => {
-      formAction(formData);
-    });
+    setIsLoading(true);
+    setError(null);
+
+    const result = await deleteProjectWithRefresh(selectedProject.id);
+
+    if (result.success) {
+      closeDialog();
+      // Refresh the projects list
+      window.location.reload();
+    } else {
+      setError(result.message || 'Failed to delete project');
+    }
+
+    setIsLoading(false);
   };
 
   const closeDialog = () => {
     setIsDeleteDialogOpen(false);
     setSelectedProject(null);
+    setError(null);
   };
-
-  useEffect(() => {
-    if (state.success) {
-      closeDialog();
-    }
-  }, [state]);
 
   return (
     <>
@@ -78,16 +77,21 @@ export function ProjectsTable({ data }: { data: Project[] }) {
               &quot;? This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
+          {error && (
+            <div className="rounded-md bg-red-50 p-3 text-sm text-red-600">
+              {error}
+            </div>
+          )}
           <DialogFooter>
-            <Button variant="ghost" onClick={closeDialog} disabled={pending}>
+            <Button variant="ghost" onClick={closeDialog} disabled={isLoading}>
               Cancel
             </Button>
             <Button
               variant="destructive"
               onClick={handleDeleteConfirm}
-              disabled={pending}
+              disabled={isLoading}
             >
-              {pending ? (
+              {isLoading ? (
                 <>
                   <Loader2 className="animate-spin" />
                   Deleting...

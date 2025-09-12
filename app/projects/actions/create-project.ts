@@ -5,12 +5,13 @@ import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { TablesInsert } from '@/database.types';
 import { z } from 'zod';
+import { DEFAULT_LATEX_CONTENT } from '@/app/constants/data';
 
 const CreateProject = z.object({
   title: z.string().min(1, 'Project title is required').trim(),
 });
 
-export type State = {
+type State = {
   projectId: string | null;
   message?: string | null;
   success?: boolean;
@@ -55,26 +56,38 @@ export async function createProject(prevState: State, formData: FormData) {
       throw new Error('Failed to create project');
     }
 
+    // Create a default LaTeX document for the project
+    const defaultContent = DEFAULT_LATEX_CONTENT(title);
+
+    const { data: documentData, error: documentError } = await supabase
+      .from('documents')
+      .insert({
+        title: title,
+        content: defaultContent,
+        owner_id: user.id,
+        project_id: data.id,
+        filename: 'main.tex',
+        document_type: 'article',
+      })
+      .select()
+      .single();
+
+    if (documentError) {
+      console.error('Error creating document:', documentError);
+      throw new Error('Failed to create document');
+    }
+
+    // Create a file record for the main.tex file
     const { error: fileError } = await supabase.from('files').insert({
       project_id: data.id,
       name: 'main.tex',
+      type: 'text/plain',
+      size: defaultContent.length,
     });
 
     if (fileError) {
-      throw new Error(`Failed to insert file record: ${fileError.message}`);
-    }
-
-    const latexSource = `\\documentclass{article}\\begin{document}Hello, world!\\end{document}`;
-
-    const { error: uploadError } = await supabase.storage
-      .from('octree')
-      .upload(
-        `projects/${data.id}/main.tex`,
-        new Blob([latexSource], { type: 'text/plain' })
-      );
-
-    if (uploadError) {
-      throw new Error(`Failed to upload main.tex: ${uploadError.message}`);
+      console.error('Error creating file record:', fileError);
+      // Don't throw here as the document was created successfully
     }
 
     revalidatePath('/projects');

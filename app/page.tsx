@@ -2,20 +2,31 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { PlusIcon } from 'lucide-react';
+import { PlusIcon, FileText } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
-import { defaultLatexContent } from '@/app/editor/default-content';
-import Navbar from '@/components/navbar';
 import { Button } from '@/components/ui/button';
 import { DataTable } from '@/components/documents/data-table';
 import { columns } from '@/components/documents/columns';
 import { CreateDocumentDialog } from '@/components/documents/create-document-dialog';
 import { DeleteDocumentDialog } from '@/components/documents/delete-document-dialog';
 import { Document } from '@/types/document';
+// import { CreateDocumentDialog } from '@/components/ui/create-document-dialog';
+import { defaultLatexContent } from '@/app/editor/default-content';
+import { useProjectRefresh } from '@/app/context/project';
+import { OctreeLogo } from '@/components/icons/octree-logo';
+import { UserProfileDropdown } from '@/components/user/user-profile-dropdown';
+import { DM_Sans } from 'next/font/google';
+import { cn } from '@/lib/utils';
+import Link from 'next/link';
 
+const dmSans = DM_Sans({
+  subsets: ['latin'],
+  weight: ['400', '500', '700'],
+});
 export default function Dashboard() {
   const supabase = createClient();
   const router = useRouter();
+  const { refreshProjects } = useProjectRefresh();
 
   const [userName, setUserName] = useState<string | null>(null);
   const [documents, setDocuments] = useState<Document[]>([]);
@@ -46,7 +57,13 @@ export default function Dashboard() {
 
       const { data, error } = await supabase
         .from('documents')
-        .select('*')
+        .select(`
+          *,
+          projects!documents_project_id_fkey (
+            id,
+            title
+          )
+        `)
         .order('updated_at', { ascending: false });
 
       if (!error && data) {
@@ -54,7 +71,9 @@ export default function Dashboard() {
       }
     };
     fetchUserAndDocuments();
-  }, [router, supabase]);
+    // Refresh sidebar projects when page loads
+    refreshProjects();
+  }, [router, supabase, refreshProjects]);
 
   const handleCreateClick = () => {
     setCreateDialog(true);
@@ -124,8 +143,32 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="min-h-screen">
-      <Navbar userName={userName} />
+    <>
+      {/* Custom Navbar */}
+      <nav className="bg-white border-b border-gray-200">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="flex h-14 items-center justify-between">
+            <div className="flex items-center">
+              <Link href="/" className="flex items-center space-x-2">
+                <div className="h-5 w-5 bg-blue-500 rounded flex items-center justify-center">
+                  <FileText className="h-3 w-3 text-white" />
+                </div>
+                <span
+                  className={cn(
+                    'text-lg font-medium tracking-tight text-neutral-900',
+                    dmSans.className
+                  )}
+                >
+                  Octree
+                </span>
+              </Link>
+            </div>
+            <div className="flex items-center">
+              <UserProfileDropdown userName={userName} />
+            </div>
+          </div>
+        </div>
+      </nav>
 
       <main className="container mx-auto px-4 py-8">
         <div className="mb-8 flex items-center justify-between">
@@ -163,6 +206,6 @@ export default function Dashboard() {
         onClose={() => setCreateDialog(false)}
         onConfirm={createNewDocument}
       />
-    </div>
+    </>
   );
 }

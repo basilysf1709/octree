@@ -12,6 +12,46 @@ export const runtime = 'nodejs';
 export async function POST(request: Request) {
   try {
     const { content } = await request.json();
+    
+    // Validate LaTeX content structure
+    if (!content || typeof content !== 'string') {
+      return NextResponse.json(
+        {
+          error: 'Invalid content',
+          details: 'Content must be a non-empty string',
+          suggestion: 'Please provide valid LaTeX content'
+        },
+        { status: 400 }
+      );
+    }
+
+    // Check if content has proper LaTeX structure
+    const hasDocumentClass = content.includes('\\documentclass');
+    const hasBeginDocument = content.includes('\\begin{document}');
+    const hasEndDocument = content.includes('\\end{document}');
+
+    if (!hasDocumentClass) {
+      return NextResponse.json(
+        {
+          error: 'Invalid LaTeX structure',
+          details: 'LaTeX document must start with \\documentclass declaration',
+          suggestion: 'Add \\documentclass{article} at the beginning of your document'
+        },
+        { status: 400 }
+      );
+    }
+
+    if (!hasBeginDocument || !hasEndDocument) {
+      return NextResponse.json(
+        {
+          error: 'Invalid LaTeX structure',
+          details: 'LaTeX document must have \\begin{document} and \\end{document}',
+          suggestion: 'Wrap your content between \\begin{document} and \\end{document}'
+        },
+        { status: 400 }
+      );
+    }
+
     const isProd = process.env.ENVIRONMENT === 'prod';
 
     if (isProd) {

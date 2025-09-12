@@ -1,6 +1,6 @@
 'use client';
 
-import { useActionState, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { PlusIcon } from 'lucide-react';
 import {
@@ -15,22 +15,36 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { createProject, State } from '@/app/projects/actions/create-project';
+import { useCreateProject } from '@/hooks/create-project-client';
 
 export function CreateProjectDialog() {
   const [open, setOpen] = useState(false);
+  const [title, setTitle] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const { createProjectWithRefresh } = useCreateProject();
 
-  const initialState: State = { projectId: null, message: null };
-  const [state, formAction, pending] = useActionState(
-    createProject,
-    initialState
-  );
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!title.trim()) return;
 
-  useEffect(() => {
-    if (state.success) {
+    setIsLoading(true);
+    setError(null);
+
+    const formData = new FormData();
+    formData.append('title', title);
+
+    const result = await createProjectWithRefresh(formData);
+
+    if (result.success) {
       setOpen(false);
+      setTitle('');
+    } else {
+      setError(result.message || 'Failed to create project');
     }
-  }, [state]);
+
+    setIsLoading(false);
+  };
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -41,7 +55,7 @@ export function CreateProjectDialog() {
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
-        <form action={formAction} className="grid gap-4">
+        <form onSubmit={handleSubmit} className="grid gap-4">
           <DialogHeader>
             <DialogTitle>New Project</DialogTitle>
             <DialogDescription>
@@ -51,20 +65,25 @@ export function CreateProjectDialog() {
 
           <div className="grid gap-3">
             <Label htmlFor="title">Title</Label>
-            <Input id="title" name="title" />
-            {state.message && (
-              <p className="text-sm text-red-600">{state.message}</p>
+            <Input 
+              id="title" 
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Enter project title"
+            />
+            {error && (
+              <p className="text-sm text-red-600">{error}</p>
             )}
           </div>
 
           <DialogFooter>
             <DialogClose asChild>
-              <Button variant="outline" disabled={pending}>
+              <Button variant="outline" disabled={isLoading}>
                 Cancel
               </Button>
             </DialogClose>
-            <Button type="submit" disabled={pending}>
-              {pending ? 'Creating...' : 'Create'}
+            <Button type="submit" disabled={isLoading}>
+              {isLoading ? 'Creating...' : 'Create'}
             </Button>
           </DialogFooter>
         </form>

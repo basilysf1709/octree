@@ -697,10 +697,10 @@ export default function EditorPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-100">
-      <div className="mx-auto h-[calc(100vh-4rem)] px-2 py-2">
-        <div className="relative flex h-6 justify-end gap-1 py-1">
-          <Breadcrumb className="absolute top-1 left-1/2 -translate-x-1/2">
+    <div className="min-h-screen bg-slate-100 overflow-x-hidden">
+      <div className="mx-auto h-[calc(100vh-4rem)] px-2 py-2 max-w-full overflow-hidden">
+        <div className="flex h-6 items-center justify-between py-1">
+          <Breadcrumb>
             <BreadcrumbList>
               <BreadcrumbItem>
                 <BreadcrumbLink href="/">Documents</BreadcrumbLink>
@@ -721,7 +721,7 @@ export default function EditorPage() {
           )}
         </div>
 
-        <div className="mb-1 flex items-center justify-between">
+        <div className="mb-1 flex items-center justify-between min-w-0">
           <ButtonGroup>
             <ButtonGroupItem onClick={() => handleTextFormat('bold')}>
               <span className="text-sm font-bold">B</span>
@@ -734,7 +734,7 @@ export default function EditorPage() {
             </ButtonGroupItem>
           </ButtonGroup>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 min-w-0">
             <div className="bg-background flex w-fit items-center gap-1 rounded-md border border-slate-300 p-1 shadow-xs">
               <Button
                 variant="ghost"
@@ -850,13 +850,13 @@ export default function EditorPage() {
             )}
 
             {/* Enhanced Suggestion Actions with Diff View */}
-            <div className="absolute top-1 right-3 z-50 max-w-[400px] space-y-2">
+            <div className="absolute top-1 right-3 z-50 max-w-[350px] space-y-2">
               {editSuggestions
                 .filter((s) => s.status === 'pending')
                 .map((suggestion) => (
                   <div
                     key={suggestion.id}
-                    className="flex flex-col gap-3 rounded-lg border border-blue-200 bg-white p-4 shadow-xl backdrop-blur-sm"
+                    className="flex flex-col gap-3 rounded-lg border border-blue-200 bg-white p-4 shadow-xl backdrop-blur-sm max-w-full max-h-96"
                   >
                     <div className="flex items-center justify-between">
                       <div className="text-sm font-medium text-blue-700">
@@ -869,11 +869,13 @@ export default function EditorPage() {
                       </div>
                     </div>
 
-                    <DiffViewer
-                      original={suggestion.original}
-                      suggested={suggestion.suggested}
-                      className="max-w-full"
-                    />
+                    <div className="max-w-full max-h-48 overflow-auto">
+                      <DiffViewer
+                        original={suggestion.original}
+                        suggested={suggestion.suggested}
+                        className="max-w-full"
+                      />
+                    </div>
 
                     <div className="flex items-center gap-2">
                       <Button
@@ -900,7 +902,7 @@ export default function EditorPage() {
             </div>
           </div>
 
-          <div className="h-full flex-3 overflow-auto">
+          <div className="h-full flex-1 overflow-auto min-w-0">
             <PDFViewer pdfData={pdfData} isLoading={compiling} />
           </div>
         </div>

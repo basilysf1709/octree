@@ -284,8 +284,7 @@ export function Chat({
 
         if (
           target.tagName !== 'INPUT' &&
-          target.tagName !== 'TEXTAREA' &&
-          !target.closest('.monaco-editor')
+          target.tagName !== 'TEXTAREA'
         ) {
           e.preventDefault();
           setIsOpen((prev) => !prev);
@@ -295,6 +294,7 @@ export function Chat({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [setIsOpen]);
 
   if (!isOpen) {
@@ -352,16 +352,24 @@ export function Chat({
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => setIsMinimized(!isMinimized)}
-            className="h-8 w-8 rounded-lg p-0 text-blue-600 hover:bg-blue-50 hover:text-blue-800"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setIsMinimized(!isMinimized);
+            }}
+            className="h-8 w-8 rounded-lg p-0 text-blue-600 hover:bg-blue-50 hover:text-blue-800 z-20"
           >
             {isMinimized ? <Maximize2 size={16} /> : <Minimize2 size={16} />}
           </Button>
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => setIsOpen(false)}
-            className="h-8 w-8 rounded-lg p-0 text-blue-600 hover:bg-blue-50 hover:text-blue-800"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setIsOpen(false);
+            }}
+            className="h-8 w-8 rounded-lg p-0 text-blue-600 hover:bg-blue-50 hover:text-blue-800 z-20"
           >
             <X size={16} />
           </Button>
@@ -378,7 +386,7 @@ export function Chat({
             <div
               ref={chatContainerRef}
               className={cn(
-                'scrollbar-thin scrollbar-thumb-neutral-300 scrollbar-track-transparent h-[440px] overflow-auto p-4',
+                'scrollbar-thin scrollbar-thumb-neutral-300 scrollbar-track-transparent h-[440px] overflow-y-auto overflow-x-hidden p-4',
                 textFromEditor && 'pb-24'
               )}
             >
@@ -397,7 +405,7 @@ export function Chat({
               {messages.map((message) => (
                 <div
                   key={message.id}
-                  className={`mb-4 break-words ${
+                  className={`mb-4 break-words min-w-0 ${
                     message.role === 'assistant'
                       ? 'rounded-lg border border-slate-200 bg-gradient-to-br from-blue-50 to-blue-50/50 p-3 shadow-xs'
                       : 'rounded-lg border border-slate-200 bg-white p-3 shadow-xs'
@@ -406,7 +414,7 @@ export function Chat({
                   <div className="mb-1 text-sm font-semibold text-blue-800">
                     {message.role === 'assistant' ? 'Octra' : 'You'}
                   </div>
-                  <div className="text-sm text-slate-800">
+                  <div className="text-sm text-slate-800 min-w-0 overflow-hidden">
                     {renderMessageContent(message.content)}
                   </div>
                 </div>
@@ -415,7 +423,7 @@ export function Chat({
 
             <div className="relative px-2">
               {textFromEditor && (
-                <div className="absolute top-0 left-1/2 w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-full rounded-t-md border border-b-0 border-slate-300 bg-slate-50 px-2 py-1 text-xs shadow-xs">
+                <div className="absolute top-0 left-1/2 w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-full rounded-t-md border border-b-0 border-slate-300 bg-slate-50 px-2 py-1 text-xs shadow-xs z-10 pointer-events-auto">
                   <Button
                     onClick={() => setTextFromEditor(null)}
                     size="icon"

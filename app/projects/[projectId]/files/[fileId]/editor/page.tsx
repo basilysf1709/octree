@@ -7,9 +7,7 @@ import { Button } from '@/components/ui/button';
 import { useParams, useRouter, usePathname } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 import type * as Monaco from 'monaco-editor';
-import PDFViewer from '@/components/pdf-viewer';
-import { createClient } from '@/lib/supabase/client';
-import { useDebouncedCallback } from 'use-debounce';
+import { createClient } from '@/lib/supabase/client';import PDFViewer from '@/components/pdf-viewer';
 import { ButtonGroup, ButtonGroupItem } from '@/components/ui/button-group';
 import {
   latexLanguageConfiguration,

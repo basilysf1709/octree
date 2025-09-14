@@ -157,7 +157,7 @@ export default function FileEditorPage() {
         setFile(fileData);
         setDocumentData(documentData);
         setTitle(documentData.title);
-        setContent(content);
+        setContent(documentData.content);
 
         setIsLoading(false);
 
@@ -183,7 +183,7 @@ export default function FileEditorPage() {
     };
 
     fetchFile();
-  }, [projectId, fileId, supabase, router, pathname, compiling, content]);
+  }, [projectId, fileId]);
 
   const saveDocument = async (contentToSave?: string): Promise<boolean> => {
     if (!projectId || !fileId) return false;

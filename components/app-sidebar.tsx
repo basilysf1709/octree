@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/sidebar"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { UserProfileDropdown } from "@/components/user/user-profile-dropdown"
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { createClient } from "@/lib/supabase/client"
 import Link from "next/link"
 import { useProjectRefresh } from "@/app/context/project"
@@ -57,7 +57,7 @@ export function AppSidebar({ userName, projectId }: AppSidebarProps) {
 
   const pathname = usePathname()
 
-  const fetchCurrentProjectAndFiles = async () => {
+  const fetchCurrentProjectAndFiles = useCallback(async () => {
     if (!projectId) return
 
     try {
@@ -103,11 +103,11 @@ export function AppSidebar({ userName, projectId }: AppSidebarProps) {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [projectId])
 
   useEffect(() => {
     fetchCurrentProjectAndFiles()
-  }, [refreshTrigger, projectId])
+  }, [refreshTrigger, projectId, fetchCurrentProjectAndFiles])
 
   const getFileIcon = (fileName: string) => {
     const extension = fileName.split(".").pop()?.toLowerCase()

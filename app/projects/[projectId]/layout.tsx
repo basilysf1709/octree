@@ -43,7 +43,6 @@ export default async function ProjectLayout({
   
   // Extract fileId from pathname if we're in file editor
   let fileId = null
-  let fileName = null
   if (isFileEditor) {
     const pathParts = pathname.split('/')
     const fileIndex = pathParts.findIndex(part => part === 'files')

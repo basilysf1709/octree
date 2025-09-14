@@ -286,9 +286,37 @@ export default function FileEditorPage() {
     }
   };
 
-  const handleAcceptEdit = (suggestionId: string) => {
+  const handleAcceptEdit = async (suggestionId: string) => {
     const suggestion = editSuggestions.find((s) => s.id === suggestionId);
     if (!suggestion || !editorRef.current) return;
+
+    // Check if user can make edits
+    try {
+      const response = await fetch('/api/track-edit', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to check edit limits');
+      }
+
+      const data = await response.json();
+
+      if (!data.canEdit) {
+        // Show paywall or error message
+        alert('You have reached your free edit limit. Please upgrade to Pro for unlimited edits.');
+        return;
+      }
+
+      // Notify other components to refresh usage data
+      window.dispatchEvent(new Event('usage-update'));
+    } catch (error) {
+      console.error('Error checking edit limits:', error);
+      return;
+    }
 
     try {
       const editor = editorRef.current;

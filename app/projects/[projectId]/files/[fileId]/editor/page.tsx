@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useCallback, useEffect, useState, useRef } from 'react';
 import { useDebouncedCallback } from 'use-debounce';
 import Editor, { loader } from '@monaco-editor/react';
 import { Button } from '@/components/ui/button';
@@ -80,6 +80,8 @@ export default function FileEditorPage() {
 
   const editorRef = useRef<Monaco.editor.IStandaloneCodeEditor | null>(null);
 
+  // Keep track of whether we've attempted initial compilation
+  const initialCompileRef = useRef(false);
   // Debounced auto-save function
   const debouncedSave = useDebouncedCallback(
     (content: string) => {
@@ -155,19 +157,33 @@ export default function FileEditorPage() {
         setFile(fileData);
         setDocumentData(documentData);
         setTitle(documentData.title);
-        setContent(documentData.content);
+        setContent(content);
 
         setIsLoading(false);
 
+        // Schedule compilation after state updates have been applied
+        setTimeout(() => {
+          if (!initialCompileRef.current && !compiling && content) {
+            initialCompileRef.current = true;
+            handleCompile();
+          }
+        }, 500);
       } catch (error) {
         console.error('Error loading file:', error);
         setError(error instanceof Error ? error.message : 'Failed to load file');
         setIsLoading(false);
-      }
+
+        // Schedule compilation after state updates have been applied
+        setTimeout(() => {
+          if (!initialCompileRef.current && !compiling && content) {
+            initialCompileRef.current = true;
+            handleCompile();
+          }
+        }, 500);      }
     };
 
     fetchFile();
-  }, [projectId, fileId, supabase, router, pathname]);
+  }, [projectId, fileId, supabase, router, pathname, compiling, content, handleCompile]);
 
   const saveDocument = async (contentToSave?: string): Promise<boolean> => {
     if (!projectId || !fileId) return false;
@@ -199,7 +215,7 @@ export default function FileEditorPage() {
     }
   };
 
-  const handleCompile = async () => {
+  const handleCompile = useCallback(async () => {
     if (compiling) return;
 
     setCompiling(true);
@@ -246,7 +262,7 @@ export default function FileEditorPage() {
     } finally {
       setCompiling(false);
     }
-  };
+  }, [compiling, content]);
 
   const handleEditSuggestion = (suggestion: EditSuggestion | string) => {
     if (typeof suggestion === 'string') {

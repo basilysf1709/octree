@@ -183,7 +183,7 @@ export default function FileEditorPage() {
     };
 
     fetchFile();
-  }, [projectId, fileId, supabase, router, pathname, compiling, content, handleCompile]);
+  }, [projectId, fileId, supabase, router, pathname, compiling, content]);
 
   const saveDocument = async (contentToSave?: string): Promise<boolean> => {
     if (!projectId || !fileId) return false;

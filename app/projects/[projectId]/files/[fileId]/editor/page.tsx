@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
+import { useDebouncedCallback } from 'use-debounce';
 import Editor, { loader } from '@monaco-editor/react';
 import { Button } from '@/components/ui/button';
 import { useParams, useRouter, usePathname } from 'next/navigation';
@@ -89,7 +90,16 @@ export default function FileEditorPage() {
     2000 // Save after 2 seconds of inactivity
   );
 
-  // Initialize Monaco
+
+  // Auto-compile on content changes (debounced)
+  const debouncedAutoCompile = useDebouncedCallback(
+    (content: string) => {
+      if (!compiling && content.trim()) {
+        handleCompile();
+      }
+    },
+    2000 // 2 second delay to avoid excessive compilation
+  );  // Initialize Monaco
   useEffect(() => {
     loader.init().then((monaco) => {
       monaco.languages.register({ id: 'latex' });
@@ -487,7 +497,12 @@ export default function FileEditorPage() {
 
     // Add selection change listener for floating button
     editor.onDidChangeCursorSelection((e) => {
-      debouncedCursorSelection(editor);
+
+    // Auto-compile on content changes
+    editor.onDidChangeModelContent(() => {
+      const currentContent = editor.getValue();
+      debouncedAutoCompile(currentContent);
+    });      debouncedCursorSelection(editor);
     });
 
     // Add keyboard shortcuts

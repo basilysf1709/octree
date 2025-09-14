@@ -81,6 +81,15 @@ export default function ProjectEditorPage() {
   // Keep track of whether we've attempted initial compilation
   const initialCompileRef = useRef(false);
 
+  // Auto-compile on content changes (debounced)
+  const debouncedAutoCompile = useDebouncedCallback(
+    (content: string) => {
+      if (!compiling && content.trim()) {
+        handleCompile(content);
+      }
+    },
+    2000 // 2 second delay to avoid excessive compilation
+  );
   // Load project and document on initial render and compile once after loading
   useEffect(() => {
     const fetchProjectAndDocument = async () => {
@@ -728,7 +737,12 @@ export default function ProjectEditorPage() {
 
     // Add selection change listener for floating button
     editor.onDidChangeCursorSelection((e) => {
-      debouncedCursorSelection(editor);
+
+    // Auto-compile on content changes
+    editor.onDidChangeModelContent(() => {
+      const currentContent = editor.getValue();
+      debouncedAutoCompile(currentContent);
+    });      debouncedCursorSelection(editor);
     });
 
     // Original Cmd+B command for text selection remains

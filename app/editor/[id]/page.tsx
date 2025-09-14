@@ -82,6 +82,15 @@ export default function EditorPage() {
 
   const initialCompileRef = useRef(false);
 
+  // Auto-compile on content changes (debounced)
+  const debouncedAutoCompile = useDebouncedCallback(
+    (content: string) => {
+      if (!compiling && content.trim()) {
+        handleCompile(content);
+      }
+    },
+    2000 // 2 second delay to avoid excessive compilation
+  );
   useEffect(() => {
     const fetchAndCompile = async () => {
       if (!documentId) return;
@@ -663,7 +672,12 @@ export default function EditorPage() {
 
     // Add selection change listener for floating button
     editor.onDidChangeCursorSelection((e) => {
-      debouncedCursorSelection(editor);
+
+    // Auto-compile on content changes
+    editor.onDidChangeModelContent(() => {
+      const currentContent = editor.getValue();
+      debouncedAutoCompile(currentContent);
+    });      debouncedCursorSelection(editor);
     });
 
     // Original Cmd+B command for text selection remains

@@ -31,7 +31,7 @@ export function PaywallDialog({ isOpen, onClose, editCount, remainingEdits, isMo
   };
 
   const features = [
-    'Unlimited AI-powered edits',
+    '50 AI-powered edits',
     'Advanced LaTeX compilation',
     'Priority support',
     'Early access to new features',

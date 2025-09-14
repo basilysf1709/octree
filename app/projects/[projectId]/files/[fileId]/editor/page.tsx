@@ -185,7 +185,7 @@ export default function FileEditorPage() {
     fetchFile();
   }, [projectId, fileId]);
 
-  const saveDocument = async (contentToSave?: string): Promise<boolean> => {
+  const saveDocument = useCallback(async (contentToSave?: string): Promise<boolean> => {
     if (!projectId || !fileId) return false;
 
     const contentToUse = contentToSave !== undefined ? contentToSave : content;
@@ -213,7 +213,7 @@ export default function FileEditorPage() {
     } finally {
       setIsSaving(false);
     }
-  };
+  }, [projectId, fileId, content]);
 
   const handleCompile = useCallback(async () => {
     if (compiling) return;
@@ -262,7 +262,7 @@ export default function FileEditorPage() {
     } finally {
       setCompiling(false);
     }
-  }, [compiling, content]);
+  }, [compiling, content, saveDocument]);
 
   const handleEditSuggestion = (suggestion: EditSuggestion | string) => {
     if (typeof suggestion === 'string') {

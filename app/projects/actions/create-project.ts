@@ -90,7 +90,7 @@ export async function createProject(prevState: State, formData: FormData) {
       // Don't throw here as the document was created successfully
     }
 
-    revalidatePath('/projects');
+    revalidatePath('/');
 
     return {
       projectId: data.id,

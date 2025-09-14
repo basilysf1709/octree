@@ -75,7 +75,7 @@ export async function deleteProject(prevState: State, formData: FormData) {
       throw new Error('Failed to delete project');
     }
 
-    revalidatePath('/projects');
+    revalidatePath('/');
 
     return {
       projectId,

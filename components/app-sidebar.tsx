@@ -128,7 +128,7 @@ export function AppSidebar({ userName, projectId }: AppSidebarProps) {
     <Sidebar className="border-r border-gray-200">
       <SidebarHeader className="flex items-center gap-2 p-4 border-b border-gray-100">
         <Link
-          href="/projects"
+          href="/"
           className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 transition-colors"
         >
           {/* <Folder className="h-4 w-4" /> */}

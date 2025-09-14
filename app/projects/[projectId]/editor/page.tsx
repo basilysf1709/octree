@@ -777,7 +777,7 @@ export default function ProjectEditorPage() {
         <div className="text-center">
           <p className="text-neutral-600 mb-4">Project or document not found</p>
           <Button variant="outline" onClick={() => router.push('/projects')}>
-            Back to Projects
+            Back to Dashboard
           </Button>
         </div>
       </main>
@@ -792,7 +792,7 @@ export default function ProjectEditorPage() {
           <Breadcrumb>
             <BreadcrumbList>
               <BreadcrumbItem>
-                <BreadcrumbLink href="/projects">Projects</BreadcrumbLink>
+                <BreadcrumbLink href="/">Dashboard</BreadcrumbLink>
               </BreadcrumbItem>
               <BreadcrumbSeparator />
               <BreadcrumbItem>

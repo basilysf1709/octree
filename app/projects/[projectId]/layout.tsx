@@ -78,7 +78,7 @@ export default async function ProjectLayout({
             <Breadcrumb>
               <BreadcrumbList className="text-xs gap-1">
                 <BreadcrumbItem>
-                  <BreadcrumbLink href="/projects">Projects</BreadcrumbLink>
+                  <BreadcrumbLink href="/">Dashboard</BreadcrumbLink>
                 </BreadcrumbItem>
                 <BreadcrumbSeparator />
                 <BreadcrumbItem>

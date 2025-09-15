@@ -120,12 +120,16 @@ export default function FileEditorPage() {
   );
 
   const handleSuggestionFromChat = useCallback(
-    (suggestionArray: any) => {
+    (
+      suggestionArray: EditSuggestion | string | (string | EditSuggestion)[]
+    ) => {
       if (Array.isArray(suggestionArray)) {
         const [first, ...rest] = suggestionArray;
         handleEditSuggestion(first);
-        suggestionQueueRef.current = rest.map((s: any) =>
-          typeof s === 'string' ? JSON.parse(s) : s
+        suggestionQueueRef.current = rest.map((suggestion) =>
+          typeof suggestion === 'string'
+            ? (JSON.parse(suggestion) as EditSuggestion)
+            : suggestion
         );
       } else {
         handleEditSuggestion(suggestionArray);

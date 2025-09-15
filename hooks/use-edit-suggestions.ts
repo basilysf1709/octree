@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { EditSuggestion } from '@/types/edit';
 import type * as Monaco from 'monaco-editor';
+import { toast } from 'sonner';
 
 export interface EditSuggestionsState {
   editSuggestions: EditSuggestion[];
@@ -69,7 +70,7 @@ export function useEditSuggestions({
 
       if (!data.canEdit) {
         // Show paywall or error message
-        alert(
+        toast.error(
           'You have reached your free edit limit. Please upgrade to Pro for unlimited edits.'
         );
         return;

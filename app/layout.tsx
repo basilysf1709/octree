@@ -2,8 +2,8 @@ import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import { Analytics } from '@vercel/analytics/react';
 import './globals.css';
-import { createClient } from '@/lib/supabase/server';
 import { ProjectProvider } from '@/app/context/project';
+import { Toaster } from '@/components/ui/sonner';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -17,21 +17,13 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  const userName = user?.user_metadata?.name ?? user?.email ?? null;
-
-          return (
-          <html lang="en">
-            <body className={inter.className}>
-              <ProjectProvider>
-                {children}
-              </ProjectProvider>
-              <Analytics />
-            </body>
-          </html>
-        );
+  return (
+    <html lang="en">
+      <body className={inter.className}>
+        <ProjectProvider>{children}</ProjectProvider>
+        <Toaster position="top-center" />
+        <Analytics />
+      </body>
+    </html>
+  );
 }

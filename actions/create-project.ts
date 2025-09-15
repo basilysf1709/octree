@@ -5,7 +5,7 @@ import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { TablesInsert } from '@/database.types';
 import { z } from 'zod';
-import { DEFAULT_LATEX_CONTENT } from '@/app/constants/data';
+import { DEFAULT_LATEX_CONTENT } from '@/data/constants';
 
 const CreateProject = z.object({
   title: z.string().min(1, 'Project title is required').trim(),

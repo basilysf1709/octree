@@ -1,7 +1,7 @@
 'use server';
 
 import { createClient } from '@/lib/supabase/server';
-import { DEFAULT_LATEX_CONTENT } from '@/app/constants/data';
+import { DEFAULT_LATEX_CONTENT } from '@/data/constants';
 
 export interface ProjectDocumentData {
   project: any;

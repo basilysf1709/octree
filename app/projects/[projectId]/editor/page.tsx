@@ -19,11 +19,11 @@ import { EditorHeader } from '@/components/editor/header';
 import { SuggestionActions } from '@/components/editor/suggestion-actions';
 import { initialContent } from '@/lib/utils';
 import { useDebouncedCallback } from 'use-debounce';
-import { createClient } from '@/lib/supabase/client';
-import { DEFAULT_LATEX_CONTENT } from '@/app/constants/data';
+import { fetchProjectAndDocument } from '@/actions/fetch-project-document';
+import { saveDocument } from '@/actions/save-document';
+import { compilePdf } from '@/lib/requests/compilation';
 
 export default function ProjectEditorPage() {
-  const supabase = createClient();
   const params = useParams();
   const router = useRouter();
   const projectId = params.projectId as string;
@@ -52,7 +52,6 @@ export default function ProjectEditorPage() {
     });
   }, []); // Empty dependency array means this runs once on mount
 
-  const [title, setTitle] = useState<string>('');
   const [content, setContent] = useState(initialContent);
   const [chatOpen, setChatOpen] = useState(false);
   const [compiling, setCompiling] = useState(false);
@@ -82,83 +81,42 @@ export default function ProjectEditorPage() {
     },
     2000 // 2 second delay to avoid excessive compilation
   );
+
   // Load project and document on initial render and compile once after loading
   useEffect(() => {
-    const fetchProjectAndDocument = async () => {
+    const loadProjectAndDocument = async () => {
       if (!projectId) return;
 
       try {
-        // Get current user
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
-        if (!session?.user) {
-          router.push('/auth/login');
+        const result = await fetchProjectAndDocument(projectId);
+
+        if (result.error) {
+          console.error('Error loading project:', result.error);
+          if (result.error === 'User not authenticated') {
+            router.push('/auth/login');
+            return;
+          }
+          router.push('/projects');
           return;
         }
 
-        // Fetch the project
-        const { data: projectData, error: projectError } = await supabase
-          .from('projects')
-          .select('*')
-          .eq('id', projectId)
-          .eq('user_id', session.user.id)
-          .single();
-
-        if (projectError) {
-          throw new Error('Project not found');
+        if (!result.data) {
+          router.push('/projects');
+          return;
         }
+
+        const { project: projectData, document: documentData } = result.data;
 
         setProject(projectData);
-
-        // Fetch the project's main document
-        const { data: documentData, error: documentError } = await supabase
-          .from('documents')
-          .select('content, title')
-          .eq('project_id', projectId)
-          .eq('filename', 'main.tex')
-          .eq('owner_id', session.user.id)
-          .single();
-
-        if (documentError) {
-          // If no main.tex document exists, create one
-          const defaultContent = DEFAULT_LATEX_CONTENT(projectData.title);
-
-          const { data: newDocument, error: createError } = await supabase
-            .from('documents')
-            .insert({
-              title: projectData.title,
-              content: defaultContent,
-              owner_id: session.user.id,
-              project_id: projectId,
-              filename: 'main.tex',
-              document_type: 'article',
-            })
-            .select('content, title')
-            .single();
-
-          if (createError) {
-            throw new Error('Failed to create document');
-          }
-
-          setDocument(newDocument);
-          setTitle(newDocument.title);
-          setContent(newDocument.content);
-        } else {
-          setDocument(documentData);
-          setTitle(documentData.title);
-          setContent(documentData.content);
-        }
-
+        setDocument(documentData);
+        setContent(documentData.content);
         setLastSaved(new Date());
 
         // Schedule compilation after state updates have been applied
         setTimeout(() => {
           if (!initialCompileRef.current && !compiling) {
             initialCompileRef.current = true;
-            handleCompile(
-              documentData?.content || documentData?.content || initialContent
-            );
+            handleCompile(documentData?.content || initialContent);
           }
         }, 500);
 
@@ -169,8 +127,8 @@ export default function ProjectEditorPage() {
       }
     };
 
-    fetchProjectAndDocument();
-  }, [projectId, supabase, router]);
+    loadProjectAndDocument();
+  }, [projectId, router]);
 
   // Simplified handleCompile function
   const handleCompile = async (contentToCompile?: string) => {
@@ -185,27 +143,27 @@ export default function ProjectEditorPage() {
     setCompiling(true);
 
     try {
-      // Save the document first
-      await saveDocument(contentToUse);
+      // First save the document
+      const saveResult = await saveDocument(projectId, contentToUse);
 
-      // Then compile
-      const response = await fetch('/api/compile-pdf', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: contentToUse }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Compilation failed with status ${response.status}`);
+      if (!saveResult.success) {
+        console.error('[ProjectEditorPage] Save error:', saveResult.error);
+        return;
       }
 
-      const data = await response.json();
+      setLastSaved(new Date());
 
-      if (data.pdf) {
-        setPdfData(data.pdf);
+      // Then compile using requests module
+      const compileResult = await compilePdf(contentToUse);
+
+      if (compileResult.success && compileResult.pdfData) {
+        setPdfData(compileResult.pdfData);
       } else {
-        console.error('[ProjectEditorPage] No PDF data in response');
-        throw new Error('No PDF data received');
+        console.error(
+          '[ProjectEditorPage] Compilation error:',
+          compileResult.error
+        );
+        throw new Error(compileResult.error || 'Compilation failed');
       }
     } catch (error) {
       console.error('[ProjectEditorPage] Compilation error:', error);
@@ -215,7 +173,9 @@ export default function ProjectEditorPage() {
   };
 
   // New function to save document
-  const saveDocument = async (contentToSave?: string): Promise<boolean> => {
+  const handleSaveDocument = async (
+    contentToSave?: string
+  ): Promise<boolean> => {
     if (!projectId) return false;
 
     // Use provided content or fall back to state
@@ -224,60 +184,19 @@ export default function ProjectEditorPage() {
     try {
       setIsSaving(true);
 
-      // First, get the current user
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      if (!session?.user) {
-        throw new Error('User not authenticated');
+      const result = await saveDocument(projectId, contentToUse);
+
+      if (result.success) {
+        // Update state if we used a different content
+        if (contentToSave !== undefined && contentToSave !== content) {
+          setContent(contentToSave);
+        }
+        setLastSaved(new Date());
+        return true;
+      } else {
+        console.error('Error saving document:', result.error);
+        return false;
       }
-
-      // Get the document ID using project ID
-      const { data: documentData, error: documentError } = await supabase
-        .from('documents')
-        .select('id')
-        .eq('project_id', projectId)
-        .eq('filename', 'main.tex')
-        .eq('owner_id', session.user.id)
-        .single();
-
-      if (documentError || !documentData) {
-        throw new Error('Document not found');
-      }
-
-      // Update the document
-      const { error: updateError } = await supabase
-        .from('documents')
-        .update({
-          content: contentToUse,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', documentData.id);
-
-      if (updateError) throw updateError;
-
-      // Save version to document_versions table
-      const { error: versionError } = await supabase
-        .from('document_versions')
-        .insert({
-          document_id: documentData.id,
-          content: contentToUse,
-          change_summary: 'Auto-saved version',
-          created_by: session.user.id,
-        });
-
-      if (versionError) {
-        console.warn('Failed to save version:', versionError);
-        // Don't throw here as the main document was saved successfully
-      }
-
-      // Update state if we used a different content
-      if (contentToSave !== undefined && contentToSave !== content) {
-        setContent(contentToSave);
-      }
-
-      setLastSaved(new Date());
-      return true;
     } catch (error) {
       console.error('Error saving document:', error);
       return false;
@@ -296,35 +215,22 @@ export default function ProjectEditorPage() {
       const currentContent = editor?.getValue() || content;
 
       // Save document in the background
-      const savePromise = saveDocument(currentContent);
+      const savePromise = handleSaveDocument(currentContent);
 
-      const response = await fetch('/api/compile-pdf', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: currentContent }),
-      });
+      // Compile PDF for export using requests module
+      const compileResult = await compilePdf(currentContent);
 
       // Wait for save to complete in background
       await savePromise;
 
-      if (!response.ok) throw new Error('PDF compilation failed');
-
-      // Log raw response for debugging
-      const rawText = await response.text();
-
-      // Parse manually to avoid potential issues
-      let data;
-      try {
-        data = JSON.parse(rawText);
-      } catch (e) {
-        console.error('Failed to parse JSON:', e);
-        throw new Error('Failed to parse server response');
+      if (!compileResult.success || !compileResult.pdfData) {
+        throw new Error(compileResult.error || 'PDF compilation failed');
       }
 
       // Continue with PDF processing...
-      if (data.pdf) {
+      if (compileResult.pdfData) {
         // Convert Base64 back to binary
-        const binaryString = atob(data.pdf);
+        const binaryString = atob(compileResult.pdfData);
         const bytes = new Uint8Array(binaryString.length);
         for (let i = 0; i < binaryString.length; i++) {
           bytes[i] = binaryString.charCodeAt(i);
@@ -730,7 +636,7 @@ export default function ProjectEditorPage() {
           const currentContent = editor.getValue();
 
           // Execute save and compile with current content
-          saveDocument(currentContent).then((saved) => {
+          handleSaveDocument(currentContent).then((saved) => {
             if (saved) handleCompile(currentContent);
           });
 

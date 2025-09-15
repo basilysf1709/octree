@@ -56,7 +56,6 @@ export async function createProject(prevState: State, formData: FormData) {
       throw new Error('Failed to create project');
     }
 
-    // Create a default LaTeX document for the project
     const defaultContent = DEFAULT_LATEX_CONTENT(title);
 
     const { data: documentData, error: documentError } = await supabase

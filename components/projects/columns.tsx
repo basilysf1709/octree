@@ -3,7 +3,6 @@
 import { ColumnDef } from '@tanstack/react-table';
 import dayjs from 'dayjs';
 import { MoreHorizontal, Trash2 } from 'lucide-react';
-import { useState, useActionState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -13,16 +12,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
 import { Database } from '@/database.types';
-import { deleteProject } from '@/app/projects/actions/delete-project';
 
 type Project = Database['public']['Tables']['projects']['Row'];
 

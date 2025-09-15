@@ -38,7 +38,6 @@ export async function deleteProject(prevState: State, formData: FormData) {
 
     const { projectId } = validatedFields.data;
 
-    // First, verify the project belongs to the current user
     const { data: project, error: projectError } = await supabase
       .from('projects')
       .select('id, title')
@@ -52,7 +51,6 @@ export async function deleteProject(prevState: State, formData: FormData) {
       );
     }
 
-    // Delete related files first (due to foreign key constraint)
     const { error: filesError } = await supabase
       .from('files')
       .delete()
@@ -63,7 +61,6 @@ export async function deleteProject(prevState: State, formData: FormData) {
       throw new Error('Failed to delete project files');
     }
 
-    // Delete the project
     const { error: deleteError } = await supabase
       .from('projects')
       .delete()

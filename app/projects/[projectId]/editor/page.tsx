@@ -1,4 +1,3 @@
-/* eslint-disable */
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
@@ -11,23 +10,16 @@ import {
 } from '@/lib/editor-config';
 import { Chat } from '@/components/chat';
 import { EditSuggestion } from '@/types/edit';
-import { Check, X, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import type * as Monaco from 'monaco-editor';
 import PDFViewer from '@/components/pdf-viewer';
 import { useParams, useRouter } from 'next/navigation';
-import { ButtonGroup, ButtonGroupItem } from '@/components/ui/button-group';
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from '@/components/ui/breadcrumb';
-import { cn, initialContent } from '@/lib/utils';
+import { EditorToolbar } from '@/components/editor/toolbar';
+import { EditorHeader } from '@/components/editor/header';
+import { SuggestionActions } from '@/components/editor/suggestion-actions';
+import { initialContent } from '@/lib/utils';
 import { useDebouncedCallback } from 'use-debounce';
 import { createClient } from '@/lib/supabase/client';
-import { DiffViewer } from '@/components/ui/diff-viewer';
 import { DEFAULT_LATEX_CONTENT } from '@/app/constants/data';
 
 export default function ProjectEditorPage() {
@@ -97,7 +89,9 @@ export default function ProjectEditorPage() {
 
       try {
         // Get current user
-        const { data: { session } } = await supabase.auth.getSession();
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
         if (!session?.user) {
           router.push('/auth/login');
           return;
@@ -162,12 +156,13 @@ export default function ProjectEditorPage() {
         setTimeout(() => {
           if (!initialCompileRef.current && !compiling) {
             initialCompileRef.current = true;
-            handleCompile(documentData?.content || documentData?.content || initialContent);
+            handleCompile(
+              documentData?.content || documentData?.content || initialContent
+            );
           }
         }, 500);
 
         setIsLoading(false);
-
       } catch (error) {
         console.error('Error loading project:', error);
         router.push('/projects');
@@ -230,7 +225,9 @@ export default function ProjectEditorPage() {
       setIsSaving(true);
 
       // First, get the current user
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       if (!session?.user) {
         throw new Error('User not authenticated');
       }
@@ -399,7 +396,9 @@ export default function ProjectEditorPage() {
 
       if (!data.canEdit) {
         // Show paywall or error message
-        alert('You have reached your free edit limit. Please upgrade to Pro for unlimited edits.');
+        alert(
+          'You have reached your free edit limit. Please upgrade to Pro for unlimited edits.'
+        );
         return;
       }
 
@@ -765,12 +764,12 @@ export default function ProjectEditorPage() {
 
     // Add selection change listener for floating button
     editor.onDidChangeCursorSelection((e) => {
-
-    // Auto-compile on content changes
-    editor.onDidChangeModelContent(() => {
-      const currentContent = editor.getValue();
-      debouncedAutoCompile(currentContent);
-    });      debouncedCursorSelection(editor);
+      // Auto-compile on content changes
+      editor.onDidChangeModelContent(() => {
+        const currentContent = editor.getValue();
+        debouncedAutoCompile(currentContent);
+      });
+      debouncedCursorSelection(editor);
     });
 
     // Original Cmd+B command for text selection remains
@@ -779,7 +778,9 @@ export default function ProjectEditorPage() {
       () => {
         const currentEditor = editorRef.current;
         if (!currentEditor) {
-          console.error('[ProjectEditorPage] Cmd+B Error: editorRef is not set.');
+          console.error(
+            '[ProjectEditorPage] Cmd+B Error: editorRef is not set.'
+          );
           return;
         }
 
@@ -806,7 +807,7 @@ export default function ProjectEditorPage() {
   if (isLoading) {
     return (
       <main className="container mx-auto px-4 py-8">
-        <div className="flex items-center justify-center h-64">
+        <div className="flex h-64 items-center justify-center">
           <Loader2 className="h-8 w-8 animate-spin" />
         </div>
       </main>
@@ -817,7 +818,7 @@ export default function ProjectEditorPage() {
     return (
       <main className="container mx-auto px-4 py-8">
         <div className="text-center">
-          <p className="text-neutral-600 mb-4">Project or document not found</p>
+          <p className="mb-4 text-neutral-600">Project or document not found</p>
           <Button variant="outline" onClick={() => router.push('/projects')}>
             Back to Dashboard
           </Button>
@@ -827,89 +828,20 @@ export default function ProjectEditorPage() {
   }
 
   return (
-    <div className="h-screen bg-slate-100 flex flex-col">
-      {/* Header */}
-      <div className="flex-shrink-0 px-2 py-0.5 border-b border-slate-200 bg-white">
-        <div className="flex items-center justify-between">
-          <Breadcrumb>
-            <BreadcrumbList>
-              <BreadcrumbItem>
-                <BreadcrumbLink href="/">Dashboard</BreadcrumbLink>
-              </BreadcrumbItem>
-              <BreadcrumbSeparator />
-              <BreadcrumbItem>
-                <BreadcrumbPage>{project.title}</BreadcrumbPage>
-              </BreadcrumbItem>
-            </BreadcrumbList>
-          </Breadcrumb>
+    <div className="flex h-screen flex-col bg-slate-100">
+      <EditorHeader projectTitle={project.title} lastSaved={lastSaved} />
 
-          <div className="flex items-center gap-2">
-            {lastSaved && (
-              <span className="text-xs text-slate-500">
-                Last saved: {lastSaved.toLocaleTimeString()}
-              </span>
-            )}
-          </div>
-        </div>
-      </div>
+      <EditorToolbar
+        onTextFormat={handleTextFormat}
+        onCompile={() => handleCompile()}
+        onExportPDF={handleExportPDF}
+        compiling={compiling}
+        exportingPDF={exportingPDF}
+        isSaving={isSaving}
+      />
 
-      {/* Toolbar */}
-      <div className="flex-shrink-0 p-2 border-b border-slate-200 bg-white">
-        <div className="flex items-center justify-between">
-          <ButtonGroup>
-            <ButtonGroupItem onClick={() => handleTextFormat('bold')}>
-              <span className="text-sm font-bold">B</span>
-            </ButtonGroupItem>
-            <ButtonGroupItem onClick={() => handleTextFormat('italic')}>
-              <span className="text-sm italic">I</span>
-            </ButtonGroupItem>
-            <ButtonGroupItem onClick={() => handleTextFormat('underline')}>
-              <span className="text-sm underline">U</span>
-            </ButtonGroupItem>
-          </ButtonGroup>
-
-          <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="xs"
-              onClick={() => handleCompile()}
-              disabled={compiling}
-            >
-              {compiling ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin mr-1" />
-                  Compiling
-                </>
-              ) : (
-                <>
-                  Compile
-                  <span className="ml-1 text-xs opacity-60">⌘S</span>
-                </>
-              )}
-            </Button>
-            <Button
-              variant="ghost"
-              size="xs"
-              onClick={handleExportPDF}
-              disabled={exportingPDF || isSaving}
-            >
-              {exportingPDF ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin mr-1" />
-                  Exporting
-                </>
-              ) : (
-                'Export'
-              )}
-            </Button>
-          </div>
-        </div>
-      </div>
-
-      {/* Main Content */}
-      <div className="flex-1 flex min-h-0">
-        {/* Editor */}
-        <div className="flex-1 relative overflow-hidden">
+      <div className="flex min-h-0 flex-1">
+        <div className="relative flex-1 overflow-hidden">
           <Editor
             height="100%"
             defaultLanguage="latex"
@@ -946,7 +878,6 @@ export default function ProjectEditorPage() {
             onMount={handleEditorDidMount}
           />
 
-          {/* Floating Button */}
           {showButton && (
             <Button
               variant="outline"
@@ -963,64 +894,18 @@ export default function ProjectEditorPage() {
             </Button>
           )}
 
-          {/* Suggestion Actions */}
-          <div className="absolute top-2 right-2 z-50 max-w-[350px] space-y-2">
-            {editSuggestions
-              .filter((s) => s.status === 'pending')
-              .map((suggestion) => (
-                <div
-                  key={suggestion.id}
-                  className="flex flex-col gap-2 rounded-lg border border-blue-200 bg-white p-3 shadow-xl backdrop-blur-sm"
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="text-sm font-medium text-blue-700">
-                      Lines {suggestion.startLine}
-                      {suggestion.originalLineCount > 1 &&
-                        `-${suggestion.startLine + suggestion.originalLineCount - 1}`}
-                    </div>
-                    <div className="rounded bg-gray-100 px-2 py-1 text-xs text-gray-500">
-                      AI Suggestion
-                    </div>
-                  </div>
-
-                  <DiffViewer
-                    original={suggestion.original}
-                    suggested={suggestion.suggested}
-                    className="max-w-full "
-                  />
-
-                  <div className="flex items-center gap-2">
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => handleAcceptEdit(suggestion.id)}
-                      className="flex-1 border border-green-200 text-green-700 hover:border-green-300 hover:bg-green-50"
-                    >
-                      <Check size={14} className="mr-1" />
-                      Accept
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => handleRejectEdit(suggestion.id)}
-                      className="flex-1 border border-red-200 text-red-700 hover:border-red-300 hover:bg-red-50"
-                    >
-                      <X size={14} className="mr-1" />
-                      Reject
-                    </Button>
-                  </div>
-                </div>
-              ))}
-          </div>
+          <SuggestionActions
+            suggestions={editSuggestions}
+            onAccept={handleAcceptEdit}
+            onReject={handleRejectEdit}
+          />
         </div>
 
-        {/* PDF Viewer */}
-        <div className="w-1/2 border-l border-slate-200 overflow-hidden">
+        <div className="w-1/2 overflow-hidden border-l border-slate-200">
           <PDFViewer pdfData={pdfData} isLoading={compiling} />
         </div>
       </div>
 
-      {/* Add Chat component */}
       <Chat
         isOpen={chatOpen}
         setIsOpen={setChatOpen}
@@ -1029,7 +914,9 @@ export default function ProjectEditorPage() {
           if (Array.isArray(suggestionArray)) {
             const [first, ...rest] = suggestionArray;
             handleEditSuggestion(first);
-            suggestionQueueRef.current = rest.map(s => typeof s === 'string' ? JSON.parse(s) : s);
+            suggestionQueueRef.current = rest.map((s) =>
+              typeof s === 'string' ? JSON.parse(s) : s
+            );
           } else {
             // Fallback for legacy single suggestion
             handleEditSuggestion(suggestionArray);
@@ -1042,4 +929,4 @@ export default function ProjectEditorPage() {
       />
     </div>
   );
-} 
+}

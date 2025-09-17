@@ -10,7 +10,7 @@ import {
 export function LimitReachedDialog() {
   return (
     <Dialog>
-      <DialogTrigger className="text-3xl text-red-400">Open</DialogTrigger>
+      <DialogTrigger>Open</DialogTrigger>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Are you absolutely sure?</DialogTitle>

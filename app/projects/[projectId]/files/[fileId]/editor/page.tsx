@@ -241,8 +241,6 @@ export default function FileEditorPage() {
           onDismiss={() => setCompilationError(null)}
         />
       )}
-
-      <LimitReachedDialog />
     </div>
   );
 }

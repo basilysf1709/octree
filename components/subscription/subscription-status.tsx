@@ -298,7 +298,7 @@ export function SubscriptionStatus() {
               />
             </div>
             <p className="text-xs text-neutral-500 mt-2">
-              {usage.remainingEdits > 0 ? `${usage.remainingEdits} edits remaining` : 'No edits remaining'}
+              {usage.remainingEdits && usage.remainingEdits > 0 ? `${usage.remainingEdits} edits remaining` : 'No edits remaining'}
             </p>
           </div>
 

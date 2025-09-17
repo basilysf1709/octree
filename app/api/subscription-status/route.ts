@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import Stripe from 'stripe';
+import { hasUnlimitedEdits } from '@/lib/paywall';
 
 const stripe = new Stripe(process.env.STRIPE_PROD_SECRET_KEY!, {
   apiVersion: '2025-02-24.acacia',
@@ -22,6 +23,8 @@ export async function GET() {
       );
     }
 
+    const hasUnlimitedUser = hasUnlimitedEdits(user.email);
+
     // Get current usage from database
     const { data: usageData, error: usageError } = await supabase
       .from('user_usage')
@@ -41,8 +44,8 @@ export async function GET() {
           edit_count: 0,
           monthly_edit_count: 0,
           monthly_reset_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 30 days from now
-          is_pro: false,
-          subscription_status: 'inactive'
+          is_pro: hasUnlimitedUser,
+          subscription_status: hasUnlimitedUser ? 'unlimited' : 'inactive'
         })
         .select('*')
         .single();
@@ -81,6 +84,33 @@ export async function GET() {
       }
     }
 
+    if (hasUnlimitedUser && finalUsageData) {
+      const hasPaidStatus = ['active', 'trialing'].includes(
+        finalUsageData.subscription_status ?? ''
+      );
+      const needsUnlimitedUpdate =
+        !finalUsageData.is_pro ||
+        (!hasPaidStatus && finalUsageData.subscription_status !== 'unlimited');
+
+      if (needsUnlimitedUpdate) {
+        const { data: updatedUnlimitedData, error: unlimitedUpdateError } = await supabase
+          .from('user_usage')
+          .update({
+            is_pro: true,
+            subscription_status: hasPaidStatus
+              ? finalUsageData.subscription_status
+              : 'unlimited'
+          })
+          .eq('user_id', user.id)
+          .select('*')
+          .single();
+
+        if (!unlimitedUpdateError && updatedUnlimitedData) {
+          finalUsageData = updatedUnlimitedData;
+        }
+      }
+    }
+
     // Try to find Stripe customer by email first
     let customer = null;
     try {
@@ -109,18 +139,23 @@ export async function GET() {
     }
 
     if (!customer) {
+      const editCount = finalUsageData?.edit_count || 0;
+      const monthlyEditCount = finalUsageData?.monthly_edit_count || 0;
+      const baseRemainingEdits = Math.max(0, 5 - editCount);
+
       return NextResponse.json({
         hasSubscription: false,
         subscription: null,
         usage: {
-          editCount: finalUsageData?.edit_count || 0,
-          monthlyEditCount: finalUsageData?.monthly_edit_count || 0,
-          remainingEdits: Math.max(0, 5 - (finalUsageData?.edit_count || 0)),
-          remainingMonthlyEdits: 0,
-          isPro: false,
-          limitReached: (finalUsageData?.edit_count || 0) >= 5,
+          editCount,
+          monthlyEditCount,
+          remainingEdits: hasUnlimitedUser ? null : baseRemainingEdits,
+          remainingMonthlyEdits: hasUnlimitedUser ? null : 0,
+          isPro: hasUnlimitedUser ? true : (finalUsageData?.is_pro || false),
+          limitReached: hasUnlimitedUser ? false : baseRemainingEdits <= 0,
           monthlyLimitReached: false,
-          monthlyResetDate: finalUsageData?.monthly_reset_date || null
+          monthlyResetDate: finalUsageData?.monthly_reset_date || null,
+          hasUnlimitedEdits: hasUnlimitedUser
         }
       });
     }
@@ -146,18 +181,23 @@ export async function GET() {
     }
 
     if (!subscription) {
+      const editCount = finalUsageData?.edit_count || 0;
+      const monthlyEditCount = finalUsageData?.monthly_edit_count || 0;
+      const baseRemainingEdits = Math.max(0, 5 - editCount);
+
       return NextResponse.json({
         hasSubscription: false,
         subscription: null,
         usage: {
-          editCount: finalUsageData?.edit_count || 0,
-          monthlyEditCount: finalUsageData?.monthly_edit_count || 0,
-          remainingEdits: Math.max(0, 5 - (finalUsageData?.edit_count || 0)),
-          remainingMonthlyEdits: 0,
-          isPro: false,
-          limitReached: (finalUsageData?.edit_count || 0) >= 5,
+          editCount,
+          monthlyEditCount,
+          remainingEdits: hasUnlimitedUser ? null : baseRemainingEdits,
+          remainingMonthlyEdits: hasUnlimitedUser ? null : 0,
+          isPro: hasUnlimitedUser ? true : (finalUsageData?.is_pro || false),
+          limitReached: hasUnlimitedUser ? false : baseRemainingEdits <= 0,
           monthlyLimitReached: false,
-          monthlyResetDate: finalUsageData?.monthly_reset_date || null
+          monthlyResetDate: finalUsageData?.monthly_reset_date || null,
+          hasUnlimitedEdits: hasUnlimitedUser
         }
       });
     }
@@ -176,6 +216,13 @@ export async function GET() {
     } catch (error) {
       console.error('Error updating subscription status in database:', error);
     }
+
+    const editCount = finalUsageData?.edit_count || 0;
+    const monthlyEditCount = finalUsageData?.monthly_edit_count || 0;
+    const isActive = subscription.status === 'active';
+    const baseRemainingEdits = isActive
+      ? Math.max(0, 50 - monthlyEditCount)
+      : Math.max(0, 5 - editCount);
 
     return NextResponse.json({
       hasSubscription: true,
@@ -196,14 +243,23 @@ export async function GET() {
         })),
       },
       usage: {
-        editCount: finalUsageData?.edit_count || 0,
-        monthlyEditCount: finalUsageData?.monthly_edit_count || 0,
-        remainingEdits: subscription.status === 'active' ? Math.max(0, 50 - (finalUsageData?.monthly_edit_count || 0)) : Math.max(0, 5 - (finalUsageData?.edit_count || 0)),
-        remainingMonthlyEdits: subscription.status === 'active' ? Math.max(0, 50 - (finalUsageData?.monthly_edit_count || 0)) : 0,
-        isPro: subscription.status === 'active',
-        limitReached: subscription.status === 'active' ? (finalUsageData?.monthly_edit_count || 0) >= 50 : (finalUsageData?.edit_count || 0) >= 5,
-        monthlyLimitReached: subscription.status === 'active' ? (finalUsageData?.monthly_edit_count || 0) >= 50 : false,
-        monthlyResetDate: finalUsageData?.monthly_reset_date || null
+        editCount,
+        monthlyEditCount,
+        remainingEdits: hasUnlimitedUser ? null : baseRemainingEdits,
+        remainingMonthlyEdits: hasUnlimitedUser
+          ? null
+          : (isActive ? baseRemainingEdits : 0),
+        isPro: (subscription.status === 'active') || hasUnlimitedUser,
+        limitReached: hasUnlimitedUser
+          ? false
+          : (isActive
+            ? monthlyEditCount >= 50
+            : editCount >= 5),
+        monthlyLimitReached: hasUnlimitedUser
+          ? false
+          : (isActive ? monthlyEditCount >= 50 : false),
+        monthlyResetDate: finalUsageData?.monthly_reset_date || null,
+        hasUnlimitedEdits: hasUnlimitedUser
       }
     });
 

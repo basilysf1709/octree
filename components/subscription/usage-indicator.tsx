@@ -13,12 +13,13 @@ interface UsageIndicatorProps {
 interface UsageData {
   editCount: number;
   monthlyEditCount: number;
-  remainingEdits: number;
-  remainingMonthlyEdits: number;
+  remainingEdits: number | null;
+  remainingMonthlyEdits: number | null;
   isPro: boolean;
   limitReached: boolean;
   monthlyLimitReached: boolean;
   monthlyResetDate: string | null;
+  hasUnlimitedEdits: boolean;
 }
 
 export function UsageIndicator({ className }: UsageIndicatorProps) {
@@ -65,6 +66,10 @@ export function UsageIndicator({ className }: UsageIndicatorProps) {
   }
 
   if (!usageData) {
+    return null;
+  }
+
+  if (usageData.hasUnlimitedEdits) {
     return null;
   }
 

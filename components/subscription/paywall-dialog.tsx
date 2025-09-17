@@ -10,7 +10,7 @@ interface PaywallDialogProps {
   isOpen: boolean;
   onClose: () => void;
   editCount: number;
-  remainingEdits: number;
+  remainingEdits: number | null;
   isMonthly?: boolean;
 }
 
@@ -40,6 +40,7 @@ export function PaywallDialog({ isOpen, onClose, editCount, remainingEdits, isMo
 
   const limitType = isMonthly ? 'Monthly' : 'Free Trial';
   const maxEdits = isMonthly ? 50 : 5;
+  const safeRemainingEdits = typeof remainingEdits === 'number' ? remainingEdits : 0;
   const limitText = isMonthly 
     ? `You've used ${editCount} out of 50 monthly AI edits. Upgrade to Pro for unlimited access!`
     : `You've used ${editCount} out of 5 free AI edits. Upgrade to Pro for unlimited access!`;
@@ -71,7 +72,7 @@ export function PaywallDialog({ isOpen, onClose, editCount, remainingEdits, isMo
               />
             </div>
             <p className="text-xs text-neutral-500 mt-2">
-              {remainingEdits > 0 ? `${remainingEdits} edits remaining` : 'No edits remaining'}
+              {safeRemainingEdits > 0 ? `${safeRemainingEdits} edits remaining` : 'No edits remaining'}
             </p>
           </div>
 

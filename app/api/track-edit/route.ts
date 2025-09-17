@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { hasUnlimitedEdits } from '@/lib/paywall';
 
 export async function POST() {
   try {
@@ -16,6 +17,8 @@ export async function POST() {
         { status: 401 }
       );
     }
+
+    const hasUnlimitedUser = hasUnlimitedEdits(user.email);
 
     // First, ensure user has a usage record
     const { data: initialUsageData, error: usageError } = await supabase
@@ -37,8 +40,8 @@ export async function POST() {
           edit_count: 0,
           monthly_edit_count: 0,
           monthly_reset_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 30 days from now
-          is_pro: false,
-          subscription_status: 'inactive'
+          is_pro: hasUnlimitedUser,
+          subscription_status: hasUnlimitedUser ? 'unlimited' : 'inactive'
         })
         .select('edit_count, monthly_edit_count, monthly_reset_date, is_pro, subscription_status')
         .single();
@@ -79,6 +82,53 @@ export async function POST() {
           usageData.monthly_edit_count = 0;
         }
       }
+    }
+
+    if (hasUnlimitedUser) {
+      const { data: unlimitedUsageData, error: unlimitedUpdateError } = await supabase
+        .from('user_usage')
+        .update({
+          edit_count: (usageData?.edit_count ?? 0) + 1,
+          monthly_edit_count: (usageData?.monthly_edit_count ?? 0) + 1,
+          is_pro: true,
+          subscription_status:
+            usageData?.subscription_status === 'active'
+              ? usageData.subscription_status
+              : 'unlimited'
+        })
+        .eq('user_id', user.id)
+        .select('edit_count, monthly_edit_count, monthly_reset_date, is_pro, subscription_status')
+        .single();
+
+      if (unlimitedUpdateError) {
+        console.error('Error updating unlimited user usage data:', unlimitedUpdateError);
+        return NextResponse.json(
+          { error: 'Failed to update usage data' },
+          { status: 500 }
+        );
+      }
+
+      return NextResponse.json({
+        success: true,
+        canEdit: true,
+        remainingEdits: null,
+        remainingMonthlyEdits: null,
+        editCount: unlimitedUsageData?.edit_count ?? 0,
+        monthlyEditCount: unlimitedUsageData?.monthly_edit_count ?? 0,
+        isPro: true,
+        subscriptionStatus:
+          unlimitedUsageData?.subscription_status ??
+          (usageData?.subscription_status === 'active'
+            ? usageData.subscription_status
+            : 'unlimited'),
+        limitReached: false,
+        monthlyLimitReached: false,
+        monthlyResetDate:
+          unlimitedUsageData?.monthly_reset_date ??
+          usageData?.monthly_reset_date ??
+          null,
+        hasUnlimitedEdits: true
+      });
     }
 
     // Call the database function to increment edit count and check limits
@@ -124,7 +174,8 @@ export async function POST() {
       subscriptionStatus: updatedUsageData.subscription_status,
       limitReached: !canEdit,
       monthlyLimitReached: updatedUsageData.is_pro && updatedUsageData.monthly_edit_count >= 50,
-      monthlyResetDate: updatedUsageData.monthly_reset_date
+      monthlyResetDate: updatedUsageData.monthly_reset_date,
+      hasUnlimitedEdits: false
     });
 
   } catch (error) {

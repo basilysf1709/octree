@@ -38,7 +38,6 @@ export default function FileEditorPage() {
 
   const editorRef = useRef<Monaco.editor.IStandaloneCodeEditor | null>(null);
   const monacoRef = useRef<typeof Monaco | null>(null);
-  const suggestionQueueRef = useRef<EditSuggestion[]>([]);
 
   const { project, file, documentData, isLoading, error } = useFileEditor();
 
@@ -72,7 +71,6 @@ export default function FileEditorPage() {
     handleEditSuggestion,
     handleAcceptEdit,
     handleRejectEdit,
-    handleNextSuggestion,
   } = useEditSuggestions({
     editor: editorRef.current,
     monacoInstance: monacoRef.current,
@@ -120,39 +118,10 @@ export default function FileEditorPage() {
   );
 
   const handleSuggestionFromChat = useCallback(
-    (
-      suggestionArray: EditSuggestion | string | (string | EditSuggestion)[]
-    ) => {
-      if (Array.isArray(suggestionArray)) {
-        const [first, ...rest] = suggestionArray;
-        handleEditSuggestion(first);
-        suggestionQueueRef.current = rest.map((suggestion) =>
-          typeof suggestion === 'string'
-            ? (JSON.parse(suggestion) as EditSuggestion)
-            : suggestion
-        );
-      } else {
-        handleEditSuggestion(suggestionArray);
-        suggestionQueueRef.current = [];
-      }
+    (suggestions: EditSuggestion | EditSuggestion[]) => {
+      handleEditSuggestion(suggestions);
     },
     [handleEditSuggestion]
-  );
-
-  const handleAcceptEditWithQueue = useCallback(
-    async (suggestionId: string) => {
-      await handleAcceptEdit(suggestionId);
-      setTimeout(handleNextSuggestion, 0);
-    },
-    [handleAcceptEdit, handleNextSuggestion]
-  );
-
-  const handleRejectEditWithQueue = useCallback(
-    (suggestionId: string) => {
-      handleRejectEdit(suggestionId);
-      setTimeout(handleNextSuggestion, 0);
-    },
-    [handleRejectEdit, handleNextSuggestion]
   );
 
   useEditorKeyboardShortcuts({
@@ -215,8 +184,8 @@ export default function FileEditorPage() {
           />
           <SuggestionActions
             suggestions={editSuggestions}
-            onAccept={handleAcceptEditWithQueue}
-            onReject={handleRejectEditWithQueue}
+            onAccept={handleAcceptEdit}
+            onReject={handleRejectEdit}
           />
         </div>
 

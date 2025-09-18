@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { EditSuggestion } from '@/types/edit';
+import { parseLatexDiff } from '@/lib/parse-latex-diff';
 import type * as Monaco from 'monaco-editor';
 import { toast } from 'sonner';
 
@@ -9,8 +10,7 @@ export interface EditSuggestionsState {
   editSuggestions: EditSuggestion[];
   decorationIds: string[];
   setDecorationIds: (ids: string[]) => void;
-  suggestionQueueRef: React.MutableRefObject<EditSuggestion[]>;
-  handleEditSuggestion: (suggestion: EditSuggestion | string) => void;
+  handleEditSuggestion: (suggestion: EditSuggestion | EditSuggestion[]) => void;
   handleAcceptEdit: (suggestionId: string) => Promise<void>;
   handleRejectEdit: (suggestionId: string) => void;
   handleNextSuggestion: () => void;
@@ -28,24 +28,176 @@ export function useEditSuggestions({
   const [editSuggestions, setEditSuggestions] = useState<EditSuggestion[]>([]);
   const [decorationIds, setDecorationIds] = useState<string[]>([]);
   const suggestionQueueRef = useRef<EditSuggestion[]>([]);
+  const continueToastIdRef = useRef<string | number | null>(null);
+  const promptDisplayedRef = useRef(false);
+  const hasActiveBatchRef = useRef(false);
 
-  const handleEditSuggestion = (suggestion: EditSuggestion | string) => {
-    // Accept both object and stringified suggestion
-    let parsedSuggestion: EditSuggestion;
-    if (typeof suggestion === 'string') {
-      parsedSuggestion = JSON.parse(suggestion) as EditSuggestion;
-    } else {
-      parsedSuggestion = suggestion;
+  const clearContinueToast = useCallback(() => {
+    if (continueToastIdRef.current !== null) {
+      toast.dismiss(continueToastIdRef.current);
+      continueToastIdRef.current = null;
     }
-    setEditSuggestions([parsedSuggestion]);
-  };
+  }, []);
 
-  const handleNextSuggestion = () => {
-    if (suggestionQueueRef.current.length > 0) {
-      const next = suggestionQueueRef.current.shift();
-      if (next) setEditSuggestions([next]);
-    } else {
-      setEditSuggestions([]);
+  const normalizeSuggestions = (suggestions: EditSuggestion[]) =>
+    suggestions.map((suggestion) => ({
+      ...suggestion,
+      status: 'pending' as const,
+    }));
+
+  const applyIncomingSuggestions = useCallback(
+    (
+      incoming: EditSuggestion[],
+      options: { suppressLimitNotice?: boolean } = {}
+    ) => {
+      const normalized = normalizeSuggestions(incoming);
+      const firstBatch = normalized.slice(0, 5).map((suggestion) => ({
+        ...suggestion,
+      }));
+      const remaining = normalized.slice(5).map((suggestion) => ({
+        ...suggestion,
+      }));
+
+      setEditSuggestions(firstBatch);
+      suggestionQueueRef.current = remaining;
+      hasActiveBatchRef.current = firstBatch.length > 0;
+      promptDisplayedRef.current = false;
+      clearContinueToast();
+
+      if (
+        !options.suppressLimitNotice &&
+        remaining.length > 0 &&
+        firstBatch.length > 0
+      ) {
+        toast.info(
+          'Showing the first 5 AI suggestions. Continue when you are ready to review more.'
+        );
+      }
+    },
+    [clearContinueToast]
+  );
+
+  const handleEditSuggestion = useCallback(
+    (suggestionInput: EditSuggestion | EditSuggestion[]) => {
+      const incomingArray = Array.isArray(suggestionInput)
+        ? suggestionInput
+        : [suggestionInput];
+
+      if (incomingArray.length === 0) {
+        setEditSuggestions([]);
+        suggestionQueueRef.current = [];
+        hasActiveBatchRef.current = false;
+        promptDisplayedRef.current = false;
+        clearContinueToast();
+        return;
+      }
+
+      applyIncomingSuggestions(incomingArray);
+    },
+    [applyIncomingSuggestions, clearContinueToast]
+  );
+
+  const handleNextSuggestion = useCallback(() => {
+    if (suggestionQueueRef.current.length === 0) {
+      clearContinueToast();
+      hasActiveBatchRef.current = false;
+      promptDisplayedRef.current = false;
+      return;
+    }
+
+    const nextBatch = suggestionQueueRef.current
+      .slice(0, 5)
+      .map((suggestion) => ({
+        ...suggestion,
+        status: 'pending' as const,
+      }));
+
+    suggestionQueueRef.current = suggestionQueueRef.current
+      .slice(5)
+      .map((suggestion) => ({
+        ...suggestion,
+        status: 'pending' as const,
+      }));
+
+    setEditSuggestions(nextBatch);
+    hasActiveBatchRef.current = nextBatch.length > 0;
+    promptDisplayedRef.current = false;
+    clearContinueToast();
+  }, [clearContinueToast]);
+
+  const resolveSuggestionConflict = async (
+    suggestion: EditSuggestion,
+    currentText: string,
+    model: Monaco.editor.ITextModel
+  ) => {
+    const trimmedOriginalLength = suggestion.original.trim().length;
+    const trimmedSuggestedLength = suggestion.suggested.trim().length;
+    const trimmedCurrentLength = currentText.trim().length;
+
+    const originalLineCount = suggestion.original
+      ? suggestion.original.split('\n').length
+      : 0;
+    const currentLineCount = currentText ? currentText.split('\n').length : 0;
+
+    const lineDelta = Math.abs(currentLineCount - originalLineCount);
+    const charDelta = Math.abs(trimmedCurrentLength - trimmedOriginalLength);
+
+    const isSmallChange =
+      lineDelta <= 3 &&
+      Math.max(
+        trimmedOriginalLength,
+        trimmedSuggestedLength,
+        trimmedCurrentLength
+      ) <= 1500 &&
+      charDelta <= 600;
+
+    try {
+      const response = await fetch('/api/octra/conflict', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          fileContent: model.getValue(),
+          suggestion,
+          currentText,
+          isSmallChange,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to resolve conflict');
+      }
+
+      const data = await response.json();
+
+      if (!data?.content) {
+        throw new Error('Missing resolution content');
+      }
+
+      const resolvedSuggestions = parseLatexDiff(data.content);
+
+      if (resolvedSuggestions.length === 0) {
+        toast.error(
+          'Octra could not resolve the updated document state. Please regenerate suggestions.'
+        );
+        return;
+      }
+
+      applyIncomingSuggestions(resolvedSuggestions, {
+        suppressLimitNotice: true,
+      });
+
+      toast.info(
+        `Generated updated suggestions using ${
+          isSmallChange ? 'GPT-4o mini' : 'DeepSeek Coder'
+        } after detecting changes in the document.`
+      );
+    } catch (error) {
+      console.error('Error resolving suggestion conflict:', error);
+      toast.error(
+        'Unable to resolve this suggestion with the updated document. Ask Octra for a fresh set of edits.'
+      );
     }
   };
 
@@ -112,6 +264,18 @@ export function useEditSuggestions({
         endColumn
       );
 
+      const currentText = model.getValueInRange(rangeToReplace);
+      const normalizedCurrent = currentText.replace(/\r?\n$/, '');
+      const normalizedOriginal = suggestion.original.replace(/\r?\n$/, '');
+
+      if (
+        currentText !== suggestion.original &&
+        normalizedCurrent !== normalizedOriginal
+      ) {
+        await resolveSuggestionConflict(suggestion, currentText, model);
+        return;
+      }
+
       editor.executeEdits('accept-ai-suggestion', [
         {
           range: rangeToReplace,
@@ -121,29 +285,60 @@ export function useEditSuggestions({
       ]);
 
       setEditSuggestions((prev) =>
-        prev.map((s) =>
-          s.id === suggestionId ? { ...s, status: 'accepted' } : s
-        )
+        prev.filter((s) => s.id !== suggestionId)
       );
-      setTimeout(handleNextSuggestion, 0);
     } catch (error) {
       console.error('Error applying edit:', error);
-      setEditSuggestions((prev) =>
-        prev.map((s) =>
-          s.id === suggestionId ? { ...s, status: 'pending' } : s
-        )
-      );
+      toast.error('Failed to apply this suggestion. Please try again.');
     }
   };
 
   const handleRejectEdit = (suggestionId: string) => {
     setEditSuggestions((prev) =>
-      prev.map((s) =>
-        s.id === suggestionId ? { ...s, status: 'rejected' } : s
-      )
+      prev.filter((s) => s.id !== suggestionId)
     );
-    setTimeout(handleNextSuggestion, 0);
   };
+
+  useEffect(() => {
+    const pendingCount = editSuggestions.filter(
+      (suggestion) => suggestion.status === 'pending'
+    ).length;
+
+    if (pendingCount > 0) {
+      hasActiveBatchRef.current = true;
+      return;
+    }
+
+    if (!hasActiveBatchRef.current) {
+      clearContinueToast();
+      promptDisplayedRef.current = false;
+      return;
+    }
+
+    if (suggestionQueueRef.current.length > 0) {
+      if (!promptDisplayedRef.current) {
+        const toastId = toast.info(
+          'More AI suggestions are ready. Continue when you want to review the next batch.',
+          {
+            action: {
+              label: 'Continue',
+              onClick: () => {
+                clearContinueToast();
+                promptDisplayedRef.current = false;
+                handleNextSuggestion();
+              },
+            },
+          }
+        );
+        continueToastIdRef.current = toastId as string | number;
+        promptDisplayedRef.current = true;
+      }
+    } else {
+      hasActiveBatchRef.current = false;
+      promptDisplayedRef.current = false;
+      clearContinueToast();
+    }
+  }, [editSuggestions, clearContinueToast, handleNextSuggestion]);
 
   // Update the decoration effect for a clear inline diff view
   useEffect(() => {
@@ -284,14 +479,15 @@ export function useEditSuggestions({
       if (editor && decorationIds.length > 0) {
         editor.deltaDecorations(decorationIds, []);
       }
+      clearContinueToast();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Empty dependency array for unmount cleanup
 
   return {
     editSuggestions,
     decorationIds,
     setDecorationIds,
-    suggestionQueueRef,
     handleEditSuggestion,
     handleAcceptEdit,
     handleRejectEdit,

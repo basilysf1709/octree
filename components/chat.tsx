@@ -8,8 +8,8 @@ import { Loader2, X, Maximize2, Minimize2, ArrowUp } from 'lucide-react';
 import { OctreeLogo } from '@/components/icons/octree-logo';
 import { motion, AnimatePresence } from 'framer-motion';
 import { EditSuggestion } from '@/types/edit';
-import { v4 as uuidv4 } from 'uuid';
 import { cn } from '@/lib/utils';
+import { parseLatexDiff } from '@/lib/parse-latex-diff';
 import { Textarea } from './ui/textarea';
 import LatexRenderer from './latex-renderer';
 import {
@@ -20,9 +20,7 @@ import {
 } from './ui/accordion';
 
 interface ChatProps {
-  onEditSuggestion: (
-    edit: EditSuggestion | string | (string | EditSuggestion)[]
-  ) => void;
+  onEditSuggestion: (edit: EditSuggestion | EditSuggestion[]) => void;
   fileContent: string;
   textFromEditor: string | null;
   setTextFromEditor: (text: string | null) => void;
@@ -148,90 +146,8 @@ export function Chat({
     return parts;
   };
 
-  const parseEditSuggestions = (
-    content: string
-  ): (string | EditSuggestion)[] => {
-    const editRegex = /```latex-diff\n([\s\S]*?)\n```/g;
-    let match;
-    let cleanContent = content;
-    const suggestions: EditSuggestion[] = [];
-
-    while ((match = editRegex.exec(content)) !== null) {
-      const diffBlockContent = match[1];
-      const lines = diffBlockContent.trim().split('\n');
-
-      let originalContent = '';
-      let suggestedContent = '';
-      let referenceStartLine = 0;
-      let referenceOriginalCount = 0;
-      let referenceNewStartLine = 0;
-      let referenceNewCount = 0;
-
-      const headerMatch = lines[0]?.match(
-        /@@\s*-(\d+)(?:,(\d+))?\s*\+(\d+)(?:,(\d+))?\s*@@/
-      );
-
-      if (headerMatch) {
-        referenceStartLine = parseInt(headerMatch[1], 10);
-        referenceOriginalCount = headerMatch[2]
-          ? parseInt(headerMatch[2], 10)
-          : 0;
-        referenceNewStartLine = parseInt(headerMatch[3], 10);
-        referenceNewCount = headerMatch[4] ? parseInt(headerMatch[4], 10) : 0;
-
-        let actualOriginalLineCount = 0;
-        let firstChangeIndex = -1;
-
-        for (let i = 1; i < lines.length; i++) {
-          const line = lines[i];
-          const lineContent = line.slice(1);
-
-          if (line.startsWith('-')) {
-            originalContent += lineContent + '\n';
-            actualOriginalLineCount++;
-            if (firstChangeIndex === -1) {
-              firstChangeIndex = i - 1;
-            }
-          } else if (line.startsWith('+')) {
-            suggestedContent += lineContent + '\n';
-            if (firstChangeIndex === -1) {
-              firstChangeIndex = i - 1;
-            }
-          }
-        }
-
-        const correctedStartLine =
-          firstChangeIndex !== -1
-            ? referenceStartLine + firstChangeIndex
-            : referenceStartLine;
-
-        originalContent = originalContent.replace(/\n$/, '');
-        suggestedContent = suggestedContent.replace(/\n$/, '');
-
-        if (originalContent || suggestedContent) {
-          const suggestion: EditSuggestion = {
-            id: uuidv4(),
-            original: originalContent,
-            suggested: suggestedContent,
-            startLine: correctedStartLine,
-            originalLineCount: actualOriginalLineCount,
-            status: 'pending',
-          };
-          suggestions.push(suggestion);
-        }
-      } else {
-        console.error('Could not parse diff header:', lines[0]);
-      }
-
-      cleanContent = cleanContent.replace(match[0], '');
-    }
-    // Only show the first suggestion now, return the rest for queueing
-    if (suggestions.length > 0) {
-      // Always pass all suggestions as an array
-      return suggestions.map((s) => JSON.stringify(s));
-    }
-    return [];
-  };
+  const parseEditSuggestions = (content: string): EditSuggestion[] =>
+    parseLatexDiff(content);
 
   const {
     messages,

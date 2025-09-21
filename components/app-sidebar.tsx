@@ -1,6 +1,6 @@
 "use client"
 
-import { Folder, FileText, ChevronDown, DonutIcon as DocumentIcon, FolderOpen } from "lucide-react"
+import { Folder, FileText, ChevronDown, DonutIcon as DocumentIcon, FolderOpen, Trash2 } from "lucide-react"
 import {
   Sidebar,
   SidebarContent,
@@ -22,6 +22,7 @@ import Link from "next/link"
 import { useProjectRefresh } from "@/app/context/project"
 import { AddFileDialog } from "@/components/projects/add-file-dialog"
 import { usePathname } from "next/navigation"
+import { DeleteFileDialog } from "@/components/files/delete-file-dialog"
 
 interface Project {
   id: string
@@ -53,6 +54,11 @@ export function AppSidebar({ userName, projectId }: AppSidebarProps) {
   const [currentProject, setCurrentProject] = useState<ProjectWithFiles | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isProjectOpen, setIsProjectOpen] = useState(true)
+  const [deleteDialog, setDeleteDialog] = useState<{
+    open: boolean;
+    fileId: string;
+    fileName: string;
+  }>({ open: false, fileId: '', fileName: '' })
   const { refreshTrigger } = useProjectRefresh()
 
   const pathname = usePathname()
@@ -108,6 +114,16 @@ export function AppSidebar({ userName, projectId }: AppSidebarProps) {
   useEffect(() => {
     fetchCurrentProjectAndFiles()
   }, [refreshTrigger, projectId, fetchCurrentProjectAndFiles])
+
+  const handleDeleteClick = (e: React.MouseEvent, fileId: string, fileName: string) => {
+    e.preventDefault() // Prevent navigation
+    e.stopPropagation() // Prevent event bubbling
+    setDeleteDialog({
+      open: true,
+      fileId,
+      fileName,
+    })
+  }
 
   const getFileIcon = (fileName: string) => {
     const extension = fileName.split(".").pop()?.toLowerCase()
@@ -183,7 +199,7 @@ export function AppSidebar({ userName, projectId }: AppSidebarProps) {
                               <SidebarMenuItem key={file.id}>
                                 <SidebarMenuSubButton
                                   asChild
-                                  className={`rounded-md transition-all duration-200 ${
+                                  className={`group rounded-md transition-all duration-200 ${
                                     isActive
                                       ? "bg-blue-50 text-blue-700 border-l-3 border-blue-500 shadow-sm"
                                       : "hover:bg-gray-50 text-gray-700"
@@ -196,12 +212,12 @@ export function AppSidebar({ userName, projectId }: AppSidebarProps) {
                                     {getFileIcon(file.name)}
                                     <div className="flex-1 min-w-0">
                                       <span className="text-sm font-medium truncate block">{file.name}</span>
-                                      {/* {file.size && (
-                                        <span className="text-xs text-gray-400">
-                                          {(file.size / 1024).toFixed(1)} KB
-                                        </span>
-                                      )} */}
+                                      
                                     </div>
+                                    <Trash2 
+                                      className="h-4 w-4 text-red-500 hover:text-red-700 cursor-pointer" 
+                                      onClick={(e) => handleDeleteClick(e, file.id, file.name)}
+                                    />
                                   </Link>
                                 </SidebarMenuSubButton>
                               </SidebarMenuItem>
@@ -238,6 +254,18 @@ export function AppSidebar({ userName, projectId }: AppSidebarProps) {
       <SidebarFooter className="border-t border-gray-100 p-4">
         <UserProfileDropdown userName={userName} />
       </SidebarFooter>
+
+      {currentProject && deleteDialog.open && (
+        <DeleteFileDialog
+          fileId={deleteDialog.fileId}
+          fileName={deleteDialog.fileName}
+          projectId={currentProject.id}
+          open={deleteDialog.open}
+          onOpenChange={(open) => setDeleteDialog(prev => ({ ...prev, open }))}
+          onFileDeleted={fetchCurrentProjectAndFiles}
+          availableFiles={currentProject.files}
+        />
+      )}
     </Sidebar>
   )
 }

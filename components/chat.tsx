@@ -264,6 +264,15 @@ export function Chat({
         </div>
 
         <div className="flex gap-1">
+          {isLoading && (
+            <div
+              className="flex items-center pr-1"
+              aria-live="polite"
+              aria-label="Loading"
+            >
+              <Loader2 className="h-3 w-3 animate-spin text-blue-600" />
+            </div>
+          )}
           <Button
             variant="ghost"
             size="sm"

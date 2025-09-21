@@ -46,6 +46,7 @@ export async function POST(request: Request) {
 
     let model = chooseModel({ changeType, textFromEditor, messages });
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     // Fallback to gpt-4o-mini if deepseek key/config is missing
     const prefersDeepseek = (m: any) => typeof m?.providerId === 'string' && m.providerId.includes('deepseek');
     const deepseekKeyMissing = !process.env.DEEPSEEK_API_KEY && !process.env.DEEPSEEK_API_KEY_ID;

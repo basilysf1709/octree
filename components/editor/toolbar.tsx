@@ -56,9 +56,9 @@ export function EditorToolbar({
             </span>
           )}
           {isSaving && (
-            <span className="text-xs text-blue-500">
-              <Loader2 className="mr-1 inline h-3 w-3 animate-spin" />
-              Saving...
+            <span className="flex items-center text-xs text-blue-500">
+              <Loader2 className="mr-1 inline h-4 w-4 animate-spin" />
+              Saving
             </span>
           )}
 
@@ -67,10 +67,11 @@ export function EditorToolbar({
             size="xs"
             onClick={onCompile}
             disabled={compiling}
+            className="w-[90px]"
           >
             {compiling ? (
               <>
-                <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+                <Loader2 className="h-4 w-4 animate-spin" />
                 Compiling
               </>
             ) : (

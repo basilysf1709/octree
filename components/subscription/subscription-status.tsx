@@ -341,7 +341,7 @@ export function SubscriptionStatus() {
         isOpen={showPaywall}
         onClose={() => setShowPaywall(false)}
         editCount={usage.editCount}
-        remainingEdits={usage.remainingEdits}
+        remainingEdits={usage.remainingEdits ?? 0}
       />
     </>
   );

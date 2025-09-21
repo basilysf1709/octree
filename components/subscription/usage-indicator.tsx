@@ -119,7 +119,7 @@ export function UsageIndicator({ className }: UsageIndicatorProps) {
         isOpen={showPaywall}
         onClose={() => setShowPaywall(false)}
         editCount={usageData.isPro ? monthlyEditCount : editCount}
-        remainingEdits={usageData.isPro ? remainingMonthlyEdits : remainingEdits}
+        remainingEdits={(usageData.isPro ? remainingMonthlyEdits : remainingEdits) ?? 0}
         isMonthly={usageData.isPro}
       />
     </>

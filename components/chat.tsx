@@ -24,11 +24,15 @@ interface ChatProps {
   fileContent: string;
   textFromEditor: string | null;
   setTextFromEditor: (text: string | null) => void;
+  isMinimized: boolean;
+  setIsMinimized: React.Dispatch<React.SetStateAction<boolean>>;
   isOpen: boolean;
   setIsOpen: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 export function Chat({
+  isMinimized,
+  setIsMinimized,
   isOpen,
   setIsOpen,
   onEditSuggestion,
@@ -36,7 +40,6 @@ export function Chat({
   textFromEditor,
   setTextFromEditor,
 }: ChatProps) {
-  const [isMinimized, setIsMinimized] = useState(false);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const [userInput, setUserInput] = useState<string>('');
@@ -137,7 +140,10 @@ export function Chat({
 
     if (lastIndex < content.length) {
       parts.push(
-        <div key={`text-after-${lastIndex}`} className="mt-2 whitespace-pre-wrap">
+        <div
+          key={`text-after-${lastIndex}`}
+          className="mt-2 whitespace-pre-wrap"
+        >
           <ReactMarkdown>{content.slice(lastIndex)}</ReactMarkdown>
         </div>
       );
@@ -175,19 +181,9 @@ export function Chat({
 
   useEffect(() => {
     if (textFromEditor) {
-      if (!isOpen) {
-        setIsOpen(true);
-      }
-
-      if (isMinimized) {
-        setIsMinimized(false);
-      }
-
-      setTimeout(() => {
-        inputRef.current?.focus();
-      }, 100);
+      inputRef.current?.focus();
     }
-  }, [textFromEditor, isOpen, isMinimized, setIsOpen, setIsMinimized]);
+  }, [textFromEditor]);
 
   useEffect(() => {
     scrollToBottom();
@@ -198,10 +194,7 @@ export function Chat({
       if ((e.metaKey || e.ctrlKey) && e.key === 'b') {
         const target = e.target as HTMLElement;
 
-        if (
-          target.tagName !== 'INPUT' &&
-          target.tagName !== 'TEXTAREA'
-        ) {
+        if (target.tagName !== 'INPUT' && target.tagName !== 'TEXTAREA') {
           e.preventDefault();
           setIsOpen((prev) => !prev);
         }
@@ -281,7 +274,7 @@ export function Chat({
               e.stopPropagation();
               setIsMinimized(!isMinimized);
             }}
-            className="h-8 w-8 rounded-lg p-0 text-blue-600 hover:bg-blue-50 hover:text-blue-800 z-20"
+            className="z-20 h-8 w-8 rounded-lg p-0 text-blue-600 hover:bg-blue-50 hover:text-blue-800"
           >
             {isMinimized ? <Maximize2 size={16} /> : <Minimize2 size={16} />}
           </Button>
@@ -293,7 +286,7 @@ export function Chat({
               e.stopPropagation();
               setIsOpen(false);
             }}
-            className="h-8 w-8 rounded-lg p-0 text-blue-600 hover:bg-blue-50 hover:text-blue-800 z-20"
+            className="z-20 h-8 w-8 rounded-lg p-0 text-blue-600 hover:bg-blue-50 hover:text-blue-800"
           >
             <X size={16} />
           </Button>
@@ -310,7 +303,7 @@ export function Chat({
             <div
               ref={chatContainerRef}
               className={cn(
-                'scrollbar-thin scrollbar-thumb-neutral-300 scrollbar-track-transparent h-[440px] overflow-y-auto overflow-x-hidden p-4',
+                'scrollbar-thin scrollbar-thumb-neutral-300 scrollbar-track-transparent h-[440px] overflow-x-hidden overflow-y-auto p-4',
                 textFromEditor && 'pb-24'
               )}
             >
@@ -329,7 +322,7 @@ export function Chat({
               {messages.map((message) => (
                 <div
                   key={message.id}
-                  className={`mb-4 break-words min-w-0 ${
+                  className={`mb-4 min-w-0 break-words ${
                     message.role === 'assistant'
                       ? 'rounded-lg border border-slate-200 bg-gradient-to-br from-blue-50 to-blue-50/50 p-3 shadow-xs'
                       : 'rounded-lg border border-slate-200 bg-white p-3 shadow-xs'
@@ -338,7 +331,7 @@ export function Chat({
                   <div className="mb-1 text-sm font-semibold text-blue-800">
                     {message.role === 'assistant' ? 'Octra' : 'You'}
                   </div>
-                  <div className="text-sm text-slate-800 min-w-0 overflow-hidden">
+                  <div className="min-w-0 overflow-hidden text-sm text-slate-800">
                     {renderMessageContent(message.content)}
                   </div>
                 </div>
@@ -347,7 +340,7 @@ export function Chat({
 
             <div className="relative px-2">
               {textFromEditor && (
-                <div className="absolute top-0 left-1/2 w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-full rounded-t-md border border-b-0 border-slate-300 bg-slate-50 px-2 py-1 text-xs shadow-xs z-10 pointer-events-auto">
+                <div className="pointer-events-auto absolute top-0 left-1/2 z-10 w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-full rounded-t-md border border-b-0 border-slate-300 bg-slate-50 px-2 py-1 text-xs shadow-xs">
                   <Button
                     onClick={() => setTextFromEditor(null)}
                     size="icon"

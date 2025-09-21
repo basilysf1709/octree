@@ -1,8 +1,12 @@
-import type React from "react"
-import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
-import { AppSidebar } from "@/components/app-sidebar"
-import { createClient } from "@/lib/supabase/server"
-import { BackButton } from "@/components/projects/back-button"
+import type React from 'react';
+import {
+  SidebarInset,
+  SidebarProvider,
+  SidebarTrigger,
+} from '@/components/ui/sidebar';
+import { AppSidebar } from '@/components/app-sidebar';
+import { createClient } from '@/lib/supabase/server';
+import { BackButton } from '@/components/projects/back-button';
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -10,73 +14,70 @@ import {
   BreadcrumbList,
   BreadcrumbPage,
   BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb"
-import { headers } from "next/headers"
+} from '@/components/ui/breadcrumb';
+import { headers } from 'next/headers';
 
 export default async function ProjectLayout({
   children,
   params,
 }: {
-  children: React.ReactNode
-  params: Promise<{ projectId: string }>
+  children: React.ReactNode;
+  params: Promise<{ projectId: string }>;
 }) {
-  const { projectId } = await params
-  const supabase = await createClient()
+  const { projectId } = await params;
+  const supabase = await createClient();
   const {
     data: { user },
-  } = await supabase.auth.getUser()
+  } = await supabase.auth.getUser();
 
-  const userName = user?.user_metadata?.name ?? user?.email ?? null
+  const userName = user?.user_metadata?.name ?? user?.email ?? null;
 
-  // Get project data for breadcrumbs
   const { data: project } = await supabase
     .from('projects')
     .select('title')
     .eq('id', projectId)
     .eq('user_id', user?.id || '')
-    .single()
+    .single();
 
-  // Get current pathname to determine if we're in a file editor
-  const headersList = await headers()
-  const pathname = headersList.get('x-pathname') || ''
-  const isFileEditor = pathname.includes('/files/') && pathname.includes('/editor')
-  
-  // Extract fileId from pathname if we're in file editor
-  let fileId = null
+  const headersList = await headers();
+  const pathname = headersList.get('x-pathname') || '';
+  const isFileEditor =
+    pathname.includes('/files/') && pathname.includes('/editor');
+
+  let fileId = null;
   if (isFileEditor) {
-    const pathParts = pathname.split('/')
-    const fileIndex = pathParts.findIndex(part => part === 'files')
+    const pathParts = pathname.split('/');
+    const fileIndex = pathParts.findIndex((part) => part === 'files');
     if (fileIndex !== -1 && pathParts[fileIndex + 1]) {
-      fileId = pathParts[fileIndex + 1]
+      fileId = pathParts[fileIndex + 1];
     }
   }
-  
-  // Get file data if we have a fileId
-  let file = null
+
+  let file = null;
   if (fileId) {
     const { data: fileData } = await supabase
       .from('files')
       .select('name')
       .eq('id', fileId)
       .eq('project_id', projectId)
-      .single()
-    file = fileData
+      .single();
+    file = fileData;
   }
 
   return (
     <SidebarProvider defaultOpen={false}>
       <AppSidebar userName={userName} projectId={projectId} />
       <SidebarInset>
-        <header className="flex items-center justify-between border-b px-4 py-2">
+        <header className="relative flex items-center justify-between border-b px-4 py-2">
           <div className="flex items-center gap-2">
             <SidebarTrigger />
             <span className="text-muted-foreground">|</span>
             <BackButton />
           </div>
-          
-          <div className="flex-1 flex justify-center">
+
+          <div className="absolute left-1/2 flex flex-1 -translate-x-1/2 justify-center">
             <Breadcrumb>
-              <BreadcrumbList className="text-xs gap-1">
+              <BreadcrumbList className="gap-1 text-xs">
                 <BreadcrumbItem>
                   <BreadcrumbLink href="/">Dashboard</BreadcrumbLink>
                 </BreadcrumbItem>
@@ -87,7 +88,9 @@ export default async function ProjectLayout({
                       {project?.title || 'Project'}
                     </BreadcrumbLink>
                   ) : (
-                    <BreadcrumbPage>{project?.title || 'Project'}</BreadcrumbPage>
+                    <BreadcrumbPage>
+                      {project?.title || 'Project'}
+                    </BreadcrumbPage>
                   )}
                 </BreadcrumbItem>
                 {isFileEditor && (
@@ -101,12 +104,10 @@ export default async function ProjectLayout({
               </BreadcrumbList>
             </Breadcrumb>
           </div>
-          
-          <div className="w-32"></div>
         </header>
 
         <main className="flex-1">{children}</main>
       </SidebarInset>
     </SidebarProvider>
-  )
+  );
 }

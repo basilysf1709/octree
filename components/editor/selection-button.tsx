@@ -21,9 +21,9 @@ export function SelectionButton({
   return (
     <Button
       variant="outline"
-      size="xs"
+      size="sm"
       onClick={onCopy}
-      className={cn('absolute z-10 py-2 font-medium', className)}
+      className={cn('absolute z-10 font-medium', className)}
       style={{
         top: position.top,
         left: position.left,

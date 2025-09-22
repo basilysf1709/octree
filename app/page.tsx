@@ -44,9 +44,7 @@ export default async function Dashboard() {
           <div className="flex h-14 items-center justify-between">
             <div className="flex items-center">
               <Link href="/" className="flex items-center space-x-2">
-                <div className="flex h-5 w-5 items-center justify-center rounded bg-blue-500">
-                  <FileText className="h-3 w-3 text-white" />
-                </div>
+                <OctreeLogo className="h-7 w-7" />
                 <span
                   className={cn(
                     'text-lg font-medium tracking-tight text-neutral-900',

@@ -18,6 +18,7 @@ import {
   SidebarMenuSub,
   SidebarMenuSubButton,
   SidebarFooter,
+  SidebarHeader,
 } from '@/components/ui/sidebar';
 import {
   Collapsible,
@@ -74,13 +75,11 @@ export function AppSidebar({ userName, projectId }: AppSidebarProps) {
     try {
       const supabase = createClient();
 
-      // Get current user
       const {
         data: { session },
       } = await supabase.auth.getSession();
       if (!session?.user) return;
 
-      // Fetch the current project
       const { data: projectData, error: projectError } = await supabase
         .from('projects')
         .select('*')
@@ -93,7 +92,6 @@ export function AppSidebar({ userName, projectId }: AppSidebarProps) {
         return;
       }
 
-      // Fetch files for the current project
       const { data: filesData, error: filesError } = await supabase
         .from('files')
         .select('*')
@@ -143,6 +141,7 @@ export function AppSidebar({ userName, projectId }: AppSidebarProps) {
     <Sidebar className="border-r border-gray-200">
       <SidebarContent className="p-2">
         <SidebarGroup>
+          <p className="px-3 pb-1 text-sm font-medium">Files</p>
           <SidebarGroupContent>
             <SidebarMenu>
               {isLoading ? (

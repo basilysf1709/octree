@@ -60,7 +60,7 @@ export function UsageIndicator({ className }: UsageIndicatorProps) {
   if (isLoading) {
     return (
       <div className={`flex items-center gap-2 ${className}`}>
-        <div className="animate-pulse bg-neutral-200 h-4 w-16 rounded" />
+        <div className="h-4 w-16 animate-pulse rounded bg-neutral-200" />
       </div>
     );
   }
@@ -78,38 +78,46 @@ export function UsageIndicator({ className }: UsageIndicatorProps) {
     return null;
   }
 
-  const { editCount, monthlyEditCount, remainingEdits, remainingMonthlyEdits, limitReached, monthlyLimitReached } = usageData;
+  const {
+    editCount,
+    monthlyEditCount,
+    remainingEdits,
+    remainingMonthlyEdits,
+    limitReached,
+    monthlyLimitReached,
+  } = usageData;
 
   return (
     <>
       <div className={`flex items-center gap-2 ${className}`}>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1">
           <Info className="h-4 w-4 text-neutral-500" />
-          <span className="text-sm text-neutral-600">
-            {usageData.isPro 
-              ? (monthlyLimitReached ? 'Monthly limit reached' : `${remainingMonthlyEdits} monthly edits left`)
-              : (limitReached ? 'No free edits left' : `${remainingEdits} free edits left`)
-            }
+          <span className="text-xs text-neutral-600">
+            {usageData.isPro
+              ? monthlyLimitReached
+                ? 'Monthly limit reached'
+                : `${remainingMonthlyEdits} monthly edits left`
+              : limitReached
+                ? 'No free edits left'
+                : `${remainingEdits} free edits left`}
           </span>
         </div>
-        
-        <Badge 
-          variant={limitReached || monthlyLimitReached ? "destructive" : "secondary"}
+
+        <Badge
+          variant={
+            limitReached || monthlyLimitReached ? 'destructive' : 'secondary'
+          }
           className="text-xs"
         >
-          {usageData.isPro 
-            ? `${monthlyEditCount}/50`
-            : `${editCount}/5`
-          }
+          {usageData.isPro ? `${monthlyEditCount}/50` : `${editCount}/5`}
         </Badge>
 
         {(limitReached || monthlyLimitReached) && (
           <Button
             size="sm"
             onClick={handleUpgradeClick}
-            className="h-6 px-2 text-xs bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
+            className="h-6 bg-blue-600 px-2 text-xs text-white hover:bg-blue-700"
           >
-            <CreditCard className="h-3 w-3 mr-1" />
             {usageData.isPro ? 'Upgrade Plan' : 'Upgrade'}
           </Button>
         )}
@@ -119,9 +127,11 @@ export function UsageIndicator({ className }: UsageIndicatorProps) {
         isOpen={showPaywall}
         onClose={() => setShowPaywall(false)}
         editCount={usageData.isPro ? monthlyEditCount : editCount}
-        remainingEdits={usageData.isPro ? remainingMonthlyEdits : remainingEdits}
+        remainingEdits={
+          (usageData.isPro ? remainingMonthlyEdits : remainingEdits) ?? 0
+        }
         isMonthly={usageData.isPro}
       />
     </>
   );
-} 
+}

@@ -29,7 +29,6 @@ import { ErrorState } from '@/components/editor/error-state';
 import PDFViewer from '@/components/pdf-viewer';
 import { Chat } from '@/components/chat';
 import { CompilationError } from '@/components/latex/compilation-error';
-import { LimitReachedDialog } from '@/components/editor/limit-reached-dialog';
 
 export default function FileEditorPage() {
   const params = useParams();
@@ -85,6 +84,8 @@ export default function FileEditorPage() {
     textFromEditor,
     chatOpen,
     setChatOpen,
+    chatMinimized,
+    setChatMinimized,
     setTextFromEditor,
     handleCopy,
     setupEditorListeners,
@@ -132,6 +133,7 @@ export default function FileEditorPage() {
       if (selectedText.trim()) {
         setTextFromEditor(selectedText);
         setChatOpen(true);
+        setChatMinimized(false);
       }
     },
     onTextFormat: handleTextFormat,
@@ -195,6 +197,8 @@ export default function FileEditorPage() {
       </div>
 
       <Chat
+        isMinimized={chatMinimized}
+        setIsMinimized={setChatMinimized}
         isOpen={chatOpen}
         setIsOpen={setChatOpen}
         onEditSuggestion={handleSuggestionFromChat}

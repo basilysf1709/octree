@@ -13,14 +13,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { CancelSubscriptionDialog } from '@/components/subscription/cancel-subscription-dialog';
-import { 
-  User, 
-  Settings, 
-  CreditCard, 
-  LogOut, 
-  ChevronDown,
-  Receipt
-} from 'lucide-react';
+import { User, Settings, LogOut, ChevronDown, Receipt } from 'lucide-react';
 
 interface UserProfileDropdownProps {
   userName: string | null;
@@ -36,53 +29,34 @@ export function UserProfileDropdown({ userName }: UserProfileDropdownProps) {
     router.push('/auth/login');
   };
 
-  const handleCancelSubscription = () => {
-    setIsCancelDialogOpen(true);
-  };
-
   return (
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" className="flex items-center gap-2">
-            <User className="h-4 w-4" />
-            <span className="font-medium text-neutral-900">
-              {userName || 'User'}
-            </span>
+            <div className="flex flex-1 gap-2">
+              <User className="h-4 w-4" />
+              <span className="font-medium text-neutral-900">
+                {userName || 'User'}
+              </span>
+            </div>
             <ChevronDown className="h-4 w-4" />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-56">
           <DropdownMenuLabel>Account</DropdownMenuLabel>
           <DropdownMenuSeparator />
-          
+
           <DropdownMenuItem onClick={() => router.push('/settings')}>
             <Settings className="mr-2 h-4 w-4" />
             Settings
           </DropdownMenuItem>
-          
-          {/* <DropdownMenuItem onClick={() => router.push('/pricing')}>
-            <CreditCard className="mr-2 h-4 w-4" />
-            Change Plan
-          </DropdownMenuItem> */}
-          
+
           <DropdownMenuItem onClick={() => router.push('/billing')}>
             <Receipt className="mr-2 h-4 w-4" />
             Billing History
           </DropdownMenuItem>
-          
-          {/* <DropdownMenuSeparator />
-          
-          <DropdownMenuItem 
-            onClick={handleCancelSubscription}
-            className="text-red-600 focus:text-red-600"
-          >
-            <CreditCard className="mr-2 h-4 w-4" />
-            Cancel Subscription
-          </DropdownMenuItem>
-          
-          <DropdownMenuSeparator /> */}
-          
+
           <DropdownMenuItem onClick={handleLogout}>
             <LogOut className="mr-2 h-4 w-4" />
             Logout
@@ -96,4 +70,4 @@ export function UserProfileDropdown({ userName }: UserProfileDropdownProps) {
       />
     </>
   );
-} 
+}

@@ -1,7 +1,7 @@
 import { EditSuggestion } from '@/types/edit';
 import { v4 as uuidv4 } from 'uuid';
 
-const DIFF_BLOCK_REGEX = /```latex-diff\n([\s\S]*?)\n```/g;
+const DIFF_BLOCK_REGEX = /```latex-diff[^\n]*\r?\n([\s\S]*?)\r?\n```/gi;
 const DIFF_HEADER_REGEX =
   /@@\s*-(\d+)(?:,(\d+))?\s*\+(\d+)(?:,(\d+))?\s*@@/;
 
@@ -11,7 +11,7 @@ export function parseLatexDiff(content: string): EditSuggestion[] {
 
   while ((match = DIFF_BLOCK_REGEX.exec(content)) !== null) {
     const diffBlockContent = match[1];
-    const lines = diffBlockContent.trim().split('\n');
+    const lines = diffBlockContent.trim().split(/\r?\n/);
 
     const headerMatch = lines[0]?.match(DIFF_HEADER_REGEX);
 

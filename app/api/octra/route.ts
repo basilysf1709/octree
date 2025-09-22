@@ -1,13 +1,42 @@
+/* eslint-disable */
 import { NextResponse } from 'next/server';
 import { deepseek } from '@ai-sdk/deepseek';
 import { streamText } from 'ai';
+import { openai } from '@ai-sdk/openai';
 
 export const runtime = 'edge';
 export const preferredRegion = 'auto';
 
+// Simple model selection based on optional override or heuristic
+type ChangeType = 'small' | 'large' | 'auto';
+function chooseModel(params: {
+  changeType?: ChangeType;
+  textFromEditor?: string;
+  messages: Array<{ role: string; content: string }>;
+}) {
+  const { changeType, textFromEditor, messages } = params;
+
+  if (changeType === 'small') return openai('gpt-4o-mini');
+  if (changeType === 'large') return deepseek('deepseek-coder');
+
+  const textBasis = (textFromEditor && textFromEditor.trim().length > 0)
+    ? textFromEditor
+    : (messages.slice().reverse().find((m) => m.role === 'user')?.content ?? '');
+
+  const newlineCount = (textBasis.match(/\n/g) || []).length;
+  const isNonEmpty = textBasis.trim().length > 0;
+
+  // Strict: single-line small change => GPT-4o mini; otherwise DeepSeek Coder
+  if (isNonEmpty && newlineCount === 0) {
+    return openai('gpt-4o-mini');
+  }
+
+  return deepseek('deepseek-coder');
+}
+
 export async function POST(request: Request) {
   try {
-    const { messages, fileContent, textFromEditor } = await request.json();
+    const { messages, fileContent, textFromEditor, changeType } = await request.json();
 
     // --- Add Line Numbers to Content ---
     const lines = fileContent.split('\n');
@@ -16,8 +45,17 @@ export async function POST(request: Request) {
       .join('\n');
     // ------------------------------------
 
+    let model = chooseModel({ changeType, textFromEditor, messages });
+
+    // Fallback to gpt-4o-mini if deepseek key/config is missing
+    const prefersDeepseek = (m: any) => typeof m?.providerId === 'string' && m.providerId.includes('deepseek');
+    const deepseekKeyMissing = !process.env.DEEPSEEK_API_KEY && !process.env.DEEPSEEK_API_KEY_ID;
+    if (prefersDeepseek(model) && deepseekKeyMissing) {
+      model = openai('gpt-4o-mini');
+    }
+
     const result = streamText({
-      model: deepseek('deepseek-coder'),
+      model,
       messages: [
         {
           role: 'system',

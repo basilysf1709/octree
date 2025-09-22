@@ -125,82 +125,6 @@ export function useEditSuggestions({
     clearContinueToast();
   }, [clearContinueToast]);
 
-  const resolveSuggestionConflict = async (
-    suggestion: EditSuggestion,
-    currentText: string,
-    model: Monaco.editor.ITextModel
-  ) => {
-    const trimmedOriginalLength = suggestion.original.trim().length;
-    const trimmedSuggestedLength = suggestion.suggested.trim().length;
-    const trimmedCurrentLength = currentText.trim().length;
-
-    const originalLineCount = suggestion.original
-      ? suggestion.original.split('\n').length
-      : 0;
-    const currentLineCount = currentText ? currentText.split('\n').length : 0;
-
-    const lineDelta = Math.abs(currentLineCount - originalLineCount);
-    const charDelta = Math.abs(trimmedCurrentLength - trimmedOriginalLength);
-
-    const isSmallChange =
-      lineDelta <= 3 &&
-      Math.max(
-        trimmedOriginalLength,
-        trimmedSuggestedLength,
-        trimmedCurrentLength
-      ) <= 1500 &&
-      charDelta <= 600;
-
-    try {
-      const response = await fetch('/api/octra/conflict', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          fileContent: model.getValue(),
-          suggestion,
-          currentText,
-          isSmallChange,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to resolve conflict');
-      }
-
-      const data = await response.json();
-
-      if (!data?.content) {
-        throw new Error('Missing resolution content');
-      }
-
-      const resolvedSuggestions = parseLatexDiff(data.content);
-
-      if (resolvedSuggestions.length === 0) {
-        toast.error(
-          'Octra could not resolve the updated document state. Please regenerate suggestions.'
-        );
-        return;
-      }
-
-      applyIncomingSuggestions(resolvedSuggestions, {
-        suppressLimitNotice: true,
-      });
-
-      toast.info(
-        `Generated updated suggestions using ${
-          isSmallChange ? 'GPT-4o mini' : 'DeepSeek Coder'
-        } after detecting changes in the document.`
-      );
-    } catch (error) {
-      console.error('Error resolving suggestion conflict:', error);
-      toast.error(
-        'Unable to resolve this suggestion with the updated document. Ask Octra for a fresh set of edits.'
-      );
-    }
-  };
-
   const handleAcceptEdit = async (suggestionId: string) => {
     const suggestion = editSuggestions.find((s) => s.id === suggestionId);
     if (!suggestion || suggestion.status !== 'pending') return;
@@ -264,18 +188,7 @@ export function useEditSuggestions({
         endColumn
       );
 
-      const currentText = model.getValueInRange(rangeToReplace);
-      const normalizedCurrent = currentText.replace(/\r?\n$/, '');
-      const normalizedOriginal = suggestion.original.replace(/\r?\n$/, '');
-
-      if (
-        currentText !== suggestion.original &&
-        normalizedCurrent !== normalizedOriginal
-      ) {
-        await resolveSuggestionConflict(suggestion, currentText, model);
-        return;
-      }
-
+      // Apply suggestion immediately without conflict resolution
       editor.executeEdits('accept-ai-suggestion', [
         {
           range: rangeToReplace,
@@ -284,9 +197,7 @@ export function useEditSuggestions({
         },
       ]);
 
-      setEditSuggestions((prev) =>
-        prev.filter((s) => s.id !== suggestionId)
-      );
+      setEditSuggestions((prev) => prev.filter((s) => s.id !== suggestionId));
     } catch (error) {
       console.error('Error applying edit:', error);
       toast.error('Failed to apply this suggestion. Please try again.');

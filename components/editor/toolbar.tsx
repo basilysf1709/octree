@@ -25,55 +25,53 @@ export function EditorToolbar({
   lastSaved,
 }: EditorToolbarProps) {
   return (
-    <div className="sticky top-0 z-30 flex-shrink-0 border-b border-slate-200 bg-white px-2 py-0">
+    <div className="flex-shrink-0 border-b border-slate-200 bg-white p-2">
       <div className="flex items-center justify-between">
-        {/* Text Formatting Controls */}
         <ButtonGroup>
           <ButtonGroupItem
             onClick={() => onTextFormat('bold')}
-            className="px-2 py-1 text-xs"
+            className="w-8 px-2.5 py-1"
           >
-            <span className="text-xs font-bold">B</span>
+            <span className="font-bold">B</span>
           </ButtonGroupItem>
           <ButtonGroupItem
             onClick={() => onTextFormat('italic')}
-            className="px-2 py-1 text-xs"
+            className="w-8 px-2.5 py-1"
           >
-            <span className="text-xs italic">I</span>
+            <span className="italic">I</span>
           </ButtonGroupItem>
           <ButtonGroupItem
             onClick={() => onTextFormat('underline')}
-            className="px-2 py-1 text-xs"
+            className="w-8 px-2.5 py-1"
           >
-            <span className="text-xs underline">U</span>
+            <span className="underline">U</span>
           </ButtonGroupItem>
         </ButtonGroup>
 
-        {/* Status and Action Controls */}
         <div className="flex items-center gap-2">
-          {/* Save Status */}
+          <UsageIndicator />
           {lastSaved && (
             <span className="text-xs text-slate-500">
               Last saved: {lastSaved.toLocaleTimeString()}
             </span>
           )}
           {isSaving && (
-            <span className="text-xs text-blue-500">
-              <Loader2 className="mr-1 inline h-3 w-3 animate-spin" />
-              Saving...
+            <span className="flex items-center text-xs text-blue-500">
+              <Loader2 className="mr-1 inline h-4 w-4 animate-spin" />
+              Saving
             </span>
           )}
 
-          {/* Compile Button */}
           <Button
             variant="ghost"
             size="xs"
             onClick={onCompile}
             disabled={compiling}
+            className="w-[90px]"
           >
             {compiling ? (
               <>
-                <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+                <Loader2 className="h-4 w-4 animate-spin" />
                 Compiling
               </>
             ) : (
@@ -84,7 +82,6 @@ export function EditorToolbar({
             )}
           </Button>
 
-          {/* Export Button */}
           <Button
             variant="ghost"
             size="xs"
@@ -100,9 +97,6 @@ export function EditorToolbar({
               'Export'
             )}
           </Button>
-
-          {/* Usage Indicator */}
-          <UsageIndicator />
         </div>
       </div>
     </div>

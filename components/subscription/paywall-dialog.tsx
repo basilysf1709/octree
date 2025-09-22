@@ -1,26 +1,37 @@
 'use client';
 
 import { useState } from 'react';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { CreditCard, Lock, Zap, CheckCircle } from 'lucide-react';
+import { CreditCard, Lock, CheckCircle } from 'lucide-react';
 
 interface PaywallDialogProps {
   isOpen: boolean;
   onClose: () => void;
   editCount: number;
-  remainingEdits: number | null;
+  remainingEdits: number;
   isMonthly?: boolean;
 }
 
-export function PaywallDialog({ isOpen, onClose, editCount, remainingEdits, isMonthly = false }: PaywallDialogProps) {
+export function PaywallDialog({
+  isOpen,
+  onClose,
+  editCount,
+  remainingEdits,
+  isMonthly = false,
+}: PaywallDialogProps) {
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSubscribe = async () => {
     setIsLoading(true);
     try {
-      // Redirect to Stripe checkout
       window.open('https://buy.stripe.com/6oUdR9fyd8Sd6Cifd46oo00', '_blank');
       onClose();
     } catch (error) {
@@ -31,17 +42,16 @@ export function PaywallDialog({ isOpen, onClose, editCount, remainingEdits, isMo
   };
 
   const features = [
-    '50 AI-powered edits',
+    '50 AI-powered edits per month',
     'Advanced LaTeX compilation',
     'Priority support',
     'Early access to new features',
-    'Export to multiple formats'
+    'Export to multiple formats',
   ];
 
   const limitType = isMonthly ? 'Monthly' : 'Free Trial';
   const maxEdits = isMonthly ? 50 : 5;
-  const safeRemainingEdits = typeof remainingEdits === 'number' ? remainingEdits : 0;
-  const limitText = isMonthly 
+  const limitText = isMonthly
     ? `You've used ${editCount} out of 50 monthly AI edits. Upgrade to Pro for unlimited access!`
     : `You've used ${editCount} out of 5 free AI edits. Upgrade to Pro for unlimited access!`;
 
@@ -49,9 +59,11 @@ export function PaywallDialog({ isOpen, onClose, editCount, remainingEdits, isMo
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <div className="flex items-center gap-2 mb-2">
+          <div className="mb-2 flex items-center gap-2">
             <Lock className="h-6 w-6 text-amber-500" />
-            <DialogTitle className="text-xl">{limitType} Limit Reached</DialogTitle>
+            <DialogTitle className="text-xl">
+              {limitType} Limit Reached
+            </DialogTitle>
           </div>
           <DialogDescription className="text-base">
             {limitText}
@@ -59,50 +71,55 @@ export function PaywallDialog({ isOpen, onClose, editCount, remainingEdits, isMo
         </DialogHeader>
 
         <div className="space-y-6">
-          {/* Usage Summary */}
-          <div className="bg-neutral-50 rounded-lg p-4">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium text-neutral-700">Your Usage</span>
-              <Badge variant="secondary">{editCount}/{maxEdits} edits used</Badge>
+          <div className="rounded-lg bg-neutral-50 p-4">
+            <div className="mb-2 flex items-center justify-between">
+              <span className="text-sm font-medium text-neutral-700">
+                Your Usage
+              </span>
+              <Badge variant="secondary">
+                {editCount}/{maxEdits} edits used
+              </Badge>
             </div>
-            <div className="w-full bg-neutral-200 rounded-full h-2">
-              <div 
-                className="bg-amber-500 h-2 rounded-full transition-all duration-300"
+            <div className="h-2 w-full rounded-full bg-neutral-200">
+              <div
+                className="h-2 rounded-full bg-amber-500 transition-all duration-300"
                 style={{ width: `${(editCount / maxEdits) * 100}%` }}
               />
             </div>
-            <p className="text-xs text-neutral-500 mt-2">
-              {safeRemainingEdits > 0 ? `${safeRemainingEdits} edits remaining` : 'No edits remaining'}
+            <p className="mt-2 text-xs text-neutral-500">
+              {remainingEdits > 0
+                ? `${remainingEdits} edits remaining`
+                : 'No edits remaining'}
             </p>
           </div>
 
-          {/* Features */}
           <div className="space-y-3">
-            <h3 className="font-semibold text-neutral-900 flex items-center gap-2">
-              <Zap className="h-4 w-4 text-blue-500" />
+            <h3 className="flex items-center gap-2 font-semibold text-neutral-900">
               Pro Features
             </h3>
             <ul className="space-y-2">
               {features.map((feature, index) => (
-                <li key={index} className="flex items-center gap-2 text-sm text-neutral-700">
-                  <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0" />
+                <li
+                  key={index}
+                  className="flex items-center gap-2 text-sm text-neutral-700"
+                >
+                  <CheckCircle className="h-4 w-4 flex-shrink-0 text-blue-500" />
                   {feature}
                 </li>
               ))}
             </ul>
           </div>
 
-          {/* CTA */}
           <div className="space-y-3">
-            <Button 
+            <Button
               onClick={handleSubscribe}
               disabled={isLoading}
-              className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
+              className="w-full bg-blue-600 text-white hover:bg-blue-700"
               size="lg"
             >
               {isLoading ? (
                 <div className="flex items-center gap-2">
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                  <div className="h-4 w-4 animate-spin rounded-full border-b-2 border-white" />
                   Redirecting...
                 </div>
               ) : (
@@ -112,24 +129,19 @@ export function PaywallDialog({ isOpen, onClose, editCount, remainingEdits, isMo
                 </div>
               )}
             </Button>
-            
-            <Button 
-              variant="outline" 
-              onClick={onClose}
-              className="w-full"
-            >
+
+            <Button variant="outline" onClick={onClose} className="w-full">
               Maybe Later
             </Button>
           </div>
 
-          <p className="text-xs text-neutral-500 text-center">
-            {isMonthly 
+          <p className="text-center text-xs text-neutral-500">
+            {isMonthly
               ? 'You can continue using the editor, but AI-powered edits require a plan upgrade.'
-              : 'You can continue using the editor, but AI-powered edits require a Pro subscription.'
-            }
+              : 'You can continue using the editor, but AI-powered edits require a Pro subscription.'}
           </p>
         </div>
       </DialogContent>
     </Dialog>
   );
-} 
+}

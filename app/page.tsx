@@ -1,11 +1,8 @@
 import { redirect } from 'next/navigation';
-import { DataTable } from '@/components/projects/data-table';
-import { columns } from '@/components/projects/columns';
 import { createClient } from '@/lib/supabase/server';
 import { CreateProjectDialog } from '@/components/projects/create-project-dialog';
 import { ProjectsTable } from '@/components/projects/projects-table';
 import { OctreeLogo } from '@/components/icons/octree-logo';
-import { FileText } from 'lucide-react';
 import { UserProfileDropdown } from '@/components/user/user-profile-dropdown';
 import { DM_Sans } from 'next/font/google';
 import { cn } from '@/lib/utils';
@@ -39,15 +36,12 @@ export default async function Dashboard() {
 
   return (
     <>
-      {/* Custom Navbar */}
-      <nav className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-6">
+      <nav className="border-b border-gray-200 bg-white">
+        <div className="mx-auto max-w-7xl px-6">
           <div className="flex h-14 items-center justify-between">
             <div className="flex items-center">
               <Link href="/" className="flex items-center space-x-2">
-                <div className="h-5 w-5 bg-blue-500 rounded flex items-center justify-center">
-                  <FileText className="h-3 w-3 text-white" />
-                </div>
+                <OctreeLogo className="h-7 w-7" />
                 <span
                   className={cn(
                     'text-lg font-medium tracking-tight text-neutral-900',
@@ -68,9 +62,7 @@ export default async function Dashboard() {
       <main className="container mx-auto px-4 py-8">
         <div className="mb-8 flex items-center justify-between">
           <div>
-            <h1 className="text-lg font-semibold text-neutral-900">
-              Projects
-            </h1>
+            <h1 className="text-lg font-semibold text-neutral-900">Projects</h1>
             <p className="text-sm text-neutral-500">
               Manage and edit your projects
             </p>

@@ -22,7 +22,11 @@ interface AddFileDialogProps {
   onFileAdded?: () => void;
 }
 
-export function AddFileDialog({ projectId, projectTitle, onFileAdded }: AddFileDialogProps) {
+export function AddFileDialog({
+  projectId,
+  projectTitle,
+  onFileAdded,
+}: AddFileDialogProps) {
   const [open, setOpen] = useState(false);
   const [fileName, setFileName] = useState('');
   const [fileContent, setFileContent] = useState('');
@@ -50,16 +54,15 @@ export function AddFileDialog({ projectId, projectTitle, onFileAdded }: AddFileD
     try {
       const supabase = createClient();
 
-      // Get current user
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       if (!session?.user) {
         throw new Error('User not authenticated');
       }
 
-      // Read file content
       const content = await selectedFile.text();
 
-      // Create file record
       const { data: fileData, error: fileError } = await supabase
         .from('files')
         .insert({
@@ -75,17 +78,14 @@ export function AddFileDialog({ projectId, projectTitle, onFileAdded }: AddFileD
         throw new Error('Failed to create file record');
       }
 
-      // Create document record with file content
-      const { error: documentError } = await supabase
-        .from('documents')
-        .insert({
-          title: fileName,
-          content: content,
-          owner_id: session.user.id,
-          project_id: projectId,
-          filename: fileName,
-          document_type: 'file',
-        });
+      const { error: documentError } = await supabase.from('documents').insert({
+        title: fileName,
+        content: content,
+        owner_id: session.user.id,
+        project_id: projectId,
+        filename: fileName,
+        document_type: 'file',
+      });
 
       if (documentError) {
         console.warn('Failed to create document record:', documentError);
@@ -97,7 +97,9 @@ export function AddFileDialog({ projectId, projectTitle, onFileAdded }: AddFileD
       setUploadMode('create');
       onFileAdded?.();
     } catch (error) {
-      setError(error instanceof Error ? error.message : 'Failed to upload file');
+      setError(
+        error instanceof Error ? error.message : 'Failed to upload file'
+      );
     } finally {
       setIsLoading(false);
     }
@@ -113,13 +115,13 @@ export function AddFileDialog({ projectId, projectTitle, onFileAdded }: AddFileD
     try {
       const supabase = createClient();
 
-      // Get current user
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       if (!session?.user) {
         throw new Error('User not authenticated');
       }
 
-      // Create file record
       const { data: fileData, error: fileError } = await supabase
         .from('files')
         .insert({
@@ -135,7 +137,6 @@ export function AddFileDialog({ projectId, projectTitle, onFileAdded }: AddFileD
         throw new Error('Failed to create file record');
       }
 
-      // Create document record if there's content
       if (fileContent.trim()) {
         const { error: documentError } = await supabase
           .from('documents')
@@ -164,12 +165,13 @@ export function AddFileDialog({ projectId, projectTitle, onFileAdded }: AddFileD
     }
   };
 
-  const handleSubmit = uploadMode === 'upload' ? handleFileUpload : handleCreateFile;
+  const handleSubmit =
+    uploadMode === 'upload' ? handleFileUpload : handleCreateFile;
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <div className="flex items-center gap-3 p-2 pl-3 rounded-md hover:bg-gray-50 text-gray-600 hover:text-gray-900 transition-colors cursor-pointer border-2 border-dashed border-gray-200 hover:border-gray-300">
+        <div className="flex cursor-pointer items-center gap-3 rounded-md border-2 border-dashed border-gray-200 px-2 py-1 text-gray-600 transition-colors hover:border-gray-300 hover:bg-gray-50 hover:text-gray-900">
           <Plus className="h-4 w-4" />
           <span className="text-sm font-medium">Add File</span>
         </div>
@@ -182,8 +184,7 @@ export function AddFileDialog({ projectId, projectTitle, onFileAdded }: AddFileD
           </DialogDescription>
         </DialogHeader>
 
-        {/* Mode Toggle */}
-        <div className="flex gap-2 mb-4">
+        <div className="mb-4 flex gap-2">
           <Button
             type="button"
             variant={uploadMode === 'create' ? 'default' : 'outline'}
@@ -191,7 +192,7 @@ export function AddFileDialog({ projectId, projectTitle, onFileAdded }: AddFileD
             onClick={() => setUploadMode('create')}
             disabled={isLoading}
           >
-            <FileText className="h-4 w-4 mr-2" />
+            <FileText className="mr-2 h-4 w-4" />
             Create New
           </Button>
           <Button
@@ -201,7 +202,7 @@ export function AddFileDialog({ projectId, projectTitle, onFileAdded }: AddFileD
             onClick={() => setUploadMode('upload')}
             disabled={isLoading}
           >
-            <Upload className="h-4 w-4 mr-2" />
+            <Upload className="mr-2 h-4 w-4" />
             Upload File
           </Button>
         </div>
@@ -220,7 +221,12 @@ export function AddFileDialog({ projectId, projectTitle, onFileAdded }: AddFileD
             {error && <p className="text-sm text-red-600">{error}</p>}
 
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={isLoading}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setOpen(false)}
+                disabled={isLoading}
+              >
                 Cancel
               </Button>
               <Button type="submit" disabled={isLoading}>
@@ -247,12 +253,13 @@ export function AddFileDialog({ projectId, projectTitle, onFileAdded }: AddFileD
                 disabled={isLoading}
                 className="w-full"
               >
-                <Upload className="h-4 w-4 mr-2" />
+                <Upload className="mr-2 h-4 w-4" />
                 Choose File
               </Button>
               {selectedFile && (
                 <div className="text-sm text-green-600">
-                  Selected: {selectedFile.name} ({(selectedFile.size / 1024).toFixed(1)} KB)
+                  Selected: {selectedFile.name} (
+                  {(selectedFile.size / 1024).toFixed(1)} KB)
                 </div>
               )}
             </div>
@@ -270,11 +277,16 @@ export function AddFileDialog({ projectId, projectTitle, onFileAdded }: AddFileD
             {error && <p className="text-sm text-red-600">{error}</p>}
 
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={isLoading}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setOpen(false)}
+                disabled={isLoading}
+              >
                 Cancel
               </Button>
-              <Button 
-                type="button" 
+              <Button
+                type="button"
                 onClick={handleSubmit}
                 disabled={isLoading || !selectedFile}
               >
@@ -286,4 +298,4 @@ export function AddFileDialog({ projectId, projectTitle, onFileAdded }: AddFileD
       </DialogContent>
     </Dialog>
   );
-} 
+}

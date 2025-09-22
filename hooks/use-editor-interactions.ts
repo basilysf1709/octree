@@ -11,6 +11,8 @@ export interface EditorInteractionsState {
   textFromEditor: string | null;
   chatOpen: boolean;
   setChatOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  chatMinimized: boolean;
+  setChatMinimized: React.Dispatch<React.SetStateAction<boolean>>;
   setTextFromEditor: (text: string | null) => void;
   handleCopy: (textToCopy?: string) => void;
   setupEditorListeners: (editor: Monaco.editor.IStandaloneCodeEditor) => void;
@@ -22,15 +24,11 @@ export function useEditorInteractions(): EditorInteractionsState {
   const [selectedText, setSelectedText] = useState('');
   const [textFromEditor, setTextFromEditor] = useState<string | null>(null);
   const [chatOpen, setChatOpen] = useState(false);
+  const [chatMinimized, setChatMinimized] = useState(false);
 
   const handleCopy = useCallback(
     (textToCopy?: string) => {
       const currentSelectedText = textToCopy ?? selectedText;
-      console.log('handleCopy called with:', {
-        currentSelectedText,
-        textToCopy,
-        selectedText,
-      });
 
       if (currentSelectedText.trim()) {
         setTextFromEditor(currentSelectedText);
@@ -47,12 +45,6 @@ export function useEditorInteractions(): EditorInteractionsState {
       const model = editor.getModel();
       const text = model?.getValueInRange(selection!);
 
-      console.log('Selection changed:', {
-        selection,
-        text,
-        isEmpty: selection?.isEmpty(),
-      });
-
       if (text && selection && !selection?.isEmpty()) {
         const range = {
           startLineNumber: selection.startLineNumber,
@@ -65,8 +57,6 @@ export function useEditorInteractions(): EditorInteractionsState {
           column: range.startColumn,
         });
 
-        console.log('Setting button position:', { startCoords, text });
-
         if (startCoords) {
           setButtonPos({
             top: startCoords.top - 30,
@@ -76,7 +66,6 @@ export function useEditorInteractions(): EditorInteractionsState {
           setShowButton(true);
         }
       } else {
-        console.log('Hiding button');
         setShowButton(false);
         setSelectedText('');
       }
@@ -101,6 +90,8 @@ export function useEditorInteractions(): EditorInteractionsState {
     textFromEditor,
     chatOpen,
     setChatOpen,
+    chatMinimized,
+    setChatMinimized,
     setTextFromEditor,
     handleCopy,
     setupEditorListeners,

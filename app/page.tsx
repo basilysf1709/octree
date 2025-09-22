@@ -1,11 +1,8 @@
 import { redirect } from 'next/navigation';
-import { DataTable } from '@/components/projects/data-table';
-import { columns } from '@/components/projects/columns';
 import { createClient } from '@/lib/supabase/server';
 import { CreateProjectDialog } from '@/components/projects/create-project-dialog';
 import { ProjectsTable } from '@/components/projects/projects-table';
 import { OctreeLogo } from '@/components/icons/octree-logo';
-import { FileText } from 'lucide-react';
 import { UserProfileDropdown } from '@/components/user/user-profile-dropdown';
 import { DM_Sans } from 'next/font/google';
 import { cn } from '@/lib/utils';
